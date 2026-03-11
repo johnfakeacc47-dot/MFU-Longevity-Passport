@@ -24,7 +24,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
 
       <div className="profile-content page-content p-4 space-y-6">
         {/* Main Controls */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="section-header mb-6">
             <span className="section-icon">🛡️</span>
             <span className="section-title text-black font-bold">Sharing Preferences</span>
@@ -34,7 +34,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <div className="flex justify-between items-center">
               <div className="flex-1 pr-4">
                 <div className="font-bold text-sm text-gray-900">Share Longevity Score</div>
-                <div className="text-xs text-gray-500 mt-1">Allow team members to see your overall score.</div>
+                <div className="text-sm text-gray-500 mt-1">Allow team members to see your overall score.</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={shareScore} onChange={(e) => setShareScore(e.target.checked)} />
@@ -45,7 +45,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <div className="flex justify-between items-center pt-4 border-t border-white/50">
               <div className="flex-1 pr-4">
                 <div className="font-bold text-sm text-gray-900">Share Detailed Habits</div>
-                <div className="text-xs text-gray-500 mt-1">Visible to team members during shared missions.</div>
+                <div className="text-sm text-gray-500 mt-1">Visible to team members during shared missions.</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={shareHabits} onChange={(e) => setShareHabits(e.target.checked)} />
@@ -56,7 +56,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <div className="flex justify-between items-center pt-4 border-t border-white/50">
               <div className="flex-1 pr-4">
                 <div className="font-bold text-sm text-gray-900">AI Model Contribution</div>
-                <div className="text-xs text-gray-500 mt-1">Share anonymous corrections to improve food recognition.</div>
+                <div className="text-sm text-gray-500 mt-1">Share anonymous corrections to improve food recognition.</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={anonymousAI} onChange={(e) => setAnonymousAI(e.target.checked)} />
@@ -67,34 +67,34 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         </div>
 
         {/* Your Rights Section */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="section-header mb-4">
             <span className="section-icon">📜</span>
             <span className="section-title text-black font-bold">Your Rights (PDPA)</span>
           </div>
           <div className="grid grid-cols-1 gap-4 mt-4">
             <div className="bg-white/40 p-3 rounded-xl border border-white/60">
-              <div className="text-xs font-bold text-gray-800">Right to Access</div>
-              <p className="text-[11px] text-gray-600 mt-1">You can request a copy of all personal data we store about you at any time.</p>
+              <div className="text-sm font-bold text-gray-800">Right to Access</div>
+              <p className="text-xs text-gray-600 mt-1">You can request a copy of all personal data we store about you at any time.</p>
             </div>
             <div className="bg-white/40 p-3 rounded-xl border border-white/60">
-              <div className="text-xs font-bold text-gray-800">Right to Erasure</div>
-              <p className="text-[11px] text-gray-600 mt-1">You have the right to request permanent deletion of your health records.</p>
+              <div className="text-sm font-bold text-gray-800">Right to Erasure</div>
+              <p className="text-xs text-gray-600 mt-1">You have the right to request permanent deletion of your health records.</p>
             </div>
             <div className="bg-white/40 p-3 rounded-xl border border-white/60">
-              <div className="text-xs font-bold text-gray-800">Data Portability</div>
-              <p className="text-[11px] text-gray-600 mt-1">Export your activity and nutrition history in standard digital formats.</p>
+              <div className="text-sm font-bold text-gray-800">Data Portability</div>
+              <p className="text-xs text-gray-600 mt-1">Export your activity and nutrition history in standard digital formats.</p>
             </div>
           </div>
         </div>
 
         {/* Policy Summary */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="section-header mb-4">
             <span className="section-icon">📋</span>
             <span className="section-title text-black font-bold">Policy Summary</span>
           </div>
-          <p className="text-xs text-gray-600 leading-relaxed">
+          <p className="text-sm text-gray-600 leading-relaxed break-words" style={{ overflowWrap: 'break-word' }}>
             The MFU Longevity Passport collects health-related data solely to calculate your longevity score and provide personalized wellness insights. 
             <br/><br/>
             We use industry-standard encryption to protect your data. Your specific health logs are <strong>never</strong> shared with third parties without your explicit consent.
@@ -103,10 +103,13 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         </div>
 
         {/* Danger Zone */}
-        <div className="p-6 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/30">
+        <div className="p-6 rounded-2xl border-2 border-dashed border-red-200 bg-red-50/30" style={{ padding: '1.5rem' }}>
           <h3 className="text-sm font-bold text-red-600 mb-2">Danger Zone</h3>
-          <p className="text-xs text-gray-500 mb-4">Deleting your account will remove all health history from our servers. This action is irreversible.</p>
-          <button className="w-full py-3 rounded-xl bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-200 active:scale-95 transition-transform">
+          <p className="text-sm text-gray-500 mb-4 break-words" style={{ overflowWrap: 'break-word' }}>Deleting your account will remove all health history from our servers. This action is irreversible.</p>
+          <button 
+            className="w-full py-3 rounded-xl bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-200 active:scale-95 transition-transform mt-6"
+            style={{ marginTop: '1.5rem' }}
+          >
             Delete My Account & Data
           </button>
         </div>

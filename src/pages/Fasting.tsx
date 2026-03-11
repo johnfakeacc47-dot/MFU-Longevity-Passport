@@ -293,28 +293,28 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
         </div>
 
         {/* Educational Content */}
-        <div className="glass-card p-6 rounded-3xl mt-6">
+        <div className="glass-card p-6 rounded-3xl mt-6" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest mb-4">Fast Protocols & Benefits</h3>
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <div className="flex gap-4 items-start">
               <span className="text-xl">⚖️</span>
-              <div>
-                <div className="font-bold text-xs text-gray-800">14:10 - Metabolic Rest</div>
-                <p className="text-[10px] text-gray-500">Perfect for beginners. Stabilizes blood sugar and improves digestion.</p>
+              <div className="break-words flex-1">
+                <div className="font-bold text-xs text-gray-800 break-words">14:10 - Metabolic Rest</div>
+                <p className="text-[10px] text-gray-500 break-words">Perfect for beginners. Stabilizes blood sugar and improves digestion.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <span className="text-xl">🔥</span>
-              <div>
-                <div className="font-bold text-xs text-gray-800">16:8 - Fat Burning</div>
-                <p className="text-[10px] text-gray-500">The "Gold Standard". Shifts the body into fat-burning mode (Ketosis).</p>
+              <div className="break-words flex-1">
+                <div className="font-bold text-xs text-gray-800 break-words">16:8 - Fat Burning</div>
+                <p className="text-[10px] text-gray-500 break-words">The "Gold Standard". Shifts the body into fat-burning mode (Ketosis).</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
               <span className="text-xl">🧹</span>
-              <div>
-                <div className="font-bold text-xs text-gray-800">18:6 - Autophagy</div>
-                <p className="text-[10px] text-gray-500">Triggers cellular "cleanup" to remove damaged molecules and proteins.</p>
+              <div className="break-words flex-1">
+                <div className="font-bold text-xs text-gray-800 break-words">18:6 - Autophagy</div>
+                <p className="text-[10px] text-gray-500 break-words">Triggers cellular "cleanup" to remove damaged molecules and proteins.</p>
               </div>
             </div>
           </div>

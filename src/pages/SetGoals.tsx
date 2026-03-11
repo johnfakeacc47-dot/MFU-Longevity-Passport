@@ -37,10 +37,10 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
 
       <div className="profile-content page-content p-4 space-y-6">
         {/* Health Potential Indicator */}
-        <div className="glass-card p-6 rounded-2xl text-center">
-          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Longevity Potential</div>
+        <div className="glass-card p-6 rounded-2xl text-center" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
+          <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Longevity Potential</div>
           <div className="text-4xl font-black text-purple-700 mb-1">{getHealthPotential()}%</div>
-          <div className="text-[10px] text-gray-400">Based on your current daily targets</div>
+          <div className="text-xs text-gray-400">Based on your current daily targets</div>
           <div className="w-full bg-gray-200 h-1.5 rounded-full mt-4 overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-500"
@@ -50,7 +50,7 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         </div>
 
         {/* Fasting Goal */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="flex justify-between items-center mb-4">
             <div className="section-header">
               <span className="section-icon">⏳</span>
@@ -64,20 +64,20 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             value={fastingGoal}
             onChange={(e) => setFastingGoal(parseInt(e.target.value))}
           />
-          <div className="flex justify-between text-[10px] text-gray-400 mt-2">
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
             <span>12h</span>
             <span>16h (Optimal)</span>
             <span>22h</span>
           </div>
           <div className="mt-4 p-3 bg-blue-50/50 rounded-xl border border-blue-100/50">
-            <p className="text-[11px] text-blue-700 leading-tight">
+            <p className="text-sm text-blue-700 leading-tight">
               <strong>Tip:</strong> 16+ hours promotes <strong>autophagy</strong>, a key cellular cleanup process linked to longevity.
             </p>
           </div>
         </div>
 
         {/* Sleep Goal */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="flex justify-between items-center mb-4">
             <div className="section-header">
               <span className="section-icon">😴</span>
@@ -91,20 +91,20 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             value={sleepGoal}
             onChange={(e) => setSleepGoal(parseFloat(e.target.value))}
           />
-          <div className="flex justify-between text-[10px] text-gray-400 mt-2">
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
             <span>4h</span>
             <span>8h (Recommended)</span>
             <span>10h</span>
           </div>
           <div className="mt-4 p-3 bg-indigo-50/50 rounded-xl border border-indigo-100/50">
-            <p className="text-[11px] text-indigo-700 leading-tight">
+            <p className="text-sm text-indigo-700 leading-tight">
               <strong>Science:</strong> Consistent 7-9 hours of sleep is crucial for cognitive preservation and DNA repair.
             </p>
           </div>
         </div>
 
         {/* Activity Goal */}
-        <div className="glass-card p-6 rounded-2xl">
+        <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="flex justify-between items-center mb-4">
             <div className="section-header">
               <span className="section-icon">🏃</span>
@@ -118,13 +118,13 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             value={activityGoal}
             onChange={(e) => setActivityGoal(parseInt(e.target.value))}
           />
-          <div className="flex justify-between text-[10px] text-gray-400 mt-2">
+          <div className="flex justify-between text-xs text-gray-400 mt-2">
             <span>15m</span>
             <span>45m+ (Moderate)</span>
             <span>120m</span>
           </div>
           <div className="mt-4 p-3 bg-green-50/50 rounded-xl border border-green-100/50">
-            <p className="text-[11px] text-green-700 leading-tight">
+            <p className="text-sm text-green-700 leading-tight">
               <strong>Impact:</strong> Target 150+ minutes of moderate activity per week to maintain metabolic health.
             </p>
           </div>
