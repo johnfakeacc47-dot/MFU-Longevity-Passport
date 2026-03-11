@@ -25,6 +25,57 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
     weightKg?: string;
   }>({});
 
+  const requestNotificationPermission = async (callback: (granted: boolean) => void) => {
+    if (!('Notification' in window)) {
+      alert('This browser does not support desktop notifications.');
+      callback(false);
+      return;
+    }
+    
+    if (Notification.permission === 'granted') {
+      callback(true);
+      return;
+    }
+    
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      callback(permission === 'granted');
+    } else {
+      callback(false);
+    }
+  };
+
+  const handleToggleNotification = (
+    value: boolean, 
+    setter: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    if (value) {
+      requestNotificationPermission((granted) => {
+        setter(granted);
+      });
+    } else {
+      setter(false);
+    }
+  };
+
+  const testPushNotification = () => {
+    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification('Test Notification', {
+          body: 'This is a test notification from MFU Longevity Passport!',
+          icon: '/pwa-192x192.png',
+          badge: '/pwa-192x192.png',
+          // @ts-ignore
+          vibrate: [200, 100, 200]
+        });
+      });
+    } else if (Notification.permission !== 'granted') {
+      alert('Please enable notifications first.');
+    } else {
+      alert('Service Worker is not supported in this browser.');
+    }
+  };
+
   const fetchProfileData = useCallback(async () => {
     // 1. Try Supabase First
     if (isSupabaseConfigured()) {
@@ -197,7 +248,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                 <input
                   type="checkbox"
                   checked={weightNotification}
-                  onChange={(e) => setWeightNotification(e.target.checked)}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setWeightNotification)}
                 />
                 <span className="toggle-slider"></span>
               </label>
@@ -212,7 +263,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                 <input
                   type="checkbox"
                   checked={activityNotification}
-                  onChange={(e) => setActivityNotification(e.target.checked)}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setActivityNotification)}
                 />
                 <span className="toggle-slider"></span>
               </label>
@@ -227,10 +278,19 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                 <input
                   type="checkbox"
                   checked={mealNotification}
-                  onChange={(e) => setMealNotification(e.target.checked)}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setMealNotification)}
                 />
                 <span className="toggle-slider"></span>
               </label>
+            </div>
+
+            <div className="setting-item mt-4">
+              <button 
+                onClick={testPushNotification}
+                className="w-full py-3 rounded-xl bg-purple-100/50 text-purple-700 text-sm font-bold shadow-sm active:scale-95 transition-transform"
+              >
+                🔔 Test Notification
+              </button>
             </div>
           </div>
         </div>

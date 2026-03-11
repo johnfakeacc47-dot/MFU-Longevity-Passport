@@ -72,7 +72,19 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   const notifyUser = (message: string) => {
     playNotificationSound();
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('MFU Longevity Passport', { body: message, icon: '/vite.svg' });
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification('MFU Longevity Passport', { 
+            body: message, 
+            icon: '/pwa-192x192.png',
+            badge: '/pwa-192x192.png',
+            // @ts-ignore
+            vibrate: [200, 100, 200, 100, 200]
+          });
+        });
+      } else {
+        new Notification('MFU Longevity Passport', { body: message, icon: '/pwa-192x192.png' });
+      }
     } else {
       alert(message);
     }

@@ -7,9 +7,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json,keras,bin}'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024, // 100MB for the models
       },
