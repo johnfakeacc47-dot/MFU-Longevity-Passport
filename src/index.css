@@ -5,14 +5,28 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: #1a2e1a;
+  /* Premium mesh gradient background */
+  background: radial-gradient(ellipse at 0% 0%, #F0FDF4 0%, transparent 60%),
+              radial-gradient(ellipse at 100% 0%, #EFF6FF 0%, transparent 60%),
+              radial-gradient(ellipse at 50% 100%, #F0FDF4 0%, transparent 60%),
+              #FFFFFF;
+  background-attachment: fixed;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Glass token vars */
+  --glass-bg: rgba(255, 255, 255, 0.70);
+  --glass-border: rgba(255, 255, 255, 0.35);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --glass-blur: blur(12px);
+  --glass-radius: 24px;
+  --accent: #11a164;
+  --accent-light: #d1fae5;
 }
 
 * {
@@ -53,31 +67,41 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* Light mode only — enforced globally */
+body {
+  background: radial-gradient(ellipse at 0% 0%, #F0FDF4 0%, transparent 55%),
+              radial-gradient(ellipse at 100% 0%, #EFF6FF 0%, transparent 55%),
+              radial-gradient(ellipse at 50% 100%, #F0FDF4 0%, transparent 55%),
+              #FFFFFF;
+  background-attachment: fixed;
+  color: #1a2e1a;
 }
 
 
 /* Premium UI Utilities */
 .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   height: auto;
   min-height: fit-content;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+/* Premium emoji/icon 3D shadow */
+.nav-emoji,
+.action-icon,
+.activity-icon,
+.activity-type-icon,
+.summary-icon,
+.section-icon,
+.tip-icon,
+.empty-icon {
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.18)) drop-shadow(0 1px 1px rgba(0,0,0,0.10));
 }
 
 .premium-gradient {
@@ -94,7 +118,7 @@ button:focus-visible {
 /* STYLES APPENDED */
 .activity-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #e9f9e5 0%, #dff7d8 50%, #cfead0 100%);
+  background: transparent;
   padding: 20px;
   padding-bottom: 100px;
 }
@@ -144,13 +168,16 @@ button:focus-visible {
 }
 
 .summary-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 20px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .summary-icon {
@@ -177,11 +204,14 @@ button:focus-visible {
 
 /* Quick Log Section */
 .quick-log-section {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .quick-log-section h2 {
@@ -229,10 +259,13 @@ button:focus-visible {
 
 /* Activity History */
 .activity-history {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .activity-history h2 {
@@ -524,7 +557,7 @@ button:focus-visible {
 
 .dashboard-container {
   min-height: 100vh;
-  background: #dff7d8;
+  background: transparent;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -543,7 +576,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #dff7d8;
+  background: transparent;
 }
 
 .back-btn,
@@ -984,10 +1017,13 @@ button:focus-visible {
   bottom: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: #fff;
+  /* Glassmorphism blurred nav bar */
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 6px 12px;
-  border-top: 1px solid #e3e3e3;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 -4px 24px rgba(31, 38, 135, 0.08);
 }
 
 .nav-icon {
@@ -1016,7 +1052,7 @@ button:focus-visible {
 
 .edit-profile-container {
   min-height: 100vh;
-  background: #dff7d8;
+  background: transparent;
   display: flex;
   flex-direction: column;
   color: #0f140f;
@@ -1028,7 +1064,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #dff7d8;
+  background: transparent;
 }
 
 .header-spacer {
@@ -1120,10 +1156,12 @@ button:focus-visible {
   bottom: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 6px 12px;
-  border-top: 1px solid #e3e3e3;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 -4px 24px rgba(31, 38, 135, 0.08);
 }
 
 .nav-icon {
@@ -1152,7 +1190,7 @@ button:focus-visible {
 
 .fasting-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  background: transparent;
   display: flex;
   flex-direction: column;
   color: #0f140f;
@@ -1171,7 +1209,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #dff7d8;
+  background: transparent;
 }
 
 .back-btn,
@@ -1222,30 +1260,37 @@ button:focus-visible {
 
 .progress-ring-bg {
   fill: none;
-  stroke: #c8e6c9;
+  stroke: rgba(200, 230, 201, 0.5);
   stroke-width: 8;
 }
 
 .progress-ring-fill {
   fill: none;
-  stroke: #4caf50;
+  /* Cyan → Emerald gradient progress */
+  stroke: url(#fastingGradient);
   stroke-width: 8;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.3s ease;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.45));
 }
 
 .timer-inner {
   position: relative;
   width: 240px;
   height: 240px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.80);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: 50%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.07),
+    0 0 0 4px rgba(255, 255, 255, 0.6),
+    inset 0 1px 3px rgba(255, 255, 255, 0.9);
 }
 
 .timer-label {
@@ -1491,10 +1536,13 @@ button:focus-visible {
 }
 
 .achievement-card {
-  background: #fff;
-  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   margin-top: 12px;
 }
 
@@ -1518,10 +1566,12 @@ button:focus-visible {
   bottom: 0;
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: #fff;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   padding: 10px 6px 12px;
-  border-top: 1px solid #e3e3e3;
-  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+  border-top: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 -4px 24px rgba(31, 38, 135, 0.08);
 }
 
 .nav-icon {
@@ -2521,7 +2571,7 @@ button:focus-visible {
 
 .profile-container {
   min-height: 100vh;
-  background: #dff7d8;
+  background: transparent;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -2540,7 +2590,7 @@ button:focus-visible {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #dff7d8;
+  background: transparent;
 }
 
 .back-btn,
@@ -2569,15 +2619,18 @@ button:focus-visible {
   padding: 16px 16px 90px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 2rem;
 }
 
 .profile-card {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 24px 16px;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .profile-avatar {
@@ -2617,10 +2670,13 @@ button:focus-visible {
 }
 
 .info-section {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .section-header {
@@ -2690,11 +2746,14 @@ button:focus-visible {
 }
 
 .settings-section {
-  background: #e8f5e9;
-  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .language-toggle-btn {
@@ -2806,10 +2865,13 @@ button:focus-visible {
 }
 
 .menu-section {
-  background: #fff;
-  border-radius: 14px;
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: var(--glass-radius);
   padding: 8px 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   overflow: hidden;
 }
 

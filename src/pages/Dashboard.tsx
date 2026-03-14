@@ -4,7 +4,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { calculateLongevityScore, getScoreColor, getScoreLabel } from '../utils/longevityScore';
 import { healthApi, isApiConfigured } from '../services/healthApi';
 import { supabase, isSupabaseConfigured, getTodayHealthScore } from '../services/supabaseClient';
-import { PWAInstallPrompt } from '../components/PWAInstallPrompt';
 
 type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'activity' | 'sleep'
 
@@ -115,7 +114,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onOpenFoodReco
         <button className="menu-btn">⋮</button>
       </header>
       
-      <PWAInstallPrompt />
 
       <div className="dashboard-content page-content">
         {/* Longevity Score Card */}

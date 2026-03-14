@@ -16,7 +16,7 @@ import { AboutTracker } from './pages/AboutTracker'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase } from './services/supabaseClient'
-import { InstallPrompt } from './components/InstallPrompt'
+import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 
 const FoodRecognition = lazy(() => import('./components/FoodRecognition').then(module => ({ default: module.FoodRecognition })))
 
@@ -65,6 +65,7 @@ type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('login')
   const [showFoodRecognition, setShowFoodRecognition] = useState(false)
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false)
 
   // Restore session on page refresh
   useEffect(() => {
@@ -97,6 +98,9 @@ function App() {
 
   const handleLoginSuccess = () => {
     setCurrentPage('home');
+    // Trigger install prompt once after every successful login
+    setShowPwaPrompt(false);
+    setTimeout(() => setShowPwaPrompt(true), 50); // brief reset so prop re-fires
   };
 
   const handleLogout = () => {
@@ -161,7 +165,7 @@ function App() {
             </Suspense>
           </FoodRecognitionErrorBoundary>
         )}
-        <InstallPrompt />
+        <PWAInstallPrompt triggerOnLogin={showPwaPrompt} />
       </div>
     </LanguageProvider>
   )

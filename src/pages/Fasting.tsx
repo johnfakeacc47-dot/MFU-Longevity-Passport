@@ -344,6 +344,13 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       <div className="fasting-content page-content">
         <div className="timer-circle-wrapper">
           <svg className="progress-ring" width="280" height="280">
+            {/* Cyan→Emerald gradient for progress ring */}
+            <defs>
+              <linearGradient id="fastingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#06b6d4" />
+                <stop offset="100%" stopColor="#10b981" />
+              </linearGradient>
+            </defs>
             <circle
               className="progress-ring-bg"
               cx="140"
