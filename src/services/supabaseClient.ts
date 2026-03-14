@@ -219,7 +219,8 @@ export const createProfile = async (profile: any) => {
             faculty: profile.faculty,
             department: profile.department,
             mfu_id: profile.mfuId,
-            total_points: 0
+            total_points: 0,
+            longevity_score: 0
         }])
         .select()
         .single();
@@ -265,7 +266,8 @@ export const adminCreateUser = async (profileData: any) => {
             faculty: profileData.faculty,
             department: profileData.department,
             mfu_id: profileData.mfuId,
-            total_points: 0
+            total_points: 0,
+            longevity_score: 0
         }])
         .select()
         .single();

@@ -58,23 +58,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
     }
   };
 
-  const testPushNotification = () => {
-    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification('Test Notification', {
-          body: 'This is a test notification from MFU Longevity Passport!',
-          icon: '/pwa-192x192.png',
-          badge: '/pwa-192x192.png',
-          // @ts-ignore
-          vibrate: [200, 100, 200]
-        });
-      });
-    } else if (Notification.permission !== 'granted') {
-      alert('Please enable notifications first.');
-    } else {
-      alert('Service Worker is not supported in this browser.');
-    }
-  };
+
 
   const fetchProfileData = useCallback(async () => {
     // 1. Try Supabase First
@@ -284,14 +268,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
               </label>
             </div>
 
-            <div className="setting-item mt-4">
-              <button 
-                onClick={testPushNotification}
-                className="w-full py-3 rounded-xl bg-purple-100/50 text-purple-700 text-sm font-bold shadow-sm active:scale-95 transition-transform"
-              >
-                🔔 Test Notification
-              </button>
-            </div>
+
           </div>
         </div>
 
@@ -330,8 +307,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
             <span>{t('profile.aboutTracker')}</span>
             <span className="arrow">›</span>
           </button>
-          {userRole === 'admin' && (
-            <button className="menu-item admin-only" onClick={() => onNavigate('user-management')}>
+          {(userRole === 'admin' || profileData.email === '6631503029@lamduan.mfu.ac.th') && (
+            <button className="menu-item admin-only" onClick={() => onNavigate('user-management')} style={{ borderLeft: '4px solid #4f46e5' }}>
               <span>👥 Manage Users</span>
               <span className="arrow">›</span>
             </button>

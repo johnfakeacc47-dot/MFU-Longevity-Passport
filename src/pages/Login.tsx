@@ -48,6 +48,21 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             setError('An account with this email address already exists.');
             return;
           }
+
+          // Safety-net: create the profiles row from the frontend.
+          // Uses upsert so it won't clash if the DB trigger already created it.
+          try {
+            await supabase!.from('profiles').upsert({
+              id: data.user.id,
+              email: data.user.email || username,
+              name: '',
+              role: 'student',
+              total_points: 0,
+            }, { onConflict: 'id' });
+          } catch (profileErr) {
+            console.warn('Profile auto-create fallback failed (trigger may handle it):', profileErr);
+          }
+
           setMessage('Signup successful! Check your email, or log in directly if auto-confirmed.');
           setIsSignUp(false); // Switch back to login
           setPassword('');

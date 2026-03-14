@@ -74,18 +74,22 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
   };
 
-  const formatRole = (role: User['role']) => role.charAt(0).toUpperCase() + role.slice(1);
+  const formatRole = (role?: string) => {
+    if (!role) return 'User';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
 
   const matchesSearch = (user: User, term: string) => {
     const normalized = term.trim().toLowerCase();
     if (!normalized) return true;
-    return [user.name, user.email, user.mfuId, user.faculty, user.department]
+    return [user?.name, user?.email, user?.mfuId, user?.faculty, user?.department]
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(normalized));
   };
 
   const isWithinDate = (user: User, filter: typeof dateFilter) => {
     if (filter === 'all') return true;
+    if (!user?.createdAt) return true;
     const created = new Date(user.createdAt);
     if (Number.isNaN(created.getTime())) return true;
     const now = new Date();
@@ -104,16 +108,18 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
       if (isSupabaseConfigured()) {
         const profiles = await getAllProfiles();
         if (profiles && profiles.length > 0) {
-          setUsers(profiles.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            email: p.email,
-            mfuId: p.mfu_id,
-            role: p.role as any,
-            createdAt: p.created_at,
-            faculty: p.faculty,
-            department: p.department
-          })));
+          console.log('Fetched profiles:', profiles);
+          const mappedUsers = profiles.map((p: any) => ({
+            id: p.id || String(Math.random()),
+            name: p.name || 'Unknown',
+            email: p.email || 'no-email@mfu.ac.th',
+            mfuId: p.mfu_id || 'N/A',
+            role: (p.role as any) || 'student',
+            createdAt: p.created_at || new Date().toISOString(),
+            faculty: p.faculty || '',
+            department: p.department || ''
+          }));
+          setUsers(mappedUsers);
           setError('');
           setIsOffline(false);
           return;
@@ -486,10 +492,10 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
                     <td><input type="checkbox" /></td>
                     <td>
                       <div className="user-cell">
-                        <div className="avatar">{getInitials(user.name || user.email)}</div>
+                        <div className="avatar">{getInitials(user?.name || user?.email || '??')}</div>
                         <div>
-                          <div className="user-name">{user.name || 'Unknown User'}</div>
-                          <div className="user-sub">{user.faculty || user.department || 'MFU'}</div>
+                          <div className="user-name">{user?.name || 'Unknown User'}</div>
+                          <div className="user-sub">{user?.faculty || user?.department || 'MFU'}</div>
                         </div>
                       </div>
                     </td>

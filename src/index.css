@@ -74,6 +74,10 @@ button:focus-visible {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  height: auto;
+  min-height: fit-content;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .premium-gradient {
@@ -4185,5 +4189,62 @@ tbody td {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ── Fasting Toast Notification ────────────────────────────────────── */
+.fasting-toast {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 22px;
+  min-width: 280px;
+  max-width: 92vw;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px) saturate(1.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(17, 161, 100, 0.12);
+  font-size: 14px;
+  font-weight: 600;
+  color: #1a3a2a;
+  animation: toast-slide-in 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fasting-toast span {
+  flex: 1;
+  line-height: 1.45;
+}
+
+.toast-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #888;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toast-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #333;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
   }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi, isApiConfigured } from '../services/healthApi';
@@ -19,9 +19,41 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [showCustomModal, setShowCustomModal] = useState<boolean>(false);
   const [customHours, setCustomHours] = useState<number>(16);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const goalNotifiedRef = useRef<boolean>(false);
   const { t } = useLanguage();
 
-  // Load saved fasting state from Supabase on mount
+  // ── Toast helper ───────────────────────────────────────────────────
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  // ── SW helpers ─────────────────────────────────────────────────────
+  const postToSW = (msg: Record<string, unknown>) => {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage(msg);
+    }
+  };
+
+  const saveFastingToLocalStorage = (hours: number, start: Date) => {
+    const endTs = start.getTime() + hours * 3600 * 1000;
+    localStorage.setItem('fastingActive', 'true');
+    localStorage.setItem('fastingStartTime', start.toISOString());
+    localStorage.setItem('fastingTargetHours', String(hours));
+    localStorage.setItem('fastingEndTimestamp', String(endTs));
+    localStorage.removeItem('fastingGoalNotified');
+  };
+
+  const clearFastingLocalStorage = () => {
+    localStorage.removeItem('fastingActive');
+    localStorage.removeItem('fastingStartTime');
+    localStorage.removeItem('fastingTargetHours');
+    localStorage.removeItem('fastingEndTimestamp');
+    localStorage.removeItem('fastingGoalNotified');
+  };
+
+  // Load saved fasting state — localStorage first (instant), then Supabase
   useEffect(() => {
     const loadState = async () => {
       // 1. Request notification permissions right away
@@ -29,6 +61,37 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
         Notification.requestPermission();
       }
 
+      // 2. Instant restore from localStorage (survives refresh)
+      const lsActive = localStorage.getItem('fastingActive') === 'true';
+      const lsStart = localStorage.getItem('fastingStartTime');
+      const lsHours = localStorage.getItem('fastingTargetHours');
+      if (lsActive && lsStart && lsHours) {
+        const start = new Date(lsStart);
+        const hours = Number(lsHours);
+        const targetSecs = hours * 3600;
+        const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
+        if (elapsed < targetSecs) {
+          setSelectedHours(hours);
+          setTargetSeconds(targetSecs);
+          setElapsedSeconds(elapsed);
+          setStartTime(start);
+          setIsRunning(true);
+          // Restore duplicate-prevention flag
+          goalNotifiedRef.current = localStorage.getItem('fastingGoalNotified') === 'true';
+          // Re-schedule the alarm in SW in case it was killed
+          const endTs = start.getTime() + targetSecs * 1000;
+          postToSW({ type: 'SCHEDULE_FASTING_ALARM', endTimestamp: endTs, goalHours: hours });
+          return; // localStorage was fresh enough, skip Supabase
+        } else {
+          // Finished while tab was closed
+          clearFastingLocalStorage();
+          postToSW({ type: 'CANCEL_FASTING_ALARM' });
+          await finishFasting(hours);
+          return;
+        }
+      }
+
+      // 3. Fallback: restore from Supabase
       const profile = await getCurrentUserProfile();
       if (profile && profile.fasting_start_time && profile.fasting_target_hours) {
         const start = new Date(profile.fasting_start_time);
@@ -42,6 +105,10 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
           setElapsedSeconds(elapsed);
           setStartTime(start);
           setIsRunning(true);
+          // Persist to localStorage too & schedule SW alarm
+          saveFastingToLocalStorage(profile.fasting_target_hours, start);
+          const endTs = start.getTime() + targetSecs * 1000;
+          postToSW({ type: 'SCHEDULE_FASTING_ALARM', endTimestamp: endTs, goalHours: profile.fasting_target_hours });
         } else {
           // Timer finished while offline. Calculate points and clear.
           await finishFasting(profile.fasting_target_hours);
@@ -49,9 +116,19 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       }
     };
     loadState();
+
+    // Listen for SW_NAVIGATE messages (from notification click)
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'SW_NAVIGATE' && event.data.url?.includes('openFoodRecognition')) {
+        onOpenFoodRecognition();
+      }
+    };
+    navigator.serviceWorker?.addEventListener('message', handleSWMessage);
+    return () => {
+      navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
+    };
   }, []);
 
-  // Removed the localStorage useEffect
 
   const playNotificationSound = () => {
     // A simple polite bell sound using an oscillator beep as fallback:
@@ -69,21 +146,22 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
     osc.stop(ctx.currentTime + 1);
   };
 
-  const notifyUser = (message: string) => {
+  const notifyUser = (title: string, message: string, options?: NotificationOptions) => {
     playNotificationSound();
     if ('Notification' in window && Notification.permission === 'granted') {
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification('MFU Longevity Passport', { 
+          registration.showNotification(title, { 
             body: message, 
             icon: '/pwa-192x192.png',
             badge: '/pwa-192x192.png',
             // @ts-ignore
-            vibrate: [200, 100, 200, 100, 200]
+            vibrate: [200, 100, 200, 100, 200],
+            ...options
           });
         });
       } else {
-        new Notification('MFU Longevity Passport', { body: message, icon: '/pwa-192x192.png' });
+        new Notification(title, { body: message, icon: '/pwa-192x192.png', ...options });
       }
     } else {
       alert(message);
@@ -91,9 +169,16 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   };
 
   const finishFasting = async (hoursFasted: number) => {
+    // Duplicate prevention: only fire goal notification once per session
+    if (goalNotifiedRef.current) return;
+    goalNotifiedRef.current = true;
+    localStorage.setItem('fastingGoalNotified', 'true');
+
     setIsRunning(false);
     setElapsedSeconds(0);
     setStartTime(null);
+    clearFastingLocalStorage();
+    postToSW({ type: 'CANCEL_FASTING_ALARM' });
 
     await stopFastingTimer();
     
@@ -109,7 +194,18 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       });
     }
 
-    notifyUser(`Fasting complete! You fasted for ${hoursFasted} hours.`);
+    // High-priority goal-reached notification (fires only once)
+    showToast('🏆 Fasting Goal Reached! Time to log your first meal!');
+    notifyUser(
+      'Fasting Goal Reached! 🏆',
+      `Congratulations! You've completed your ${hoursFasted} hour fast. Time to log your first meal!`,
+      {
+        tag: 'fasting-goal',
+        // @ts-ignore – actions & requireInteraction are valid on supported browsers
+        actions: [{ action: 'enter-meal', title: '🍽️ Enter Meal' }],
+        requireInteraction: true,
+      }
+    );
     window.dispatchEvent(new Event('healthDataUpdated'));
   };
 
@@ -134,11 +230,24 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   }, [isRunning, targetSeconds, startTime, selectedHours]);
 
   const startFasting = async (hours: number) => {
+    const now = new Date();
+    goalNotifiedRef.current = false;
     setSelectedHours(hours);
     setTargetSeconds(hours * 3600);
     setElapsedSeconds(0);
-    setStartTime(new Date());
+    setStartTime(now);
     setIsRunning(true);
+
+    // Persist to localStorage
+    saveFastingToLocalStorage(hours, now);
+
+    // Schedule background alarm in Service Worker
+    const endTimestamp = now.getTime() + hours * 3600 * 1000;
+    postToSW({ type: 'SCHEDULE_FASTING_ALARM', endTimestamp, goalHours: hours });
+
+    // Show toast + OS notification
+    showToast(`Fasting Started! Your goal is set for ${hours} hours. Stay hydrated. 💧`);
+    notifyUser('Fasting Started 🍃', `Your goal is set for ${hours} hours. Stay hydrated! 💧`);
 
     try {
       if (isSupabaseConfigured()) {
@@ -156,6 +265,10 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   };
 
   const stopFasting = async () => {
+    // Cancel any pending background alarm
+    clearFastingLocalStorage();
+    postToSW({ type: 'CANCEL_FASTING_ALARM' });
+
     const elapsedHours = elapsedSeconds / 3600;
     if (elapsedHours < 1) {
       // Don't award points if less than an hour
@@ -167,7 +280,8 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       } else if (isApiConfigured) {
         await healthApi.stopFasting();
       }
-      notifyUser("Fasting stopped early. No points awarded.");
+      showToast('Fasting stopped early. No points awarded.');
+      notifyUser('Fasting Stopped', 'Fasting stopped early. No points awarded.');
     } else {
       await finishFasting(Math.floor(elapsedHours));
     }
@@ -213,6 +327,14 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
 
   return (
     <div className="fasting-container">
+      {/* ── In-app toast ─────────────────────────────────────── */}
+      {toastMessage && (
+        <div className="fasting-toast">
+          <span>{toastMessage}</span>
+          <button className="toast-close" onClick={() => setToastMessage(null)}>✕</button>
+        </div>
+      )}
+
       <header className="fasting-header">
         <button className="back-btn" onClick={() => onNavigate('home')}>←</button>
         <h1 className="header-title">{t('fasting.title')}</h1>
