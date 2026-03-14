@@ -59,6 +59,16 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose }) => 
     return translationKey ? t(translationKey) : label;
   };
 
+  // Initial device detection for camera
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      setFacingMode('environment');
+    } else {
+      setFacingMode('user');
+    }
+  }, []);
+
   useEffect(() => {
     // Ensure TensorFlow.js is ready before loading model
     tf.ready().then(() => {
@@ -478,6 +488,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose }) => 
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="camera-preview"
                     style={{ width: '100%', maxWidth: '350px', maxHeight: '50vh', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   />
