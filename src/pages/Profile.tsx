@@ -183,15 +183,24 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           <div className="body-metrics">
             <div className="metric-item">
               <div className="metric-label">{t('profile.age')}</div>
-              <div className="metric-value">{ageYears ?? '-'}</div>
+              <div className="metric-row">
+                <span className="metric-icon">🎂</span>
+                <div className="metric-value">{ageYears ?? '-'}</div>
+              </div>
             </div>
             <div className="metric-item">
               <div className="metric-label">{t('profile.weight')}</div>
-              <div className="metric-value">{profileData.weightKg || '-'}</div>
+              <div className="metric-row">
+                <span className="metric-icon">⚖️</span>
+                <div className="metric-value">{profileData.weightKg || '-'}</div>
+              </div>
             </div>
             <div className="metric-item">
               <div className="metric-label">{t('profile.height')}</div>
-              <div className="metric-value">{profileData.heightCm || '-'}</div>
+              <div className="metric-row">
+                <span className="metric-icon">📏</span>
+                <div className="metric-value">{profileData.heightCm || '-'}</div>
+              </div>
             </div>
           </div>
 

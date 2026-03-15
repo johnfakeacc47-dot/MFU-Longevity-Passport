@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { getCurrentUserProfile, updateScoreVisibility } from '../services/supabaseClient';
 
 type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
 
@@ -10,9 +11,68 @@ interface PrivacySettingsProps {
 
 export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
-  const [shareScore, setShareScore] = useState(true);
+  const [shareScore, setShareScore] = useState(false);
   const [shareHabits, setShareHabits] = useState(false);
   const [anonymousAI, setAnonymousAI] = useState(true);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load the real setting from Supabase on mount
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await getCurrentUserProfile();
+        if (profile) {
+          setShareScore(profile.is_score_public ?? false);
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  const handleShareToggle = (checked: boolean) => {
+    if (checked) {
+      // Show confirmation modal before enabling
+      setShowConfirmModal(true);
+    } else {
+      // Disable directly
+      confirmShareChange(false);
+    }
+  };
+
+  const confirmShareChange = async (isPublic: boolean) => {
+    try {
+      await updateScoreVisibility(isPublic);
+      setShareScore(isPublic);
+      setShowConfirmModal(false);
+
+      if (isPublic) {
+        // Send push notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then((registration) => {
+              registration.showNotification('Privacy Updated 🛡️', {
+                body: 'You are now sharing your longevity score with your team. You can disable this anytime in settings.',
+                icon: '/pwa-192x192.png',
+                badge: '/pwa-192x192.png',
+              });
+            });
+          } else {
+            new Notification('Privacy Updated 🛡️', {
+              body: 'You are now sharing your longevity score with your team. You can disable this anytime in settings.',
+              icon: '/pwa-192x192.png',
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error updating score visibility:', error);
+    }
+  };
 
   return (
     <div className="profile-container pb-24 premium-gradient" style={{ minHeight: '100vh' }}>
@@ -37,7 +97,12 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
                 <div className="text-sm text-gray-500 mt-1">Allow team members to see your overall score.</div>
               </div>
               <label className="toggle-switch">
-                <input type="checkbox" checked={shareScore} onChange={(e) => setShareScore(e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={shareScore}
+                  disabled={isLoading}
+                  onChange={(e) => handleShareToggle(e.target.checked)}
+                />
                 <span className="toggle-slider"></span>
               </label>
             </div>
@@ -115,6 +180,62 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         </div>
       </div>
 
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '20px',
+          }}
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(16px)',
+              borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%',
+              border: '1px solid rgba(255,255,255,0.4)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.15)',
+              textAlign: 'center',
+              animation: 'slideUp 0.3s ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🤝</div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1a1a2e', marginBottom: '8px' }}>
+              Share with Team?
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.6, marginBottom: '24px' }}>
+              Your current longevity score will be visible to your team members.
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => setShowConfirmModal(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px',
+                  border: '1px solid #ddd', background: '#f5f5f5',
+                  fontSize: '14px', fontWeight: 600, cursor: 'pointer', color: '#555',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmShareChange(true)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px',
+                  border: 'none', background: 'linear-gradient(135deg, #11a164, #0d8f58)',
+                  color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(17,161,100,0.3)',
+                }}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <footer className="bottom-nav glass-card" style={{ borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
         <button className="nav-icon" onClick={() => onNavigate('home')}>
           <span className="nav-emoji">🏠</span>
@@ -140,4 +261,3 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
     </div>
   );
 };
-

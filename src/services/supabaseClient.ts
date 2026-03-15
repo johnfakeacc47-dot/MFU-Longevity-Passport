@@ -76,7 +76,7 @@ export const getLeaderboard = async () => {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, name, total_points, avatar_url, role')
+    .select('id, name, total_points, avatar_url, role, is_score_public')
     .order('total_points', { ascending: false });
   
   if (error) {
@@ -150,7 +150,7 @@ export const getMyTeamLeaderboard = async () => {
   // 2. Fetch profiles for all member IDs
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('id, name, total_points, avatar_url, role')
+    .select('id, name, total_points, avatar_url, role, is_score_public')
     .in('id', memberIds)
     .order('total_points', { ascending: false });
 
@@ -484,6 +484,26 @@ export const stopFastingTimer = async () => {
 
   if (error) {
     console.error('Error stopping fasting timer in Supabase:', error);
+    throw error;
+  }
+  return data;
+};
+
+// --- Score Visibility ---
+export const updateScoreVisibility = async (isPublic: boolean) => {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ is_score_public: isPublic })
+    .eq('id', user.id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating score visibility:', error);
     throw error;
   }
   return data;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getLeaderboard, getChallengeStatus, seedDatabase, isSupabaseConfigured, inviteTeamMemberByEmail, getMyTeamLeaderboard } from '../services/supabaseClient';
+import { getLeaderboard, getChallengeStatus, isSupabaseConfigured, inviteTeamMemberByEmail, getMyTeamLeaderboard, getCurrentUserProfile } from '../services/supabaseClient';
 
 type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' | 'edit-profile'
 
@@ -11,11 +11,10 @@ interface TeamProps {
 
 export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const [activeLeaderboardTab, setActiveLeaderboardTab] = useState<'myTeam' | 'allTeams'>('myTeam');
-  const [isConsentGiven, setIsConsentGiven] = useState(false);
+  const [isScorePublic, setIsScorePublic] = useState(false);
   const { t } = useLanguage();
 
   const currentDayIndex = new Date().getDay(); // 0 (Sun) to 6 (Sat)
-  // Convert JS day (Sun=0) to our weekDays array (Mon=0)
   const adjustedCurrentDayIndex = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
   const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
@@ -31,27 +30,41 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
     { day: 'Sat', completed: false },
     { day: 'Sun', completed: false },
   ]);
-  const [isSeeding, setIsSeeding] = useState(false);
+
+  const CHALLENGE_GOAL = 500;
+  const teamTotalPoints = myTeamData.reduce((sum, member) => sum + (member.rawPoints || 0), 0);
+  const progressPercent = Math.min((teamTotalPoints / CHALLENGE_GOAL) * 100, 100);
+  const isChallengeCompleted = teamTotalPoints >= CHALLENGE_GOAL;
 
   const fetchData = async () => {
     if (isSupabaseConfigured()) {
       try {
+        // Get current user's sharing preference
+        const profile = await getCurrentUserProfile();
+        if (profile) {
+          setIsScorePublic(profile.is_score_public ?? false);
+        }
+
         const leaderboard = await getLeaderboard();
         setAllTeamsData(leaderboard.map((m: any) => ({
           id: m.id,
           name: m.name,
-          points: m.total_points || 0,
+          points: m.is_score_public ? (m.total_points || 0) : null,
+          rawPoints: m.total_points || 0,
           avatar: m.avatar_url,
-          rank: m.role || 'Member'
+          rank: m.role || 'Member',
+          isPublic: m.is_score_public ?? false,
         })));
 
         const myTeam = await getMyTeamLeaderboard();
         setMyTeamData(myTeam.map((m: any) => ({
           id: m.id,
           name: m.name,
-          points: m.total_points || 0,
+          points: m.is_score_public ? (m.total_points || 0) : null,
+          rawPoints: m.total_points || 0,
           avatar: m.avatar_url,
-          rank: m.role || 'Member'
+          rank: m.role || 'Member',
+          isPublic: m.is_score_public ?? false,
         })));
 
         const challenges = await getChallengeStatus();
@@ -72,24 +85,6 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
     fetchData();
   }, []);
 
-  const handleSeed = async () => {
-    if (confirm('This will seed the database with mock users and scores. Continue?')) {
-      try {
-        setIsSeeding(true);
-        const result = await seedDatabase();
-        if (result && result.success) {
-          alert('Data seeded successfully! Refreshing view...');
-          await fetchData();
-        }
-      } catch (error) {
-        console.error('Seeding failed:', error);
-        alert('Seeding failed. Please check your Supabase connection and SQL schema.');
-      } finally {
-        setIsSeeding(false);
-      }
-    }
-  };
-
   const handleInvite = async () => {
     const email = prompt("Enter member email to invite:");
     if (email) {
@@ -99,19 +94,14 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       
       if (res.success) {
         alert(`Invitation successful. They have been added to your team.`);
-        fetchData(); // Refresh UI to show new member
+        fetchData();
       } else {
         alert(`Error: ${res.error}`);
       }
     }
   };
 
-  const teamScore = myTeamData.reduce((sum, member) => sum + (member.points || 0), 0);
   const displayData = activeLeaderboardTab === 'myTeam' ? myTeamData : allTeamsData;
-
-  const handleToggleConsent = () => {
-    setIsConsentGiven(!isConsentGiven);
-  };
 
   return (
     <div className="team-container">
@@ -126,13 +116,6 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
           <div className="members-count">{myTeamData.length} {t('team.members')}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
             <div style={{ fontSize: '12px', color: '#666' }}>{todayDate}</div>
-            <button 
-              onClick={handleSeed} 
-              disabled={isSeeding}
-              style={{ fontSize: '10px', background: '#f0f0f0', border: '1px solid #ddd', borderRadius: '4px', padding: '2px 6px', cursor: 'pointer' }}
-            >
-              {isSeeding ? 'Seeding...' : 'Seed Everything ⚡'}
-            </button>
           </div>
         </div>
 
@@ -140,7 +123,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
           <div className="score-header">
             <div className="score-info">
               <div className="score-label">{t('team.teamScore')}</div>
-              <div className="score-value">{teamScore.toLocaleString()}</div>
+              <div className="score-value">{teamTotalPoints.toLocaleString()}</div>
             </div>
             <button className="invite-btn" onClick={handleInvite} disabled={isInviting}>
               <span className="plus-icon">+</span>
@@ -153,13 +136,23 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
         </div>
 
         <div className="challenge-card glass-card">
-          <h3 className="challenge-title">{t('team.challengeTitle')}</h3>
+          <h3 className="challenge-title">
+            {isChallengeCompleted ? 'Challenge Completed! 🎉' : t('team.challengeTitle')}
+          </h3>
           <p className="challenge-description">
-            {t('team.challengeDesc')}
+            {isChallengeCompleted 
+              ? 'Amazing work! Your team reached the 500 point goal. Keep up the longevity habits!' 
+              : `Team has earned ${teamTotalPoints} / ${CHALLENGE_GOAL} points this week.`}
           </p>
           <p className="challenge-join">{t('team.joinChallenge')}</p>
           <div className="progress-bar">
-            <div className="progress-fill" style={{ width: '57%' }}></div>
+            <div 
+              className="progress-fill" 
+              style={{ 
+                width: `${progressPercent}%`,
+                transition: 'width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
+              }}
+            ></div>
           </div>
           <div className="week-days">
             {weekDays.map((day, index) => (
@@ -178,63 +171,52 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
         <div className="leaderboard-section glass-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h3 className="leaderboard-title" style={{ margin: 0 }}>{t('team.leaderboard')}</h3>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#666', cursor: 'pointer' }}>
-              <input type="checkbox" checked={isConsentGiven} onChange={handleToggleConsent} />
-              Share my score
-            </label>
+            {!isScorePublic && (
+              <span style={{ fontSize: '11px', color: '#999', fontStyle: 'italic' }}>
+                🔒 Your score is private
+              </span>
+            )}
           </div>
 
-          {!isConsentGiven ? (
-            <div style={{ padding: '20px', textAlign: 'center', background: '#f9f9f9', borderRadius: '12px', border: '1px dashed #ccc' }}>
-              <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                You must give consent to share your longevity score with the team to view the leaderboard.
-              </p>
-              <button 
-                onClick={handleToggleConsent}
-                style={{ background: '#764ba2', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '14px' }}
-              >
-                Allow Sharing
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="leaderboard-tabs">
-                <button 
-                  className={`leaderboard-tab ${activeLeaderboardTab === 'myTeam' ? 'active' : ''}`}
-                  onClick={() => setActiveLeaderboardTab('myTeam')}
-                >
-                  {t('team.myTeam')}
-                </button>
-                <button 
-                  className={`leaderboard-tab ${activeLeaderboardTab === 'allTeams' ? 'active' : ''}`}
-                  onClick={() => setActiveLeaderboardTab('allTeams')}
-                >
-                  {t('team.allTeams')}
-                </button>
-              </div>
-              <div className="leaderboard-list">
-                {displayData.length > 0 ? (
-                  displayData.map((member, index) => (
-                    <div key={member.id} className="leaderboard-item">
-                      <div className="member-rank">{index + 1}.</div>
-                      <div className="member-avatar">{member.avatar}</div>
-                      <div className="member-info">
-                        <div className="member-name-line">
-                          <span className="member-name">{member.name} {member.rank}</span>
-                          {member.tag && <span className="member-tag">{member.tag}</span>}
-                        </div>
-                        <div className="member-points">{member.points} pts</div>
-                      </div>
+          <div className="leaderboard-tabs">
+            <button 
+              className={`leaderboard-tab ${activeLeaderboardTab === 'myTeam' ? 'active' : ''}`}
+              onClick={() => setActiveLeaderboardTab('myTeam')}
+            >
+              {t('team.myTeam')}
+            </button>
+            <button 
+              className={`leaderboard-tab ${activeLeaderboardTab === 'allTeams' ? 'active' : ''}`}
+              onClick={() => setActiveLeaderboardTab('allTeams')}
+            >
+              {t('team.allTeams')}
+            </button>
+          </div>
+          <div className="leaderboard-list">
+            {displayData.length > 0 ? (
+              displayData.map((member, index) => (
+                <div key={member.id} className="leaderboard-item">
+                  <div className="member-rank">{index + 1}.</div>
+                  <div className="member-avatar">{member.avatar}</div>
+                  <div className="member-info">
+                    <div className="member-name-line">
+                      <span className="member-name">{member.name} {member.rank}</span>
+                      {member.tag && <span className="member-tag">{member.tag}</span>}
                     </div>
-                  ))
-                ) : (
-                  <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: '14px' }}>
-                    No members in this team yet. Invite your friends!
+                    <div className="member-points">
+                      {member.isPublic ? `${member.points} pts` : (
+                        <span style={{ color: '#aaa', fontStyle: 'italic', fontSize: '12px' }}>🔒 Private</span>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#888', fontStyle: 'italic', fontSize: '14px' }}>
+                No members in this team yet. Invite your friends!
               </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
