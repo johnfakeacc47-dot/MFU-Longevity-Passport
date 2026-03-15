@@ -508,3 +508,27 @@ export const updateScoreVisibility = async (isPublic: boolean) => {
   }
   return data;
 };
+
+// ── Account Deletion (Part 1: Data) ──────────────────────────
+export const deleteUserAccount = async () => {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Delete in order to respect potential foreign-key constraints
+  const tables = ['team_members', 'health_scores', 'profiles'] as const;
+
+  for (const table of tables) {
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .eq(table === 'team_members' ? 'user_id' : 'id', user.id);
+
+    if (error) {
+      console.error(`Error deleting from ${table}:`, error);
+      throw error;
+    }
+  }
+
+  return { success: true, userId: user.id };
+};

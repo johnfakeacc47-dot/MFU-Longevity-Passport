@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getCurrentUserProfile, updateScoreVisibility } from '../services/supabaseClient';
+import { getCurrentUserProfile, updateScoreVisibility, deleteUserAccount } from '../services/supabaseClient';
 
 type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
 
@@ -15,6 +15,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
   const [shareHabits, setShareHabits] = useState(false);
   const [anonymousAI, setAnonymousAI] = useState(true);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load the real setting from Supabase on mount
@@ -71,6 +74,45 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
       }
     } catch (error) {
       console.error('Error updating score visibility:', error);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteStep === 1) {
+      setDeleteStep(2);
+      return;
+    }
+    // Step 2 confirmed — proceed with deletion
+    setIsDeleting(true);
+    try {
+      // Part 1: Delete data from tables
+      await deleteUserAccount();
+
+      // Part 2: Call Edge Function to delete auth user
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const session = JSON.parse(localStorage.getItem('sb-' + new URL(supabaseUrl).hostname.split('.')[0] + '-auth-token') || '{}');
+      const accessToken = session?.access_token;
+
+      if (supabaseUrl && accessToken) {
+        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
+
+      // Clear local storage and redirect
+      localStorage.clear();
+      onNavigate('login');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteModal(false);
+      setDeleteStep(1);
     }
   };
 
@@ -174,6 +216,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
           <button 
             className="w-full py-3 rounded-xl bg-red-600 text-white text-sm font-bold shadow-lg shadow-red-200 active:scale-95 transition-transform mt-6"
             style={{ marginTop: '1.5rem' }}
+            onClick={() => { setDeleteStep(1); setShowDeleteModal(true); }}
           >
             Delete My Account & Data
           </button>
@@ -230,6 +273,66 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
                 }}
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Double-Confirmation Modal */}
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999, padding: '20px',
+          }}
+          onClick={() => { setShowDeleteModal(false); setDeleteStep(1); }}
+        >
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(16px)',
+              borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%',
+              border: '1px solid rgba(255,255,255,0.4)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+              textAlign: 'center',
+              animation: 'slideUp 0.3s ease-out',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '12px' }}>{deleteStep === 1 ? '⚠️' : '🚨'}</div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#dc2626', marginBottom: '8px' }}>
+              {deleteStep === 1 ? 'Delete Account?' : 'Are you absolutely sure?'}
+            </h3>
+            <p style={{ fontSize: '14px', color: '#666', lineHeight: 1.6, marginBottom: '24px' }}>
+              {deleteStep === 1
+                ? 'This will permanently delete your account and all longevity data.'
+                : 'This action is permanent and all your longevity data will be lost. This cannot be undone.'}
+            </p>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteStep(1); }}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px',
+                  border: '1px solid #ddd', background: '#f5f5f5',
+                  fontSize: '14px', fontWeight: 600, cursor: 'pointer', color: '#555',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: '12px',
+                  border: 'none', background: deleteStep === 1 ? '#ef4444' : '#dc2626',
+                  color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+                  opacity: isDeleting ? 0.6 : 1,
+                }}
+              >
+                {isDeleting ? 'Deleting...' : (deleteStep === 1 ? 'Yes, Delete' : 'Permanently Delete')}
               </button>
             </div>
           </div>
