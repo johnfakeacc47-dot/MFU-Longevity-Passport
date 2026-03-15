@@ -167,9 +167,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           <div className="profile-avatar">
             <div className="avatar-circle">P</div>
           </div>
-          <h2 className="profile-name">{profileData.fullName || 'Pungmoo eiei'}</h2>
+          <h2 className="profile-name">{profileData.fullName || 'New User'}</h2>
           <p className="profile-email">
-            {t('profile.email')} {profileData.email || 'jeungmoo88319A0372@asmsiam.mfu.ac.th'}
+            {t('profile.email')} {profileData.email || 'Not set'}
           </p>
         </div>
 
