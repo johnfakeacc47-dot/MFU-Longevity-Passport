@@ -158,7 +158,30 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </form>
 
           <div className="login-footer" style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-            <p className="forgot-password" style={{ margin: 0 }}>{t('login.forgotPassword')}</p>
+            <div className="social-login-separator">OR</div>
+            
+            <button 
+              type="button" 
+              className="google-btn"
+              onClick={async () => {
+                try {
+                  const { error } = await supabase!.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                      redirectTo: window.location.origin
+                    }
+                  });
+                  if (error) setError(error.message);
+                } catch (err: any) {
+                  setError(err.message || 'An error occurred during Google login');
+                }
+              }}
+            >
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+              Continue with Google
+            </button>
+
+            <p className="forgot-password" style={{ margin: '10px 0 0' }}>{t('login.forgotPassword')}</p>
             
             <p style={{ margin: 0, fontSize: '14px', color: '#666' }}>
               {isSignUp ? "Already have an account? " : "Don't have an account? "}

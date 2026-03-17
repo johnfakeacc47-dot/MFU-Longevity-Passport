@@ -15,7 +15,7 @@ import { SetGoals } from './pages/SetGoals'
 import { AboutTracker } from './pages/AboutTracker'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { calculateLongevityScore } from './utils/longevityScore'
-import { syncDailyScoreToSupabase } from './services/supabaseClient'
+import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 
 const FoodRecognition = lazy(() => import('./components/FoodRecognition').then(module => ({ default: module.FoodRecognition })))
@@ -79,6 +79,22 @@ function App() {
       }
     }
 
+    // Listen for auth state changes (crucial for OAuth redirects)
+    const { data: { subscription } } = supabase!.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        localStorage.setItem('authToken', session.access_token);
+        localStorage.setItem('userEmail', session.user.email || '');
+        localStorage.setItem('userId', session.user.id);
+        
+        // If we are on the login page, move to home after session is established
+        if (currentPage === 'login') {
+          handleLoginSuccess();
+        }
+      } else if (event === 'SIGNED_OUT') {
+        handleLogout();
+      }
+    });
+
     // Auto-sync calculated longevity score to Supabase when offline logs change
     const handleHealthUpdate = async () => {
       try {
@@ -93,6 +109,7 @@ function App() {
 
     return () => {
       window.removeEventListener('healthDataUpdated', handleHealthUpdate);
+      subscription.unsubscribe();
     };
   }, []);
 
