@@ -28,7 +28,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: str
     email: '',
     mfuId: '',
     name: '',
-    role: 'student' as const,
+    role: 'student' as 'student' | 'staff' | 'admin',
     faculty: '',
     department: '',
   });
