@@ -1,23 +1,62 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Create a single supabase client for interacting with your database
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+// Use globalThis to prevent multiple instances during HMR which causes GoTrueClient warnings
+declare global {
+   
+  var __supabaseClient: SupabaseClient | undefined;
+  var __adminSupabaseClient: SupabaseClient | undefined;
+   
+}
 
-// Create an admin client for protected operations like user creation
+export const supabase = (() => {
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+  if (!globalThis.__supabaseClient) {
+    globalThis.__supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+  return globalThis.__supabaseClient;
+})();
+
 const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-export const adminSupabase = supabaseUrl && supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey)
-  : null;
+export const adminSupabase = (() => {
+  if (!supabaseUrl || !supabaseServiceRoleKey) return null;
+  if (!globalThis.__adminSupabaseClient) {
+    globalThis.__adminSupabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+  }
+  return globalThis.__adminSupabaseClient;
+})();
 
 // Helper to check if Supabase is configured
 export const isSupabaseConfigured = () => {
     return !!supabase;
 };
+
+interface DatabaseProfile {
+  name: string;
+  email: string;
+  role: string;
+  mfu_id: string;
+  faculty?: string;
+  department?: string;
+  total_points?: number;
+  longevity_score?: number;
+  birth_date?: string | null;
+  gender?: string;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  phone?: string;
+}
+
+interface ProfileUpdate {
+  fullName: string;
+  birthDate?: string;
+  gender?: string;
+  heightCm?: string | number;
+  weightKg?: string | number;
+  phone?: string;
+}
 
 // --- Seed Data ---
 export const seedDatabase = async () => {
@@ -144,7 +183,7 @@ export const getMyTeamLeaderboard = async () => {
   }
 
   // Include the current user in their own team leaderboard
-  const memberIds = teamMembers.map(tm => tm.member_id);
+  const memberIds = teamMembers.map((tm: { member_id: string }) => tm.member_id);
   memberIds.push(user.id);
 
   // 2. Fetch profiles for all member IDs
@@ -174,10 +213,10 @@ export const getTodayHealthScore = async () => {
     .select('*')
     .eq('user_id', user.id)
     .eq('date', today)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching health score:', error);
+    console.error('Error fetching health score:', error);
     return null;
   }
   return data;
@@ -208,7 +247,14 @@ export const getAllProfiles = async () => {
   return data;
 };
 
-export const createProfile = async (profile: any) => {
+export const createProfile = async (profile: {
+  name: string;
+  email: string;
+  role: string;
+  faculty?: string;
+  department?: string;
+  mfuId: string;
+}) => {
     if (!supabase) return null;
     const { data, error } = await supabase
         .from('profiles')
@@ -233,7 +279,14 @@ export const createProfile = async (profile: any) => {
 };
 
 // Admin function to fully establish a user (Auth + Profile data)
-export const adminCreateUser = async (profileData: any) => {
+export const adminCreateUser = async (profileData: {
+  name: string;
+  email: string;
+  role: string;
+  faculty?: string;
+  department?: string;
+  mfuId: string;
+}) => {
     if (!adminSupabase || !supabase) {
         throw new Error('Admin Supabase client is not configured. Check VITE_SUPABASE_SERVICE_ROLE_KEY.');
     }
@@ -282,7 +335,7 @@ export const adminCreateUser = async (profileData: any) => {
     return profileRecord;
 };
 
-export const updateProfile = async (id: string, updates: any) => {
+export const updateProfile = async (id: string, updates: Partial<DatabaseProfile> & { mfuId?: string }) => {
     if (!supabase) return null;
     const { data, error } = await supabase
         .from('profiles')
@@ -314,7 +367,7 @@ export const getCurrentUserProfile = async () => {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error fetching current user profile:', error);
@@ -323,7 +376,7 @@ export const getCurrentUserProfile = async () => {
   return data;
 };
 
-export const updateCurrentUserProfile = async (updates: any) => {
+export const updateCurrentUserProfile = async (updates: ProfileUpdate) => {
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -338,10 +391,6 @@ export const updateCurrentUserProfile = async (updates: any) => {
       gender: updates.gender,
       height_cm: updates.heightCm ? Number(updates.heightCm) : null,
       weight_kg: updates.weightKg ? Number(updates.weightKg) : null,
-      address: updates.address,
-      country: updates.country,
-      id_type: updates.idType,
-      id_number: updates.idNumber,
       phone: updates.phone,
     }, { onConflict: 'id' })
     .select()
@@ -435,7 +484,7 @@ export const syncDailyScoreToSupabase = async (score: {
     .eq('user_id', user.id);
 
   if (allScores) {
-    const lifetimePoints = allScores.reduce((sum, record) => sum + (record.total || 0), 0);
+    const lifetimePoints = (allScores as { total: number | null }[]).reduce((sum, record) => sum + (record.total || 0), 0);
     await supabase
       .from('profiles')
       .update({ total_points: lifetimePoints })

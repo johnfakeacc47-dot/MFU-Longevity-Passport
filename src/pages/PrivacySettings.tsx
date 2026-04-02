@@ -206,7 +206,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <br/><br/>
             We use industry-standard encryption to protect your data. Your specific health logs are <strong>never</strong> shared with third parties without your explicit consent.
           </p>
-          <button className="mt-4 text-xs font-bold text-purple-700 underline">Read Full Privacy Policy</button>
+          <button className="mt-4 text-xs font-bold text-blue-700 underline">Read Full Privacy Policy</button>
         </div>
 
         {/* Danger Zone */}

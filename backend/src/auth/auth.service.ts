@@ -7,7 +7,7 @@ export interface OidcProfile {
   id?: string;
   displayName?: string;
   emails?: Array<{ value: string }>;
-  _json?: Record<string, any>;
+  _json?: Record<string, unknown>;
   provider?: string;
 }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { isSupabaseConfigured, getCurrentUserProfile, updateCurrentUserProfile } from '../services/supabaseClient';
+import { calculateBMI, getBMICategory } from '../utils/healthCalculations';
 
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -18,10 +19,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
   const [gender, setGender] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [weightKg, setWeightKg] = useState('');
-  const [address, setAddress] = useState('');
-  const [country, setCountry] = useState('Thailand');
-  const [idType, setIdType] = useState<'passport' | 'national'>('national');
-  const [idNumber, setIdNumber] = useState('');
   const [phone, setPhone] = useState('');
 
   const [loading, setLoading] = useState(false);
@@ -37,10 +34,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
           setGender(dbProfile.gender || '');
           setHeightCm(dbProfile.height_cm ? String(dbProfile.height_cm) : '');
           setWeightKg(dbProfile.weight_kg ? String(dbProfile.weight_kg) : '');
-          setAddress(dbProfile.address || '');
-          setCountry(dbProfile.country || 'Thailand');
-          setIdType(dbProfile.id_type as 'national' | 'passport' || 'national');
-          setIdNumber(dbProfile.id_number || '');
           setPhone(dbProfile.phone || '');
           
           // Sync to cache
@@ -51,10 +44,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
             gender: dbProfile.gender,
             heightCm: dbProfile.height_cm,
             weightKg: dbProfile.weight_kg,
-            address: dbProfile.address,
-            country: dbProfile.country,
-            idType: dbProfile.id_type,
-            idNumber: dbProfile.id_number,
             phone: dbProfile.phone
           }));
           return;
@@ -68,10 +57,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
         setGender('');
         setHeightCm('');
         setWeightKg('');
-        setAddress('');
-        setCountry('Thailand');
-        setIdType('national');
-        setIdNumber('');
         setPhone('');
         return; // DO NOT fallback to local storage
       }
@@ -86,10 +71,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
         setGender(data.gender ?? '');
         setHeightCm(data.heightCm ?? '');
         setWeightKg(data.weightKg ?? '');
-        setAddress(data.address ?? '');
-        setCountry(data.country ?? 'Thailand');
-        setIdType(data.idType ?? 'national');
-        setIdNumber(data.idNumber ?? '');
         setPhone(data.phone ?? '');
       }
     };
@@ -105,10 +86,6 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
       gender,
       heightCm,
       weightKg,
-      address,
-      country,
-      idType,
-      idNumber,
       phone,
     };
     try {
@@ -127,7 +104,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
       onNavigate('profile');
     } catch (error) {
       console.error('Failed to save profile:', error);
-      alert('Failed to save profile. Please try again.');
+      alert(t('editProfile.saveError'));
     } finally {
       setLoading(false);
     }
@@ -214,6 +191,29 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
           </div>
         </div>
 
+        {/* BMI Display */}
+        {(heightCm && weightKg) && (
+          <div className="glass-card mb-6 p-4 rounded-2xl bg-white/30 border border-white/50">
+            <div className="flex justify-between items-center">
+              <div>
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('editProfile.bmiLabel')}</span>
+                <div className="text-2xl font-black text-indigo-900">
+                  {calculateBMI(Number(weightKg), Number(heightCm))}
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('editProfile.categoryLabel')}</span>
+                <div className={`text-sm font-bold ${
+                  t(getBMICategory(calculateBMI(Number(weightKg), Number(heightCm))!)) === t('bmi.normal') 
+                    ? 'text-green-600' : 'text-orange-600'
+                }`}>
+                  {t(getBMICategory(calculateBMI(Number(weightKg), Number(heightCm))!))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="form-section">
           <label className="form-label">{t('editProfile.phone')}</label>
           <input
@@ -225,54 +225,8 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
           />
         </div>
 
-        <div className="form-section">
-          <label className="form-label">{t('editProfile.address')}</label>
-          <textarea
-            className="form-textarea"
-            placeholder={t('editProfile.addressPlaceholder')}
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-        </div>
-
-        <div className="form-section">
-          <label className="form-label">{t('editProfile.country')}</label>
-          <input
-            className="form-input"
-            type="text"
-            placeholder={t('editProfile.countryPlaceholder')}
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-          />
-        </div>
-
-        <div className="form-section">
-          <label className="form-label">{t('editProfile.idType')}</label>
-          <select
-            className="form-input"
-            value={idType}
-            onChange={(e) => setIdType(e.target.value as 'passport' | 'national')}
-          >
-            <option value="national">{t('editProfile.nationalId')}</option>
-            <option value="passport">{t('editProfile.passport')}</option>
-          </select>
-        </div>
-
-        <div className="form-section">
-          <label className="form-label">
-            {idType === 'passport' ? t('editProfile.passportNumber') : t('editProfile.nationalIdNumber')}
-          </label>
-          <input
-            className="form-input"
-            type="text"
-            placeholder={idType === 'passport' ? t('editProfile.passportPlaceholder') : t('editProfile.nationalIdPlaceholder')}
-            value={idNumber}
-            onChange={(e) => setIdNumber(e.target.value)}
-          />
-        </div>
-
         <button className="primary-save-btn" onClick={handleSave} disabled={loading}>
-          {loading ? 'Saving...' : t('editProfile.save')}
+          {loading ? t('editProfile.saving') : t('editProfile.save')}
         </button>
       </div>
 

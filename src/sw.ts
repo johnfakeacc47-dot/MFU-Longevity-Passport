@@ -33,7 +33,7 @@ function startFastingAlarm(endTimestamp: number, goalHours: number) {
         icon: '/pwa-192x192.png',
         badge: '/pwa-192x192.png',
         tag: 'fasting-goal',
-        // @ts-ignore – actions & requireInteraction are valid on supported browsers
+        // @ts-expect-error - actions & requireInteraction are valid on supported browsers
         actions: [{ action: 'enter-meal', title: '🍽️ Enter Meal' }],
         requireInteraction: true,
         vibrate: [200, 100, 200, 100, 400],
@@ -61,7 +61,7 @@ self.addEventListener('push', (event) => {
       body: data.body,
       icon: '/pwa-192x192.png',
       badge: '/pwa-192x192.png',
-      // @ts-ignore
+      // @ts-expect-error - vibrate is supported in browser implementations
       vibrate: [200, 100, 200]
     })
   );

@@ -146,9 +146,13 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 className="password-toggle"
                 onClick={() => setShowPassword(!showPassword)}
                 tabIndex={-1}
-                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#999' }}
+                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex', alignItems: 'center' }}
               >
-                {showPassword ? "👁️‍🗨️" : "👁️"}
+                {showPassword ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                )}
               </button>
             </div>
 
@@ -172,8 +176,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     }
                   });
                   if (error) setError(error.message);
-                } catch (err: any) {
-                  setError(err.message || 'An error occurred during Google login');
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'An error occurred during Google login');
                 }
               }}
             >

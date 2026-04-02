@@ -16,7 +16,9 @@ import { AboutTracker } from './pages/AboutTracker'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
+import { useDailyReset } from './hooks/useDailyReset';
 
 const FoodRecognition = lazy(() => import('./components/FoodRecognition').then(module => ({ default: module.FoodRecognition })))
 
@@ -38,7 +40,7 @@ class FoodRecognitionErrorBoundary extends React.Component<
       return (
         <div className="loading-overlay">
           <div>
-            <div>Food Recognition failed to load.</div>
+            <div id="food-error-msg">Food Recognition failed to load.</div>
             <div style={{ marginTop: 8, fontSize: 14 }}>{this.state.message}</div>
             <button
               style={{ marginTop: 16, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
@@ -67,6 +69,9 @@ function App() {
   const [showFoodRecognition, setShowFoodRecognition] = useState(false)
   const [showPwaPrompt, setShowPwaPrompt] = useState(false)
 
+  // Initialize the daily reset hook
+  useDailyReset();
+
   // Restore session on page refresh
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -80,7 +85,7 @@ function App() {
     }
 
     // Listen for auth state changes (crucial for OAuth redirects)
-    const { data: { subscription } } = supabase!.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase!.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (session) {
         localStorage.setItem('authToken', session.access_token);
         localStorage.setItem('userEmail', session.user.email || '');
@@ -111,35 +116,36 @@ function App() {
       window.removeEventListener('healthDataUpdated', handleHealthUpdate);
       subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleLoginSuccess = () => {
+  function handleLoginSuccess() {
     setCurrentPage('home');
     // Trigger install prompt once after every successful login
     setShowPwaPrompt(false);
     setTimeout(() => setShowPwaPrompt(true), 50); // brief reset so prop re-fires
-  };
+  }
 
-  const handleLogout = () => {
+  function handleLogout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentPage');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userId');
     localStorage.removeItem('profileData');
     setCurrentPage('login');
-  };
+  }
 
-  const handleNavigate = (page: PageType) => {
+  function handleNavigate(page: PageType) {
     localStorage.setItem('currentPage', page);
     setCurrentPage(page);
-  };
+  }
 
   const renderPage = () => {
     switch (currentPage) {
       case 'login':
         return <Login onLoginSuccess={handleLoginSuccess} />
       case 'home':
-        return <Home onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} onLogout={handleLogout} />
+        return <Home onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
       case 'fasting':
         return <Fasting onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
       case 'dashboard':
@@ -163,7 +169,7 @@ function App() {
       case 'user-management':
         return (
           <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-            <UserManagement onNavigate={handleNavigate} />
+            <UserManagement onNavigate={(page) => handleNavigate(page as PageType)} />
           </div>
         )
       default:

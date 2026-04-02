@@ -15,7 +15,7 @@ interface PWAInstallPromptProps {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches ||
-  (window.navigator as any).standalone === true;
+  (window.navigator as unknown as Record<string, unknown>).standalone === true;
 
 const getDeviceType = (): 'ios' | 'android' | 'desktop' => {
   const ua = window.navigator.userAgent.toLowerCase();
@@ -30,8 +30,14 @@ const STORAGE_KEY = 'pwaPromptDismissed';
 export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLogin = false }) => {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [canPrompt, setCanPrompt] = useState(false);
   const [deviceType] = useState(getDeviceType);
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+
+  function animateClose() {
+    setClosing(true);
+    setTimeout(() => { setVisible(false); setClosing(false); }, 400);
+  }
 
   // Intercept Chrome's native beforeinstallprompt event
   useEffect(() => {
@@ -39,6 +45,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
     const handler = (e: Event) => {
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
+      setCanPrompt(true);
     };
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('appinstalled', () => {
@@ -58,17 +65,15 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
     return () => clearTimeout(timer);
   }, [triggerOnLogin]);
 
-  const animateClose = () => {
-    setClosing(true);
-    setTimeout(() => { setVisible(false); setClosing(false); }, 400);
-  };
-
   const handleDone = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
     animateClose();
   };
 
-  const handleLater = () => animateClose();
+  const handleLater = () => {
+    localStorage.setItem(STORAGE_KEY, 'true');
+    animateClose();
+  };
 
   const handleInstallNow = async () => {
     if (deferredPromptRef.current) {
@@ -82,7 +87,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
 
   if (!visible) return null;
 
-  const canNativeInstall = deviceType !== 'ios' && deferredPromptRef.current !== null;
+  const canNativeInstall = deviceType !== 'ios' && canPrompt;
 
   return (
     <>

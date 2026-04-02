@@ -127,13 +127,15 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
     return () => {
       navigator.serviceWorker?.removeEventListener('message', handleSWMessage);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
   const playNotificationSound = () => {
     // A simple polite bell sound using an oscillator beep as fallback:
     // We'll use a standard browser beep fallback since a real base64 WAV is too long. Let's just create an oscillator beep:
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -155,7 +157,7 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
             body: message, 
             icon: '/pwa-192x192.png',
             badge: '/pwa-192x192.png',
-            // @ts-ignore
+            // @ts-expect-error - vibrate is supported in browser implementations
             vibrate: [200, 100, 200, 100, 200],
             ...options
           });
@@ -168,7 +170,7 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
     }
   };
 
-  const finishFasting = async (hoursFasted: number) => {
+  async function finishFasting(hoursFasted: number) {
     // Duplicate prevention: only fire goal notification once per session
     if (goalNotifiedRef.current) return;
     goalNotifiedRef.current = true;
@@ -201,13 +203,13 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       `Congratulations! You've completed your ${hoursFasted} hour fast. Time to log your first meal!`,
       {
         tag: 'fasting-goal',
-        // @ts-ignore – actions & requireInteraction are valid on supported browsers
+        // @ts-expect-error - actions & requireInteraction are valid on supported browsers
         actions: [{ action: 'enter-meal', title: '🍽️ Enter Meal' }],
         requireInteraction: true,
       }
     );
     window.dispatchEvent(new Event('healthDataUpdated'));
-  };
+  }
 
   useEffect(() => {
     let interval: number | undefined;
@@ -227,6 +229,7 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       }, 1000);
     }
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRunning, targetSeconds, startTime, selectedHours]);
 
   const startFasting = async (hours: number) => {
@@ -325,6 +328,8 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
     return formatTime24(startTime);
   };
 
+  const isGoalReached = elapsedSeconds >= targetSeconds && targetSeconds > 0;
+
   return (
     <div className="fasting-container">
       {/* ── In-app toast ─────────────────────────────────────── */}
@@ -342,6 +347,17 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
       </header>
 
       <div className="fasting-content page-content">
+        {/* Success Banner */}
+        {isGoalReached && (
+          <div className="mb-6 p-4 rounded-2xl bg-emerald-500 text-white shadow-lg animate-bounce flex items-center gap-3">
+            <span className="text-2xl">🏆</span>
+            <div>
+              <div className="font-black text-sm uppercase">Goal Reached!</div>
+              <div className="text-[10px] opacity-90">Successfully completed your {selectedHours}h fast.</div>
+            </div>
+          </div>
+        )}
+
         <div className="timer-circle-wrapper">
           <svg className="progress-ring" width="280" height="280">
             {/* Cyan→Emerald gradient for progress ring */}
@@ -384,9 +400,15 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
           </div>
         </div>
 
-        <div className="time-range">
-          <div className="time-start">{t('fasting.start')} {getStartTime()}</div>
-          <div className="time-end">{t('fasting.end')} {getEndTime()}</div>
+        <div className="time-range glass-card p-4 rounded-2xl flex justify-between bg-white/20 border border-white/40">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold text-gray-500 uppercase">Started At</span>
+            <span className="text-lg font-black text-gray-800">{getStartTime()}</span>
+          </div>
+          <div className="flex flex-col text-right">
+            <span className="text-[10px] font-bold text-gray-500 uppercase">Target Finish</span>
+            <span className="text-lg font-black text-emerald-600">{getEndTime()}</span>
+          </div>
         </div>
 
         <div className="preset-buttons">

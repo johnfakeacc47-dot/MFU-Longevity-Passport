@@ -3,7 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { calculateLongevityScore } from '../utils/longevityScore';
 import { healthApi, isApiConfigured } from '../services/healthApi';
-import { isSupabaseConfigured, getTodayHealthScore } from '../services/supabaseClient';
+import { isSupabaseConfigured, getTodayHealthScore, getCurrentUserProfile } from '../services/supabaseClient';
+import { Icon } from '../components/Icon';
+import { calculateBMI } from '../utils/healthCalculations';
 
 type PageType =
   | 'login'
@@ -19,23 +21,23 @@ type PageType =
 interface HomeProps {
   onNavigate: (page: PageType) => void;
   onOpenFoodRecognition: () => void;
-  onLogout: () => void;
 }
 
-export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, onLogout }) => {
+const tips = [
+  'home.tip1',
+  'home.tip2',
+  'home.tip3',
+  'home.tip4',
+  'home.tip5',
+  'home.tip6',
+  'home.tip7',
+];
+
+export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
   const [score, setScore] = useState(calculateLongevityScore());
+  const [profile, setProfile] = useState<{ weight_kg?: number; height_cm?: number; } | null>(null);
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
-
-  const tips = [
-    'home.tip1',
-    'home.tip2',
-    'home.tip3',
-    'home.tip4',
-    'home.tip5',
-    'home.tip6',
-    'home.tip7',
-  ];
 
   useEffect(() => {
     const fetchScore = async () => {
@@ -50,6 +52,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
             activity: dbScore.activity,
             total: dbScore.total
           });
+          
+          const dbProfile = await getCurrentUserProfile();
+          if (dbProfile) setProfile(dbProfile);
           return;
         }
       }
@@ -111,10 +116,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
         const fastingEnd = nutritionEnd + fastingAngle;
 
         return `conic-gradient(
-          #fbcf54 0deg ${sleepEnd}deg,
-          #6ae375 ${sleepEnd}deg ${nutritionEnd}deg,
-          #34c2d1 ${nutritionEnd}deg ${fastingEnd}deg,
-          #ef6f68 ${fastingEnd}deg 360deg
+          #0ea5e9 0deg ${sleepEnd}deg,
+          #10b981 ${sleepEnd}deg ${nutritionEnd}deg,
+          #06b6d4 ${nutritionEnd}deg ${fastingEnd}deg,
+          #f59e0b ${fastingEnd}deg 360deg
         )`;
       })()
     : 'conic-gradient(#e3e3e3 0deg 360deg)';
@@ -122,6 +127,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
   const todaySummary = {
     ifProtocol: '16:8',
     calories: 1850,
+    bmi: profile?.weight_kg && profile?.height_cm ? calculateBMI(profile.weight_kg, profile.height_cm) : null
   };
 
   return (
@@ -135,27 +141,24 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
                 {isSupabaseConfigured() ? (
                   <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                    SYNCED
+                    {t('home.synced')}
                   </span>
                 ) : (
                   <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    OFFLINE
+                    {t('home.offline')}
                   </span>
                 )}
               </div>
-              <h1>Longevity Passport</h1>
-              <p className="home-tagline">Your daily health insights in one place.</p>
+              <h1>{t('home.title')}</h1>
+              <p className="home-tagline">{t('home.tagline')}</p>
             </div>
           </div>
           <div className="home-hero-actions">
             <button className="hero-btn ghost" onClick={() => onNavigate('dashboard')}>
-              View Dashboard
+              {t('home.viewDashboard')}
             </button>
             <button className="hero-btn" onClick={() => onNavigate('profile')}>
-              My Profile
-            </button>
-            <button className="hero-btn ghost" onClick={onLogout} style={{ background: '#ff6b6b', color: 'white' }}>
-              Logout
+              {t('home.myProfile')}
             </button>
           </div>
         </header>
@@ -172,19 +175,19 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
 
             <div className="chart-legend">
               <div className="legend-item">
-                <span className="dot dot-yellow" />
+                <span className="dot" style={{ backgroundColor: '#0ea5e9' }} />
                 <span className="legend-text">{t('home.sleep')} {score.sleep}</span>
               </div>
               <div className="legend-item">
-                <span className="dot dot-green" />
+                <span className="dot" style={{ backgroundColor: '#10b981' }} />
                 <span className="legend-text">{t('home.nutrition')} {score.nutrition}</span>
               </div>
               <div className="legend-item">
-                <span className="dot dot-blue" />
+                <span className="dot" style={{ backgroundColor: '#06b6d4' }} />
                 <span className="legend-text">{t('home.fasting')} {score.fasting}</span>
               </div>
               <div className="legend-item">
-                <span className="dot dot-red" />
+                <span className="dot" style={{ backgroundColor: '#f59e0b' }} />
                 <span className="legend-text">{t('home.activity')} {score.activity}</span>
               </div>
             </div>
@@ -198,7 +201,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
             aria-label={t('home.foodRecognition')}
             onClick={onOpenFoodRecognition}
           >
-            <div className="action-icon">📷</div>
+            <div className="action-icon">
+              <Icon name="nutrition" size={32} color="black" />
+            </div>
             <div className="action-title">{t('home.foodRecognition')}</div>
             <div className="action-hint">{t('home.food')}</div>
           </button>
@@ -208,7 +213,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
             aria-label={t('home.fastingTimer')}
             onClick={() => onNavigate('fasting')}
           >
-            <div className="action-icon">⏰</div>
+            <div className="action-icon">
+              <Icon name="fasting" size={32} color="black" />
+            </div>
             <div className="action-title">{t('home.fastingTimer')}</div>
             <div className="action-hint">{t('home.fasting')}</div>
           </button>
@@ -218,20 +225,24 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
         <section className="action-row secondary-actions">
           <button
             className="action-card activity-card"
-            aria-label="Activity Tracking"
+            aria-label={t('activity.title')}
             onClick={() => onNavigate('activity')}
           >
-            <div className="action-icon">💪</div>
+            <div className="action-icon">
+              <Icon name="activity" size={32} color="black" />
+            </div>
             <div className="action-title">{t('activity.title')}</div>
             <div className="action-hint">{t('home.exercise')}</div>
           </button>
 
           <button
             className="action-card sleep-card"
-            aria-label="Sleep Tracking"
+            aria-label={t('sleep.title')}
             onClick={() => onNavigate('sleep')}
           >
-            <div className="action-icon">😴</div>
+            <div className="action-icon">
+              <Icon name="sleep" size={32} color="black" />
+            </div>
             <div className="action-title">{t('sleep.title')}</div>
             <div className="action-hint">{t('home.sleep')}</div>
           </button>
@@ -239,7 +250,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
 
         {/* ===== Daily Tip ===== */}
         <section className="tip-card">
-          <div className="tip-icon">💡</div>
+          <div className="tip-icon">
+            <Icon name="health" size={24} color="#0ea5e9" />
+          </div>
           <div className="tip-text">
             <div className="tip-title">{t('home.dailyTip')}</div>
             <div className="tip-body">
@@ -253,8 +266,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           <div className="summary-header">{t('home.todaySummary')}</div>
           <div className="summary-grid">
             <div className="summary-box">
-              <div className="summary-value">{todaySummary.ifProtocol}</div>
-              <div className="summary-label">{t('home.ifToday')}</div>
+              <div className="summary-value">
+                {todaySummary.bmi || '--'}
+              </div>
+              <div className="summary-label">{t('home.bmi')}</div>
             </div>
             <div className="summary-box">
               <div className="summary-value">
@@ -272,7 +287,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           className="nav-icon active"
           onClick={() => onNavigate('home')}
         >
-          <span className="nav-emoji">🏠</span>
+          <Icon name="home" size={24} color="#0ea5e9" />
           <span className="nav-label">{t('nav.home')}</span>
         </button>
 
@@ -280,7 +295,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           className="nav-icon"
           onClick={onOpenFoodRecognition}
         >
-          <span className="nav-emoji">🍽️</span>
+          <Icon name="nutrition" size={24} color="#718096" />
           <span className="nav-label">{t('nav.fasting')}</span>
         </button>
 
@@ -288,7 +303,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           className="nav-icon"
           onClick={() => onNavigate('dashboard')}
         >
-          <span className="nav-emoji">📊</span>
+          <Icon name="activity" size={24} color="#718096" />
           <span className="nav-label">{t('nav.dashboard')}</span>
         </button>
 
@@ -296,7 +311,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           className="nav-icon"
           onClick={() => onNavigate('team')}
         >
-          <span className="nav-emoji">👥</span>
+          <Icon name="team" size={24} color="#718096" />
           <span className="nav-label">{t('nav.team')}</span>
         </button>
 
@@ -304,7 +319,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
           className="nav-icon"
           onClick={() => onNavigate('profile')}
         >
-          <span className="nav-emoji">👤</span>
+          <Icon name="profile" size={24} color="#718096" />
           <span className="nav-label">{t('nav.profile')}</span>
         </button>
       </footer>

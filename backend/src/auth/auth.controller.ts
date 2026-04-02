@@ -1,6 +1,7 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
+import { User } from '../entities/user.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -14,7 +15,7 @@ export class AuthController {
 
   @Get('callback')
   @UseGuards(AuthGuard('oidc'))
-  async callback(@Req() req: { user: any }) {
+  async callback(@Req() req: { user: User }) {
     return this.authService.issueJwt(req.user);
   }
 

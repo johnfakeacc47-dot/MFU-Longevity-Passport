@@ -6,7 +6,7 @@ export class EncryptionTransformer implements ValueTransformer {
   // Use a 32-byte key for AES-256, in production this should be in .env
   private readonly key = process.env.ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex').slice(0, 32);
 
-  to(value: any): string | null {
+  to(value: unknown): string | null {
     if (value === null || value === undefined) {
       return value;
     }
@@ -23,7 +23,7 @@ export class EncryptionTransformer implements ValueTransformer {
     return `${iv.toString('hex')}:${authTag}:${encrypted}`;
   }
 
-  from(value: string | null): any {
+  from(value: string | null): unknown {
     if (!value) {
       return value;
     }

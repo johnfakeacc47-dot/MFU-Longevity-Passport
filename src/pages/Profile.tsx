@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { isSupabaseConfigured, getCurrentUserProfile } from '../services/supabaseClient';
+import { Icon } from '../components/Icon';
 
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -27,7 +28,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
 
   const requestNotificationPermission = async (callback: (granted: boolean) => void) => {
     if (!('Notification' in window)) {
-      alert('This browser does not support desktop notifications.');
+      alert(t('profile.notSupported'));
       callback(false);
       return;
     }
@@ -79,7 +80,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
       // If Supabase is active but no profile exists, it's a new user.
       const userEmail = localStorage.getItem('userEmail');
       setProfileData({
-        fullName: 'New User',
+        fullName: t('profile.newUser'),
         email: userEmail || undefined
       });
       setUserRole('student'); // Default role
@@ -96,7 +97,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           setUserRole(payload.role || 'student');
-        } catch (e) {
+        } catch {
           setUserRole('student');
         }
       }
@@ -104,6 +105,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfileData();
     
     // Listen for updates from EditProfile
@@ -134,9 +136,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
 
   const handleResetData = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      const confirmReset = window.confirm(
-        'Are you sure you want to reset all your health data? This will permanently clear your meals, sleep, activities, and fasting logs from this device.'
-      );
+      const confirmReset = window.confirm(t('profile.resetConfirm'));
       
       if (confirmReset) {
         localStorage.removeItem('meals');
@@ -145,7 +145,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         localStorage.removeItem('fastingState');
         localStorage.removeItem('aiFeedback');
         localStorage.removeItem('offlineQueue');
-        alert('All local data has been reset.');
+        alert(t('profile.resetSuccess'));
         onNavigate('home');
       } else {
         // Uncheck the toggle if they cancelled
@@ -157,7 +157,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
   return (
     <div className="profile-container">
       <header className="profile-top-header">
-        <button className="back-btn" onClick={() => onNavigate('home')}>←</button>
+        <button className="back-btn" onClick={() => onNavigate('home')}>
+          <Icon name="activity" size={20} className="rotate-180" />
+        </button>
         <h1 className="header-title">{t('profile.title')}</h1>
         <div className="header-spacer" style={{ width: 60 }} />
       </header>
@@ -167,9 +169,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           <div className="profile-avatar">
             <div className="avatar-circle">P</div>
           </div>
-          <h2 className="profile-name">{profileData.fullName || 'New User'}</h2>
+          <h2 className="profile-name">{profileData.fullName || t('profile.newUser')}</h2>
           <p className="profile-email">
-            {t('profile.email')} {profileData.email || 'Not set'}
+            {t('profile.email')} {profileData.email || t('profile.notSet')}
           </p>
         </div>
 
@@ -284,13 +286,13 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         <div className="settings-section">
           <div className="section-header">
             <span className="section-icon">🛠️</span>
-            <span className="section-title">Developer Tools</span>
+            <span className="section-title">{t('profile.developerTools')}</span>
           </div>
           <div className="settings-list">
             <div className="setting-item">
               <div className="setting-text">
-                <div className="setting-title" style={{ color: '#d32f2f' }}>Reset All Data</div>
-                <div className="setting-description">Permanently clear all local health logs</div>
+                <div className="setting-title" style={{ color: '#d32f2f' }}>{t('profile.resetData')}</div>
+                <div className="setting-description">{t('profile.resetDataDesc')}</div>
               </div>
               <label className="toggle-switch">
                 <input
@@ -335,23 +337,23 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
 
       <footer className="bottom-nav">
         <button className="nav-icon" onClick={() => onNavigate('home')}>
-          <span className="nav-emoji">🏠</span>
+          <Icon name="home" size={24} color="#718096" />
           <span className="nav-label">{t('nav.home')}</span>
         </button>
         <button className="nav-icon" onClick={onOpenFoodRecognition}>
-          <span className="nav-emoji">🍽️</span>
+          <Icon name="nutrition" size={24} color="#718096" />
           <span className="nav-label">{t('nav.fasting')}</span>
         </button>
         <button className="nav-icon" onClick={() => onNavigate('dashboard')}>
-          <span className="nav-emoji">📊</span>
+          <Icon name="activity" size={24} color="#718096" />
           <span className="nav-label">{t('nav.dashboard')}</span>
         </button>
         <button className="nav-icon" onClick={() => onNavigate('team')}>
-          <span className="nav-emoji">👥</span>
+          <Icon name="team" size={24} color="#718096" />
           <span className="nav-label">{t('nav.team')}</span>
         </button>
         <button className="nav-icon active" onClick={() => onNavigate('profile')}>
-          <span className="nav-emoji">👤</span>
+          <Icon name="profile" size={24} color="#0ea5e9" />
           <span className="nav-label">{t('nav.profile')}</span>
         </button>
       </footer>

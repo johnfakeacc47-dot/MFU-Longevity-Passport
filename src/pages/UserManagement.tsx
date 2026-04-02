@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, CreateUserPayload } from '../services/userApi';
 import { isSupabaseConfigured, getAllProfiles, updateProfile, deleteProfile, adminCreateUser, supabase } from '../services/supabaseClient';
 import { userApi } from '../services/userApi';
+import { Icon } from '../components/Icon';
 
 const MOCK_USERS: User[] = [
   { id: '1', name: 'John Doe', email: 'john@mfu.ac.th', mfuId: '643010001', role: 'student', createdAt: new Date().toISOString() },
@@ -9,7 +10,7 @@ const MOCK_USERS: User[] = [
   { id: '3', name: 'Admin User', email: 'admin@mfu.ac.th', mfuId: 'admin01', role: 'admin', createdAt: new Date().toISOString() },
 ];
 
-export default function UserManagement({ onNavigate }: { onNavigate?: (page: any) => void }) {
+export default function UserManagement({ onNavigate }: { onNavigate?: (page: string) => void }) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -109,12 +110,12 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
         const profiles = await getAllProfiles();
         if (profiles && profiles.length > 0) {
           console.log('Fetched profiles:', profiles);
-          const mappedUsers = profiles.map((p: any) => ({
+          const mappedUsers = profiles.map((p: { id?: string; name?: string; email?: string; mfu_id?: string; role?: string; created_at?: string; faculty?: string; department?: string; }) => ({
             id: p.id || String(Math.random()),
             name: p.name || 'Unknown',
             email: p.email || 'no-email@mfu.ac.th',
             mfuId: p.mfu_id || 'N/A',
-            role: (p.role as any) || 'student',
+            role: (p.role as 'student' | 'staff' | 'admin') || 'student',
             createdAt: p.created_at || new Date().toISOString(),
             faculty: p.faculty || '',
             department: p.department || ''
@@ -156,7 +157,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
                 name: result.name,
                 email: result.email,
                 mfuId: result.mfu_id,
-                role: result.role as any,
+                role: result.role as 'student' | 'staff' | 'admin',
                 createdAt: result.created_at,
                 faculty: result.faculty,
                 department: result.department
@@ -182,7 +183,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
                 name: newUser.name,
                 email: newUser.email,
                 mfuId: newUser.mfu_id,
-                role: newUser.role as any,
+                role: newUser.role as 'student' | 'staff' | 'admin',
                 createdAt: newUser.created_at,
                 faculty: newUser.faculty,
                 department: newUser.department
@@ -191,7 +192,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
             result = await userApi.createUser(formData as CreateUserPayload);
             
             // Handle spoofed offline response
-            if ('offlineQueued' in (result as any)) {
+            if ('offlineQueued' in (result as unknown as Record<string, unknown>)) {
               const tempUser: User = {
                 id: 'temp-' + Date.now(),
                 ...formData,
@@ -230,7 +231,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
       email: user.email,
       mfuId: user.mfuId,
       name: user.name,
-      role: user.role as any,
+      role: user.role as 'student' | 'staff' | 'admin',
       faculty: user.faculty || '',
       department: user.department || '',
     });
@@ -297,7 +298,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
               onClick={() => onNavigate('home')}
               style={{ padding: 0, marginTop: '-4px' }}
             >
-              ←
+              <Icon name="activity" size={20} className="rotate-180" />
             </button>
           )}
           <div>
@@ -425,7 +426,7 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
               <select
                 required
                 value={formData.role}
-                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as 'student' | 'staff' | 'admin' })}
               >
                 <option value="student">Student</option>
                 <option value="staff">Staff</option>
@@ -506,8 +507,12 @@ export default function UserManagement({ onNavigate }: { onNavigate?: (page: any
                     <td>{formatDate(user.createdAt)}</td>
                     <td>{formatRelative(user.createdAt)}</td>
                     <td className="actions-cell">
-                      <button className="icon-btn" onClick={() => handleEdit(user)} disabled={loading}>✏️</button>
-                      <button className="icon-btn danger" onClick={() => handleDelete(user.id)} disabled={loading}>🗑️</button>
+                      <button className="icon-btn" onClick={() => handleEdit(user)} disabled={loading}>
+                        <Icon name="profile" size={16} color="#4f46e5" />
+                      </button>
+                      <button className="icon-btn danger" onClick={() => handleDelete(user.id)} disabled={loading}>
+                        <Icon name="activity" size={16} color="#ef4444" className="rotate-45" /> 
+                      </button>
                     </td>
                   </tr>
                 ))}

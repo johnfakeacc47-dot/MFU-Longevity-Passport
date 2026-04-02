@@ -21,7 +21,7 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
   return (
     <div className="profile-container pb-24 premium-gradient" style={{ minHeight: '100vh' }}>
       <header className="profile-top-header" style={{ background: 'transparent', border: 'none' }}>
-        <button className="back-btn" onClick={() => onNavigate('profile')}>←</button>
+        <button className="back-btn" onClick={() => onNavigate('profile')} aria-label="Go back to profile">←</button>
         <h1 className="header-title text-gradient">The Science</h1>
         <div style={{ width: 44 }} />
       </header>
@@ -67,12 +67,12 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
         </div>
 
         {/* Legal/Links */}
-        <div className="pt-6 border-t border-gray-200 flex flex-wrap justify-center gap-4 text-xs font-bold text-purple-600 uppercase tracking-tighter">
-          <button className="hover:underline">Terms of Service</button>
+        <div className="pt-6 border-t border-gray-200 flex flex-wrap justify-center gap-4 text-xs font-bold text-blue-600 uppercase tracking-tighter">
+          <button className="hover:underline" aria-label="View Terms of Service">Terms of Service</button>
           <span>•</span>
-          <button className="hover:underline">Privacy Policy (PDPA)</button>
+          <button className="hover:underline" aria-label="View Privacy Policy">Privacy Policy (PDPA)</button>
           <span>•</span>
-          <button className="hover:underline">API Documentation</button>
+          <button className="hover:underline" aria-label="View API Documentation">API Documentation</button>
         </div>
 
         <div className="text-center text-xs text-gray-400 pb-10">
@@ -81,23 +81,23 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
       </div>
 
       <footer className="bottom-nav glass-card" style={{ borderBottom: 'none', borderLeft: 'none', borderRight: 'none' }}>
-        <button className="nav-icon" onClick={() => onNavigate('home')}>
+        <button className="nav-icon" onClick={() => onNavigate('home')} aria-label="Home">
           <span className="nav-emoji">🏠</span>
           <span className="nav-label">{t('nav.home')}</span>
         </button>
-        <button className="nav-icon" onClick={onOpenFoodRecognition}>
+        <button className="nav-icon" onClick={onOpenFoodRecognition} aria-label="Food Recognition">
           <span className="nav-emoji">🍽️</span>
           <span className="nav-label">{t('nav.fasting')}</span>
         </button>
-        <button className="nav-icon" onClick={() => onNavigate('dashboard')}>
+        <button className="nav-icon" onClick={() => onNavigate('dashboard')} aria-label="Dashboard">
           <span className="nav-emoji">📊</span>
           <span className="nav-label">{t('nav.dashboard')}</span>
         </button>
-        <button className="nav-icon" onClick={() => onNavigate('team')}>
+        <button className="nav-icon" onClick={() => onNavigate('team')} aria-label="My Team">
           <span className="nav-emoji">👥</span>
           <span className="nav-label">{t('nav.team')}</span>
         </button>
-        <button className="nav-icon active" onClick={() => onNavigate('profile')}>
+        <button className="nav-icon active" onClick={() => onNavigate('profile')} aria-label="Profile">
           <span className="nav-emoji">👤</span>
           <span className="nav-label">{t('nav.profile')}</span>
         </button>

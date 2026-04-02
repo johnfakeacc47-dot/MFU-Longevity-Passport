@@ -39,11 +39,11 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         {/* Health Potential Indicator */}
         <div className="glass-card p-6 rounded-2xl text-center" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Longevity Potential</div>
-          <div className="text-4xl font-black text-purple-700 mb-1">{getHealthPotential()}%</div>
+          <div className="text-4xl font-black text-blue-700 mb-1">{getHealthPotential()}%</div>
           <div className="text-xs text-gray-400">Based on your current daily targets</div>
           <div className="w-full bg-gray-200 h-1.5 rounded-full mt-4 overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
               style={{ width: `${getHealthPotential()}%` }}
             ></div>
           </div>
@@ -56,11 +56,11 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
               <span className="section-icon">⏳</span>
               <span className="section-title text-black font-bold">Fasting Window</span>
             </div>
-            <span className="bg-purple-100 text-purple-700 text-xs font-bold px-2 py-1 rounded-lg">{fastingGoal} hrs</span>
+            <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-lg">{fastingGoal} hrs</span>
           </div>
           <input 
             type="range" min="12" max="22" step="1" 
-            className="w-full accent-purple-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="w-full accent-blue-600 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
             value={fastingGoal}
             onChange={(e) => setFastingGoal(parseInt(e.target.value))}
           />
@@ -130,7 +130,7 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
           </div>
         </div>
 
-        <button className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-black text-sm shadow-xl shadow-purple-200 active:scale-[0.98] transition-all" onClick={saveGoals}>
+        <button className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-sm shadow-xl shadow-blue-200 active:scale-[0.98] transition-all" onClick={saveGoals}>
           Save My Strategy
         </button>
       </div>

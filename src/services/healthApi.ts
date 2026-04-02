@@ -20,7 +20,7 @@ interface OfflineRequest {
   id: string;
   path: string;
   method: string;
-  body: any;
+  body: Record<string, unknown>;
   timestamp: number;
 }
 
@@ -140,7 +140,7 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
       // GET requests will still fail naturally since we don't have up-to-date data, 
       // but writes should appear to succeed immediately to the UI
       if (options.method && options.method !== 'GET') {
-        return { success: true, offlineQueued: true } as unknown as T;
+        return { success: true, offlineQueued: true } as T;
       }
     }
     throw error;
