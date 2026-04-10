@@ -1,0 +1,387 @@
+@import './_palette-lock.css';
+
+.team-container {
+  min-height: 100vh;
+  background: #1976D2;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  color: #1976D2;
+}
+
+.status-bar {
+  background: #0d47a1;
+  color: #1976D2;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.team-top-header {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+}
+
+.team-header-title {
+  text-align: center;
+  color: #ffffff;
+}
+
+.team-top-header .app-back-btn {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.94);
+  color: #2e7d32;
+  box-shadow: 0 8px 20px rgba(46, 125, 50, 0.16);
+}
+
+.team-top-header .app-back-btn:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  box-shadow: 0 10px 24px rgba(46, 125, 50, 0.22);
+}
+
+.team-action-btn {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2e7d32;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(46, 125, 50, 0.16);
+  transition: transform 0.18s ease, background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  flex-shrink: 0;
+  font-size: 18px;
+}
+
+.team-action-btn:hover {
+  background: #ffffff;
+  border-color: rgba(255, 255, 255, 0.32);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(46, 125, 50, 0.22);
+}
+
+.team-action-btn:active {
+  transform: translateY(0);
+}
+
+.header-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1976D2;
+}
+
+.team-content {
+  flex: 1;
+  padding: 16px 16px 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.members-info {
+  text-align: center;
+  padding: 8px 0;
+}
+
+.members-count {
+  font-size: 14px;
+  color: #1976D2;
+  font-weight: 500;
+}
+
+.team-score-card {
+  background: #1976D2;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score-info {
+  flex: 1;
+}
+
+.score-label {
+  font-size: 12px;
+  color: #1976D2;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.score-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1976D2;
+}
+
+.invite-btn {
+  background: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  transition: transform 0.2s ease;
+}
+
+.invite-btn:hover {
+  transform: translateY(-2px);
+}
+
+.plus-icon {
+  font-size: 20px;
+  color: #1976D2;
+  font-weight: 700;
+}
+
+.invite-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.invite-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1976D2;
+}
+
+.invite-sublabel {
+  font-size: 11px;
+  color: #1976D2;
+}
+
+.challenge-card {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.challenge-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1976D2;
+}
+
+.challenge-description {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: #1976D2;
+  line-height: 1.4;
+}
+
+.challenge-join {
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: #1976D2;
+  font-weight: 600;
+}
+
+.progress-bar {
+  height: 8px;
+  background: #1976D2;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1976D2 0%, #1976D2 100%);
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.week-days {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.day-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.day-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1976D2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all 0.2s ease;
+}
+
+.day-circle.completed {
+  background: #1976D2;
+  color: #ffffff;
+}
+
+.check-mark {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.day-label {
+  font-size: 11px;
+  color: #1976D2;
+  font-weight: 500;
+}
+
+.leaderboard-section {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.leaderboard-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1976D2;
+}
+
+.leaderboard-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.leaderboard-tab {
+  background: #1976D2;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1976D2;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.leaderboard-tab.active {
+  background: #1976D2;
+  color: #1976D2;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.member-rank {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1976D2;
+  min-width: 20px;
+}
+
+.member-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #1976D2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-name-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.member-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1976D2;
+}
+
+.member-tag {
+  font-size: 12px;
+  color: #1976D2;
+  font-weight: 500;
+}
+
+.member-points {
+  font-size: 12px;
+  color: #1976D2;
+}
+
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: #ffffff;
+  padding: 10px 6px 12px;
+  border-top: 1px solid #1976D2;
+  box-shadow: 0 -6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.nav-icon {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: #1976D2;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 6px 4px;
+  transition: color 0.15s ease;
+}
+
+.nav-icon .nav-emoji {
+  font-size: 18px;
+}
+
+.nav-icon.active {
+  color: #1976D2;
+  font-weight: 700;
+}

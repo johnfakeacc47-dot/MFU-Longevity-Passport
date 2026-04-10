@@ -1,0 +1,85 @@
+/* Shared palette lock for legacy per-page CSS files */
+:root {
+  --legacy-bg: #E3F2FD;
+  --legacy-surface: #ffffff;
+  --legacy-border: #bbdefb;
+  --legacy-primary: #1976D2;
+  --legacy-primary-strong: #1565C0;
+  --legacy-text: #0d47a1;
+}
+
+/* Global color normalization */
+[class*="text-"] {
+  color: var(--legacy-text) !important;
+}
+
+[class*="bg-"] {
+  background: var(--legacy-bg) !important;
+}
+
+[class*="border-"] {
+  border-color: var(--legacy-border) !important;
+}
+
+[class*="accent-"] {
+  accent-color: var(--legacy-primary) !important;
+}
+
+/* Keep actionable elements blue */
+button,
+.btn,
+.login-btn,
+.hero-btn,
+.update-profile-btn,
+.save-btn,
+.log-btn,
+.capture-btn,
+.camera-btn,
+.preset-btn,
+.invite-btn,
+.stop-btn,
+.cancel-btn,
+.icon-btn,
+.action-button,
+.menu-btn,
+.add-members-btn,
+.timer-btn,
+.bottom-nav .nav-icon.active {
+  background: var(--legacy-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--legacy-primary) !important;
+}
+
+/* Neutral surfaces */
+.card,
+.glass-card,
+.summary-card,
+.chart-card,
+.table-card,
+.user-form,
+.activity-item,
+.sleep-item,
+.overall-item,
+.detail-item,
+.results-container,
+.bottom-nav {
+  background: var(--legacy-surface) !important;
+  border-color: var(--legacy-border) !important;
+  color: var(--legacy-text) !important;
+}
+
+/* Background layers */
+body,
+.app-container,
+.home-container,
+.dashboard-container,
+.profile-container,
+.fasting-container,
+.team-container,
+.activity-page,
+.sleep-page,
+.edit-profile-container,
+.user-management-page {
+  background: var(--legacy-bg) !important;
+  color: var(--legacy-text) !important;
+}

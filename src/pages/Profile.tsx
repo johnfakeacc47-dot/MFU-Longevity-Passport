@@ -1,0 +1,342 @@
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { FaAppleAlt, FaBirthdayCake, FaChevronRight, FaGlobe, FaRulerVertical, FaTools, FaUser, FaUsers, FaWeight } from 'react-icons/fa';
+import { isSupabaseConfigured, getCurrentUserProfile } from '../services/supabaseClient';
+
+import { useLanguage } from '../contexts/LanguageContext';
+import { BottomNav } from '../components/BottomNav';
+import { BackButton } from '../components/BackButton';
+
+type PageType = 'login' | 'home' | 'fasting' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker'
+
+interface ProfileProps {
+  onNavigate: (page: PageType) => void;
+  onOpenFoodRecognition: () => void;
+  onLogout: () => void;
+}
+
+export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognition, onLogout }) => {
+  const [weightNotification, setWeightNotification] = useState(true);
+  const [activityNotification, setActivityNotification] = useState(false);
+  const [mealNotification, setMealNotification] = useState(true);
+  const { language, setLanguage, t } = useLanguage();
+  const [userRole, setUserRole] = useState<string>('student');
+  const [profileData, setProfileData] = useState<{
+    fullName?: string;
+    email?: string;
+    birthDate?: string;
+    heightCm?: string;
+    weightKg?: string;
+  }>({});
+
+  const requestNotificationPermission = async (callback: (granted: boolean) => void) => {
+    if (!('Notification' in window)) {
+      alert('This browser does not support desktop notifications.');
+      callback(false);
+      return;
+    }
+    
+    if (Notification.permission === 'granted') {
+      callback(true);
+      return;
+    }
+    
+    if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      callback(permission === 'granted');
+    } else {
+      callback(false);
+    }
+  };
+
+  const handleToggleNotification = (
+    value: boolean, 
+    setter: React.Dispatch<React.SetStateAction<boolean>>
+  ) => {
+    if (value) {
+      requestNotificationPermission((granted) => {
+        setter(granted);
+      });
+    } else {
+      setter(false);
+    }
+  };
+
+
+
+  const fetchProfileData = useCallback(async () => {
+    // 1. Try Supabase First
+    if (isSupabaseConfigured()) {
+      const dbProfile = await getCurrentUserProfile();
+      if (dbProfile) {
+        setProfileData({
+          fullName: dbProfile.name,
+          email: dbProfile.email,
+          birthDate: dbProfile.birth_date,
+          heightCm: dbProfile.height_cm ? String(dbProfile.height_cm) : undefined,
+          weightKg: dbProfile.weight_kg ? String(dbProfile.weight_kg) : undefined,
+        });
+        setUserRole(dbProfile.role || 'student'); // SECURE ROLE FETCH
+        return; // Skip fallback
+      }
+      
+      // If Supabase is active but no profile exists, it's a new user.
+      const userEmail = localStorage.getItem('userEmail');
+      setProfileData({
+        fullName: 'New User',
+        email: userEmail || undefined
+      });
+      setUserRole('student'); // Default role
+      return; // DO NOT fallback to local storage to prevent cross-contamination
+    }
+
+    // 2. Fallback to LocalStorage
+    const stored = localStorage.getItem('profileData');
+    if (stored) {
+      setProfileData(JSON.parse(stored));
+      // Try to get role from token if offline
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setUserRole(payload.role || 'student');
+        } catch (e) {
+          setUserRole('student');
+        }
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfileData();
+    
+    // Listen for updates from EditProfile
+    const handleProfileUpdate = () => fetchProfileData();
+    window.addEventListener('profileUpdated', handleProfileUpdate);
+
+    return () => {
+      window.removeEventListener('profileUpdated', handleProfileUpdate);
+    };
+  }, [fetchProfileData]);
+
+  const ageYears = useMemo(() => {
+    if (!profileData.birthDate) return null;
+    const birth = new Date(profileData.birthDate);
+    if (Number.isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age -= 1;
+    }
+    return age;
+  }, [profileData.birthDate]);
+
+  const toggleLanguage = () => {
+    setLanguage(language === 'th' ? 'en' : 'th');
+  };
+
+  const handleResetData = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const confirmReset = window.confirm(
+        'Are you sure you want to reset all your health data? This will permanently clear your meals, sleep, activities, and fasting logs from this device.'
+      );
+      
+      if (confirmReset) {
+        localStorage.removeItem('meals');
+        localStorage.removeItem('sleepLogs');
+        localStorage.removeItem('activities');
+        localStorage.removeItem('fastingState');
+        localStorage.removeItem('aiFeedback');
+        localStorage.removeItem('offlineQueue');
+        alert('All local data has been reset.');
+        onNavigate('home');
+      } else {
+        // Uncheck the toggle if they cancelled
+        e.target.checked = false;
+      }
+    }
+  };
+
+  return (
+    <div className="profile-container">
+      <header className="profile-top-header">
+        <BackButton onClick={() => onNavigate('home')} ariaLabel="Go back to home" />
+        <h1 className="header-title">{t('profile.title')}</h1>
+        <div className="header-spacer" style={{ width: 60 }} />
+      </header>
+
+      <div className="profile-content page-content">
+        <div className="profile-card">
+          <div className="profile-avatar">
+            <div className="avatar-circle">P</div>
+          </div>
+          <h2 className="profile-name">{profileData.fullName || 'New User'}</h2>
+          <p className="profile-email">
+            {t('profile.email')} {profileData.email || 'Not set'}
+          </p>
+        </div>
+
+        <div className="info-section">
+          <div className="section-header">
+            <span className="section-icon"><FaUser /></span>
+            <span className="section-title">{t('profile.personalInfo')}</span>
+          </div>
+          <div className="info-subtitle">{t('profile.fullName')}</div>
+
+          <div className="body-metrics">
+            <div className="metric-item">
+              <div className="metric-label">{t('profile.age')}</div>
+              <div className="metric-row">
+                <span className="metric-icon"><FaBirthdayCake /></span>
+                <div className="metric-value">{ageYears ?? '-'}</div>
+              </div>
+            </div>
+            <div className="metric-item">
+              <div className="metric-label">{t('profile.weight')}</div>
+              <div className="metric-row">
+                <span className="metric-icon"><FaWeight /></span>
+                <div className="metric-value">{profileData.weightKg || '-'}</div>
+              </div>
+            </div>
+            <div className="metric-item">
+              <div className="metric-label">{t('profile.height')}</div>
+              <div className="metric-row">
+                <span className="metric-icon"><FaRulerVertical /></span>
+                <div className="metric-value">{profileData.heightCm || '-'}</div>
+              </div>
+            </div>
+          </div>
+
+          <button className="update-profile-btn" onClick={() => onNavigate('edit-profile')}>
+            {t('profile.updateProfile')}
+          </button>
+        </div>
+
+        <div className="settings-section">
+          <div className="section-header">
+            <span className="section-icon"><FaGlobe /></span>
+            <span className="section-title">{t('profile.language')}</span>
+          </div>
+          
+          <button className="language-toggle-btn" onClick={toggleLanguage}>
+            <div className="language-content">
+              <span className="language-label">
+                {language === 'th' ? t('profile.languageThai') : t('profile.languageEnglish')}
+              </span>
+              <span className="arrow"><FaChevronRight /></span>
+            </div>
+          </button>
+        </div>
+
+        <div className="settings-section">
+          <div className="section-header">
+            <span className="section-icon"><FaAppleAlt /></span>
+            <span className="section-title">{t('profile.notificationSettings')}</span>
+          </div>
+
+          <div className="settings-list">
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title">{t('profile.fastingAlert')}</div>
+                <div className="setting-description">{t('profile.fastingAlertDesc')}</div>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={weightNotification}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setWeightNotification)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title">{t('profile.activityAlert')}</div>
+                <div className="setting-description">{t('profile.activityAlertDesc')}</div>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={activityNotification}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setActivityNotification)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title">{t('profile.mealAlert')}</div>
+                <div className="setting-description">{t('profile.mealAlertDesc')}</div>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={mealNotification}
+                  onChange={(e) => handleToggleNotification(e.target.checked, setMealNotification)}
+                />
+                <span className="toggle-slider"></span>
+              </label>
+            </div>
+
+
+          </div>
+        </div>
+
+        <div className="settings-section">
+          <div className="section-header">
+            <span className="section-icon"><FaTools /></span>
+            <span className="section-title">Developer Tools</span>
+          </div>
+          <div className="settings-list">
+            <div className="setting-item">
+              <div className="setting-text">
+                <div className="setting-title" style={{ color: '#1976D2' }}>Reset All Data</div>
+                <div className="setting-description">Permanently clear all local health logs</div>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  onChange={handleResetData}
+                />
+                <span className="toggle-slider" style={{ backgroundColor: '#E3F2FD' }}></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="menu-section">
+          <button className="menu-item" onClick={() => onNavigate('privacy-settings')}>
+            <span>{t('profile.privacySettings')}</span>
+            <span className="arrow"><FaChevronRight /></span>
+          </button>
+          <button className="menu-item" onClick={() => onNavigate('set-goals')}>
+            <span>{t('profile.setGoals')}</span>
+            <span className="arrow"><FaChevronRight /></span>
+          </button>
+          <button className="menu-item" onClick={() => onNavigate('about-tracker')}>
+            <span>{t('profile.aboutTracker')}</span>
+            <span className="arrow"><FaChevronRight /></span>
+          </button>
+          {(userRole === 'admin' || profileData.email === '6631503029@lamduan.mfu.ac.th') && (
+            <button className="menu-item admin-only" onClick={() => onNavigate('user-management')}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}><FaUsers /> Manage Users</span>
+              <span className="arrow"><FaChevronRight /></span>
+            </button>
+          )}
+        </div>
+
+        <button className="logout-btn" onClick={onLogout}>
+          {t('profile.logout')}
+        </button>
+
+        <div className="version-info">
+          {t('profile.version')} 1.0.0
+        </div>
+      </div>
+
+      <BottomNav active="profile" onNavigate={onNavigate} onOpenFoodRecognition={onOpenFoodRecognition} t={t} />
+    </div>
+  );
+};
