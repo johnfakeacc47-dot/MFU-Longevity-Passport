@@ -107,26 +107,26 @@ function App() {
     };
   }, []);
 
-  const handleLoginSuccess = () => {
+  function handleLoginSuccess() {
     setCurrentPage('home');
     // Trigger install prompt once after every successful login
     setShowPwaPrompt(false);
     setTimeout(() => setShowPwaPrompt(true), 50); // brief reset so prop re-fires
-  };
+  }
 
-  const handleLogout = () => {
+  function handleLogout() {
     localStorage.removeItem('authToken');
     localStorage.removeItem('currentPage');
     localStorage.removeItem('userEmail');
     localStorage.removeItem('userId');
     localStorage.removeItem('profileData');
     setCurrentPage('login');
-  };
+  }
 
-  const handleNavigate = (page: PageType) => {
+  function handleNavigate(page: PageType) {
     localStorage.setItem('currentPage', page);
     setCurrentPage(page);
-  };
+  }
 
   const renderPage = () => {
     switch (currentPage) {

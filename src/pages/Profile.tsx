@@ -99,7 +99,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         try {
           const payload = JSON.parse(atob(token.split('.')[1]));
           setUserRole(payload.role || 'student');
-        } catch (e) {
+        } catch {
           setUserRole('student');
         }
       }

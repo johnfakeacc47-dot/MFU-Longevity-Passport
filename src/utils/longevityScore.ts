@@ -1,6 +1,6 @@
 /**
- * Daily Longevity Score Calculator
- * Combines data from all four health pillars into a single 0-100 score
+ * Longevity Score Calculator - 4-pillar, age-dependent model.
+ * Each pillar is normalized to 0-25, total 0-100.
  */
 
 interface MealLog {
@@ -28,63 +28,97 @@ interface SleepLog {
 }
 
 export interface LongevityBreakdown {
+  sleep: number;
   nutrition: number;
   fasting: number;
   activity: number;
-  sleep: number;
   total: number;
 }
 
-export const calculateLongevityScore = (): LongevityBreakdown => {
+interface LongevityFactor {
+  key: string;
+  label: string;
+  color: string;
+  description: string;
+}
+
+export const getSleepTargetByAge = (age: number): { min: number; max: number } => {
+  if (age <= 13) return { min: 9, max: 11 };
+  if (age <= 17) return { min: 8, max: 10 };
+  if (age <= 25) return { min: 7, max: 9 };
+  if (age <= 64) return { min: 7, max: 9 };
+  return { min: 7, max: 8 };
+};
+
+export const getActivityTargetByAge = (age: number): number => {
+  if (age <= 17) return 60;
+  if (age <= 64) return 30;
+  return 20;
+};
+
+export const calculateLongevityScore = (age: number = 20): LongevityBreakdown => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayTimestamp = today.getTime();
 
-  // Get today's data
   const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
   const fastingState: FastingState = JSON.parse(localStorage.getItem('fastingState') || '{}');
   const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
   const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
 
-  // Filter for today's data
-  const todayMeals = meals.filter(m => new Date(m.timestamp).getTime() >= todayTimestamp);
-  const todayActivities = activities.filter(a => new Date(a.timestamp).getTime() >= todayTimestamp);
-  const todaySleep = sleepLogs.find(s => new Date(s.timestamp).getTime() >= todayTimestamp);
+  const todayMeals = meals.filter((m) => new Date(m.timestamp).getTime() >= todayTimestamp);
+  const todayActivities = activities.filter((a) => new Date(a.timestamp).getTime() >= todayTimestamp);
+  const todaySleep = sleepLogs.find((s) => new Date(s.timestamp).getTime() >= todayTimestamp);
 
-  // Calculate Nutrition Score (0-25 points)
-  const nutritionScore = calculateNutritionScore(todayMeals);
+  const sleepTarget = getSleepTargetByAge(age);
+  const sleepScoreRaw = calculateSleepScore(todaySleep, sleepTarget);
 
-  // Calculate Fasting Score (0-25 points)
-  const fastingScore = calculateFastingScore(fastingState);
+  const activityTarget = getActivityTargetByAge(age);
+  const activityScoreRaw = calculateActivityScore(todayActivities, activityTarget);
 
-  // Calculate Activity Score (0-25 points)
-  const activityScore = calculateActivityScore(todayActivities);
+  const nutritionScoreRaw = calculateNutritionScore(todayMeals);
+  const fastingScoreRaw = calculateFastingScore(fastingState);
 
-  // Calculate Sleep Score (0-25 points)
-  const sleepScore = calculateSleepScore(todaySleep);
+  const sleep = Math.round((sleepScoreRaw / 20) * 25);
+  const activity = Math.round((activityScoreRaw / 20) * 25);
+  const nutrition = Math.round((nutritionScoreRaw / 20) * 25);
+  const fasting = Math.round((fastingScoreRaw / 20) * 25);
 
-  const total = Math.round(nutritionScore + fastingScore + activityScore + sleepScore);
+  const total = Math.min(100, Math.round(sleep + activity + nutrition + fasting));
+  return { sleep, activity, nutrition, fasting, total };
+};
 
-  return {
-    nutrition: Math.round(nutritionScore),
-    fasting: Math.round(fastingScore),
-    activity: Math.round(activityScore),
-    sleep: Math.round(sleepScore),
-    total: Math.min(total, 100)
-  };
+const calculateSleepScore = (sleepLog: SleepLog | undefined, target: { min: number; max: number }): number => {
+  if (!sleepLog) return 0;
+
+  const { duration, quality } = sleepLog;
+  let score = 0;
+
+  if (duration >= target.min && duration <= target.max) score = 12;
+  else if (duration >= target.min - 1 && duration <= target.max + 1) score = 8;
+  else if (duration >= target.min - 2 && duration <= target.max + 2) score = 4;
+
+  const qualityScore = (quality / 10) * 8;
+  return Math.min(score + qualityScore, 20);
+};
+
+const calculateActivityScore = (activities: ActivityLog[], targetMinutes: number): number => {
+  if (activities.length === 0) return 0;
+
+  const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0);
+  const progress = Math.min(totalMinutes / targetMinutes, 1);
+  let score = progress * 16;
+  score += Math.min(activities.length * 2, 4);
+  return Math.min(score, 20);
 };
 
 const calculateNutritionScore = (meals: MealLog[]): number => {
   if (meals.length === 0) return 0;
 
-  // Base score for logging at least one meal (20 points)
-  let score = 20;
-
-  // Add up to 5 points based on average health score
+  let score = 14;
   const avgHealthScore = meals.reduce((sum, m) => sum + m.healthScore, 0) / meals.length;
-  score += (avgHealthScore / 100) * 5;
-
-  return Math.min(score, 25);
+  score += (avgHealthScore / 100) * 6;
+  return Math.min(score, 20);
 };
 
 const calculateFastingScore = (state: FastingState): number => {
@@ -94,77 +128,26 @@ const calculateFastingScore = (state: FastingState): number => {
   const startTime = new Date(state.startTime);
   const elapsedHours = (now.getTime() - startTime.getTime()) / (1000 * 60 * 60);
 
-  // Scoring based on fasting protocol
   if (state.isFasting) {
-    // Currently fasting - score based on progress
     const targetHours = state.fastingHours || 16;
-    const progress = Math.min(elapsedHours / targetHours, 1);
-    return progress * 25;
-  } else if (state.endTime) {
-    // Completed fast today
+    return Math.min(elapsedHours / targetHours, 1) * 20;
+  }
+
+  if (state.endTime) {
     const fastDuration = (new Date(state.endTime).getTime() - startTime.getTime()) / (1000 * 60 * 60);
-    if (fastDuration >= 12) {
-      // Full points for completing 12+ hour fast
-      return 25;
-    } else {
-      return (fastDuration / 12) * 25;
-    }
+    if (fastDuration >= 12) return 20;
+    if (fastDuration >= 8) return 14;
+    return (fastDuration / 12) * 20;
   }
 
   return 0;
 };
 
-const calculateActivityScore = (activities: ActivityLog[]): number => {
-  if (activities.length === 0) return 0;
-
-  const totalMinutes = activities.reduce((sum, a) => sum + a.duration, 0);
-
-  // WHO recommends 150 minutes per week (21.4 min/day)
-  // We'll score based on 30 min/day for better longevity
-  const targetMinutes = 30;
-  const progress = Math.min(totalMinutes / targetMinutes, 1);
-  let score = progress * 20; // 20 points for duration
-
-  // Bonus for variety (5 points)
-  score += Math.min(activities.length * 2, 5);
-
-  return Math.min(score, 25);
-};
-
-const calculateSleepScore = (sleepLog: SleepLog | undefined): number => {
-  if (!sleepLog) return 0;
-
-  // Optimal sleep: 7-9 hours
-  const optimalMin = 7;
-  const optimalMax = 9;
-  const duration = sleepLog.duration;
-
-  let durationScore = 0;
-  if (duration >= optimalMin && duration <= optimalMax) {
-    durationScore = 15; // Perfect duration
-  } else if (duration >= 6 && duration <= 10) {
-    // Close to optimal
-    const distanceFromOptimal = Math.min(
-      Math.abs(duration - optimalMin),
-      Math.abs(duration - optimalMax)
-    );
-    durationScore = 15 - (distanceFromOptimal * 3);
-  } else {
-    // Poor duration
-    durationScore = Math.max(0, 10 - Math.abs(duration - 8) * 2);
-  }
-
-  // Quality score (10 points)
-  const qualityScore = (sleepLog.quality / 10) * 10;
-
-  return Math.min(durationScore + qualityScore, 25);
-};
-
 export const getScoreColor = (score: number): string => {
-  if (score >= 80) return '#22c55e'; // Excellent - Green
-  if (score >= 60) return '#f59e0b'; // Good - Orange
-  if (score >= 40) return '#fb923c'; // Fair - Light Orange
-  return '#ef4444'; // Poor - Red
+  if (score >= 80) return '#22c55e';
+  if (score >= 60) return '#f59e0b';
+  if (score >= 40) return '#fb923c';
+  return '#ef4444';
 };
 
 export const getScoreLabel = (score: number): string => {
@@ -173,3 +156,10 @@ export const getScoreLabel = (score: number): string => {
   if (score >= 40) return 'Fair';
   return 'Needs Improvement';
 };
+
+export const LONGEVITY_FACTORS: LongevityFactor[] = [
+  { key: 'sleep', label: 'Sleep', color: '#0ea5e9', description: 'Restorative rest and circadian alignment.' },
+  { key: 'activity', label: 'Activity', color: '#f59e0b', description: 'Daily movement and exercise intensity.' },
+  { key: 'nutrition', label: 'Nutrition', color: '#10b981', description: 'Whole food intake and nutrient density.' },
+  { key: 'fasting', label: 'Fasting', color: '#06b6d4', description: 'Metabolic flexibility through time-restricted feeding.' },
+];

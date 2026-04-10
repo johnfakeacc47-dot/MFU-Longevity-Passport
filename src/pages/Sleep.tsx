@@ -41,7 +41,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
     calculateWeekAverage();
   }, [sleepLogs]);
 
-  const loadSleepLogs = async () => {
+  async function loadSleepLogs() {
     // If we've fully moved to Supabase and don't have a sleep history table yet, rely on localStorage
     if (isApiConfigured && !isSupabaseConfigured()) {
       try {
@@ -82,9 +82,9 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
     if (saved) {
       setSleepLogs(JSON.parse(saved));
     }
-  };
+  }
 
-  const calculateWeekAverage = () => {
+  function calculateWeekAverage() {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     
@@ -104,13 +104,13 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
       hours: Math.round((totalHours / weekLogs.length) * 10) / 10,
       quality: Math.round((totalQuality / weekLogs.length) * 10) / 10
     });
-  };
+  }
 
   const calculateDuration = (bedtime: string, waketime: string): number => {
     const [bedHour, bedMin] = bedtime.split(':').map(Number);
     const [wakeHour, wakeMin] = waketime.split(':').map(Number);
     
-    let bedMinutes = bedHour * 60 + bedMin;
+    const bedMinutes = bedHour * 60 + bedMin;
     let wakeMinutes = wakeHour * 60 + wakeMin;
     
     // If wake time is earlier than bed time, it's next day

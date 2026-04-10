@@ -45,7 +45,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
     calculateTodayTotal();
   }, [activities]);
 
-  const loadActivities = async () => {
+  async function loadActivities() {
     if (isApiConfigured) {
       try {
         const to = new Date();
@@ -74,9 +74,9 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
     if (saved) {
       setActivities(JSON.parse(saved));
     }
-  };
+  }
 
-  const calculateTodayTotal = () => {
+  function calculateTodayTotal() {
     const today = new Date().toDateString();
     const todayActivities = activities.filter(
       a => new Date(a.timestamp).toDateString() === today
@@ -84,7 +84,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
     const minutes = todayActivities.reduce((sum, a) => sum + a.duration, 0);
     const calories = todayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
     setTodayTotal({ minutes, calories });
-  };
+  }
 
   const activityTypes: ActivityType[] = [
     { type: 'walking', icon: <FaWalking />, caloriesPerMin: 4, name: t('activity.walking') },

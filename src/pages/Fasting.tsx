@@ -26,6 +26,49 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   const goalNotifiedRef = useRef<boolean>(false);
   const { t } = useLanguage();
 
+  function finishFasting(hoursFasted: number): Promise<void> {
+    return (async () => {
+      // Duplicate prevention: only fire goal notification once per session
+      if (goalNotifiedRef.current) return;
+      goalNotifiedRef.current = true;
+      localStorage.setItem('fastingGoalNotified', 'true');
+
+      setIsRunning(false);
+      setElapsedSeconds(0);
+      setStartTime(null);
+      clearFastingLocalStorage();
+      postToSW({ type: 'CANCEL_FASTING_ALARM' });
+
+      await stopFastingTimer();
+
+      // Add points to health_scores for today. Rough logic: 1 hour = 2 points, max 40.
+      const earnedPoints = Math.min(Math.round(hoursFasted * 2), 40);
+
+      const todayScore = await getTodayHealthScore();
+      if (todayScore) {
+        await syncDailyScoreToSupabase({
+          ...todayScore,
+          fasting: Math.min((todayScore.fasting || 0) + earnedPoints, 40),
+          total: Math.min((todayScore.total || 0) + earnedPoints, 100) // Rough recalculation
+        });
+      }
+
+      // High-priority goal-reached notification (fires only once)
+      showToast('Fasting goal reached! Time to log your first meal!');
+      notifyUser(
+        'Fasting Goal Reached!',
+        `Congratulations! You've completed your ${hoursFasted} hour fast. Time to log your first meal!`,
+        {
+          tag: 'fasting-goal',
+          // @ts-expect-error actions and requireInteraction are supported by modern Notification implementations
+          actions: [{ action: 'enter-meal', title: 'Enter Meal' }],
+          requireInteraction: true,
+        }
+      );
+      window.dispatchEvent(new Event('healthDataUpdated'));
+    })();
+  }
+
   // ── Toast helper ───────────────────────────────────────────────────
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -136,7 +179,9 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
   const playNotificationSound = () => {
     // A simple polite bell sound using an oscillator beep as fallback:
     // We'll use a standard browser beep fallback since a real base64 WAV is too long. Let's just create an oscillator beep:
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextCtor = window.AudioContext ?? ((window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+    if (!AudioContextCtor) return;
+    const ctx = new AudioContextCtor();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -158,7 +203,7 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
             body: message, 
             icon: '/pwa-192x192.png',
             badge: '/pwa-192x192.png',
-            // @ts-ignore
+            // @ts-expect-error vibrate is available in supporting browsers
             vibrate: [200, 100, 200, 100, 200],
             ...options
           });
@@ -169,47 +214,6 @@ export const Fasting: React.FC<FastingProps> = ({ onNavigate, onOpenFoodRecognit
     } else {
       alert(message);
     }
-  };
-
-  const finishFasting = async (hoursFasted: number) => {
-    // Duplicate prevention: only fire goal notification once per session
-    if (goalNotifiedRef.current) return;
-    goalNotifiedRef.current = true;
-    localStorage.setItem('fastingGoalNotified', 'true');
-
-    setIsRunning(false);
-    setElapsedSeconds(0);
-    setStartTime(null);
-    clearFastingLocalStorage();
-    postToSW({ type: 'CANCEL_FASTING_ALARM' });
-
-    await stopFastingTimer();
-    
-    // Add points to health_scores for today. Rough logic: 1 hour = 2 points, max 40.
-    const earnedPoints = Math.min(Math.round(hoursFasted * 2), 40);
-    
-    const todayScore = await getTodayHealthScore();
-    if (todayScore) {
-      await syncDailyScoreToSupabase({
-        ...todayScore,
-        fasting: Math.min((todayScore.fasting || 0) + earnedPoints, 40),
-        total: Math.min((todayScore.total || 0) + earnedPoints, 100) // Rough recalculation
-      });
-    }
-
-    // High-priority goal-reached notification (fires only once)
-    showToast('Fasting goal reached! Time to log your first meal!');
-    notifyUser(
-      'Fasting Goal Reached!',
-      `Congratulations! You've completed your ${hoursFasted} hour fast. Time to log your first meal!`,
-      {
-        tag: 'fasting-goal',
-        // @ts-ignore – actions & requireInteraction are valid on supported browsers
-        actions: [{ action: 'enter-meal', title: 'Enter Meal' }],
-        requireInteraction: true,
-      }
-    );
-    window.dispatchEvent(new Event('healthDataUpdated'));
   };
 
   useEffect(() => {

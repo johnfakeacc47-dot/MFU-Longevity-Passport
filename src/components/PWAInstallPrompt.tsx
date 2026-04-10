@@ -13,10 +13,12 @@ interface PWAInstallPromptProps {
   triggerOnLogin?: boolean;
 }
 
+type StandaloneNavigator = Navigator & { standalone?: boolean };
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const isStandalone = () =>
   window.matchMedia('(display-mode: standalone)').matches ||
-  (window.navigator as any).standalone === true;
+  (window.navigator as StandaloneNavigator).standalone === true;
 
 const getDeviceType = (): 'ios' | 'android' | 'desktop' => {
   const ua = window.navigator.userAgent.toLowerCase();
@@ -33,6 +35,11 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
   const [closing, setClosing] = useState(false);
   const [deviceType] = useState(getDeviceType);
   const deferredPromptRef = useRef<BeforeInstallPromptEvent | null>(null);
+
+  function animateClose() {
+    setClosing(true);
+    setTimeout(() => { setVisible(false); setClosing(false); }, 400);
+  }
 
   // Intercept Chrome's native beforeinstallprompt event
   useEffect(() => {
@@ -58,11 +65,6 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
     const timer = setTimeout(() => setVisible(true), 1200);
     return () => clearTimeout(timer);
   }, [triggerOnLogin]);
-
-  const animateClose = () => {
-    setClosing(true);
-    setTimeout(() => { setVisible(false); setClosing(false); }, 400);
-  };
 
   const handleDone = () => {
     localStorage.setItem(STORAGE_KEY, 'true');
