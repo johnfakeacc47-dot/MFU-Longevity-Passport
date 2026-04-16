@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { BottomNav } from '../components/BottomNav';
 import { calculateLongevityScore } from '../utils/longevityScore';
 import { healthApi, isApiConfigured } from '../services/healthApi';
-import { isSupabaseConfigured, getTodayHealthScore } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured, getTodayHealthScore } from '../services/supabaseClient';
 
 type PageType =
   | 'login'
@@ -28,6 +28,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
   const { t } = useLanguage();
   const [score, setScore] = useState(calculateLongevityScore());
   const [currentTipIndex, setCurrentTipIndex] = useState(0);
+  const [isLiveDB, setIsLiveDB] = useState(false);
 
   const tips = [
     'home.tip1',
@@ -43,6 +44,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
     const fetchScore = async () => {
       // 1. Try Supabase first if configured
       if (isSupabaseConfigured()) {
+        const { data: { user } } = await supabase!.auth.getUser();
+        setIsLiveDB(!!user);
+
         const dbScore = await getTodayHealthScore();
         if (dbScore) {
           setScore({
@@ -134,14 +138,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition, o
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span className="home-brand">MFU</span>
-                {isSupabaseConfigured() ? (
+                {isLiveDB ? (
                   <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                    SYNCED
+                    {t('dashboard.live')}
                   </span>
                 ) : (
                   <span className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                    OFFLINE
+                    {t('dashboard.offline')}
                   </span>
                 )}
               </div>

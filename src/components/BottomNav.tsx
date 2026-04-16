@@ -26,7 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       </button>
       <button className={`nav-icon ${active === 'food' ? 'active' : ''}`} onClick={onOpenFoodRecognition}>
         <span className="nav-emoji"><FaUtensils /></span>
-        <span className="nav-label">{t('nav.fasting')}</span>
+        <span className="nav-label">{t('nav.food')}</span>
       </button>
       <button className={`nav-icon ${active === 'dashboard' ? 'active' : ''}`} onClick={() => onNavigate('dashboard')}>
         <span className="nav-emoji"><FaChartBar /></span>

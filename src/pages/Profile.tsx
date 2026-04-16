@@ -20,6 +20,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
   const [mealNotification, setMealNotification] = useState(true);
   const { language, setLanguage, t } = useLanguage();
   const [userRole, setUserRole] = useState<string>('student');
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [profileData, setProfileData] = useState<{
     fullName?: string;
     email?: string;
@@ -64,6 +65,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
 
 
   const fetchProfileData = useCallback(async () => {
+    setIsLoading(true);
     // 1. Try Supabase First
     if (isSupabaseConfigured()) {
       const dbProfile = await getCurrentUserProfile();
@@ -76,6 +78,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           weightKg: dbProfile.weight_kg ? String(dbProfile.weight_kg) : undefined,
         });
         setUserRole(dbProfile.role || 'student'); // SECURE ROLE FETCH
+        setIsLoading(false);
         return; // Skip fallback
       }
       
@@ -86,6 +89,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         email: userEmail || undefined
       });
       setUserRole('student'); // Default role
+      setIsLoading(false);
       return; // DO NOT fallback to local storage to prevent cross-contamination
     }
 
@@ -104,6 +108,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
         }
       }
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -170,9 +175,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           <div className="profile-avatar">
             <div className="avatar-circle">P</div>
           </div>
-          <h2 className="profile-name">{profileData.fullName || 'New User'}</h2>
+          <h2 className="profile-name">{isLoading ? '...' : (profileData.fullName || 'New User')}</h2>
           <p className="profile-email">
-            {t('profile.email')} {profileData.email || 'Not set'}
+            {t('profile.email')} {isLoading ? '...' : (profileData.email || 'Not set')}
           </p>
         </div>
 

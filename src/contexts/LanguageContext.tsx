@@ -119,7 +119,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Navigation
     'nav.home': 'หน้าหลัก',
-    'nav.fasting': 'อาหาร',
+    'nav.fasting': 'เวลาเว้นอาหาร',
+    'nav.food': 'อาหาร',
     'nav.dashboard': 'สถิติ',
     'nav.team': 'ทีม',
     'nav.profile': 'โปรไฟล์',
@@ -150,6 +151,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard Page
     'dashboard.title': 'แดชบอร์ดส่วนตัว',
+    'dashboard.live': 'LIVE DB',
+    'dashboard.offline': 'ออฟไลน์',
     'dashboard.overallStats': 'ค่าแนวรวม',
     'dashboard.orders': 'คำสั่งซื้อ',
     'dashboard.day': 'วัน',
@@ -378,7 +381,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Navigation
     'nav.home': 'Home',
-    'nav.fasting': 'Food',
+    'nav.fasting': 'Fasting',
+    'nav.food': 'Food',
     'nav.dashboard': 'Stats',
     'nav.team': 'Team',
     'nav.profile': 'Profile',
@@ -409,6 +413,8 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Dashboard Page
     'dashboard.title': 'Personal Dashboard',
+    'dashboard.live': 'LIVE DB',
+    'dashboard.offline': 'OFFLINE',
     'dashboard.overallStats': 'Overall Statistics',
     'dashboard.orders': 'Orders',
     'dashboard.day': 'Day',

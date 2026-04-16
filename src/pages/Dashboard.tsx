@@ -105,12 +105,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate, onOpenFoodReco
           {isLiveDB ? (
             <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-              Live DB
+              {t('dashboard.live')}
             </div>
           ) : (
             <div className="flex items-center gap-1 text-[10px] text-blue-600 font-bold uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              Offline
+              {t('dashboard.offline')}
             </div>
           )}
         </div>

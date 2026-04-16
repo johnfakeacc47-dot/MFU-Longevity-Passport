@@ -174,10 +174,10 @@ export const getTodayHealthScore = async () => {
     .select('*')
     .eq('user_id', user.id)
     .eq('date', today)
-    .single();
+    .maybeSingle();
 
   if (error) {
-    if (error.code !== 'PGRST116') console.error('Error fetching health score:', error);
+    console.error('Error fetching health score:', error);
     return null;
   }
   return data;
