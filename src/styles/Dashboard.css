@@ -1,0 +1,798 @@
+@import './_palette-lock.css';
+
+/* ╔══════════════════════════════════════════════════════════════╗
+ * ║  HEALTH ANALYTICS DASHBOARD STYLES                          ║
+ * ║  Modern, data-centric layout with soft glassmorphism &      ║
+ * ║  responsive 16-20px rounded cards.                          ║
+ * ╚══════════════════════════════════════════════════════════════╝ */
+
+.ana-page {
+  min-height: 100vh;
+  background: var(--bg-primary, #F8FAFC);
+  color: var(--text-primary, #0F172A);
+  padding-bottom: 100px; /* space for BottomNav */
+}
+
+/* Standard Header for Statistics page */
+.dashboard-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 56px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--header-bg, rgba(244, 249, 255, 0.92));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--header-border, rgba(125, 220, 255, 0.08));
+}
+[data-theme="dark"] .dashboard-top-header {
+  background: var(--header-bg, rgba(15, 23, 42, 0.92)) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.ana-mode-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-primary, #0284C7);
+  background: rgba(2, 132, 199, 0.1);
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
+.ana-content {
+  width: 100%;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
+}
+
+/* ── Common Card Styles ── */
+.ana-card {
+  background: var(--surface, #FFFFFF);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.035), 0 1px 3px rgba(15, 23, 42, 0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ana-card-title {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+  letter-spacing: -0.3px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.ana-card-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748B);
+  font-weight: 400;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ── 1. Filter Section ── */
+.ana-filter-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ana-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px;
+  background: rgba(15, 23, 42, 0.04);
+  border-radius: 16px;
+  scrollbar-width: none;
+}
+
+.ana-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.ana-filter-btn {
+  flex: 1;
+  min-width: 90px;
+  border: none;
+  background: transparent;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ana-filter-btn:hover {
+  color: var(--text-primary, #0F172A);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.ana-filter-btn.active {
+  background: var(--surface-soft, #FFFFFF);
+  color: var(--accent-primary, #0284C7);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.ana-custom-dates {
+  display: flex;
+  gap: 16px;
+  background: var(--surface, #FFFFFF);
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ana-date-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+.ana-date-field input[type="date"] {
+  border: 1px solid rgba(15, 23, 42, 0.15);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-primary, #0F172A);
+  background: #F8FAFC;
+  outline: none;
+}
+
+/* ── 2. Overall Longevity Score Card ── */
+.ana-hero-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--surface-card, #FFFFFF);
+}
+
+.ana-hero-body {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  flex-wrap: wrap;
+}
+
+.ana-score-ring-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ana-score-ring {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 10px solid #E2E8F0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: var(--surface-card, #FFFFFF);
+}
+
+.ana-ring-num {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+
+.ana-ring-denom {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+  margin-top: 2px;
+}
+
+.ana-hero-delta-wrap {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ana-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 12px;
+  width: fit-content;
+}
+
+.ana-delta-badge.up {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+}
+
+.ana-delta-badge.down {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+}
+
+.ana-delta-badge.stable {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+}
+
+.ana-hero-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary, #64748B);
+  line-height: 1.5;
+}
+
+/* ── 3. Score Overview ── */
+.ana-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.ana-overview-item {
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ana-overview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ana-overview-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+}
+
+.ana-pillar-icon {
+  font-size: 16px;
+  display: flex;
+}
+
+.ana-overview-score {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.ana-overview-score small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+.ana-progress-track {
+  width: 100%;
+  height: 8px;
+  background: rgba(15, 23, 42, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ana-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ana-overview-bot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ana-status-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ── 4 & 5. Charts ── */
+.ana-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ana-chart-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-secondary, #64748B);
+  padding: 4px 10px;
+  border-radius: 8px;
+}
+
+.ana-pillar-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+  scrollbar-width: none;
+}
+
+.ana-pillar-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ana-pillar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.03);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ana-pillar-tab:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.ana-pillar-tab.active {
+  font-weight: 700;
+}
+
+/* Chart Component Styling */
+.ana-chart-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.ana-chart-tooltip-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.03);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.ana-chart-tooltip-date {
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+.ana-chart-tooltip-val {
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.ana-chart-svg-wrap {
+  width: 100%;
+  height: 200px;
+}
+
+.ana-chart-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ana-svg-axis-label {
+  font-size: 11px;
+  fill: #94A3B8;
+  font-weight: 500;
+}
+
+.ana-svg-x-label {
+  font-size: 11px;
+  fill: #64748B;
+  font-weight: 600;
+}
+
+.ana-svg-x-label.active {
+  fill: #0F172A;
+  font-weight: 800;
+}
+
+.ana-chart-empty {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-secondary, #64748B);
+}
+
+/* ── 6. Health Summary Grid ── */
+.ana-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ana-sum-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.ana-sum-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.ana-sum-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ana-sum-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+.ana-sum-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary, #0F172A);
+}
+
+.ana-sum-val small {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+/* ── 7. Goal Achievement ── */
+.ana-goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.ana-goal-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ana-goal-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #0F172A);
+}
+
+.ana-goal-pct {
+  font-weight: 800;
+}
+
+.ana-goal-overall {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ana-track-lg {
+  height: 12px;
+}
+
+.ana-overall-pct {
+  font-size: 16px;
+}
+
+/* ── 8. Improvement Analysis ── */
+.ana-improve-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ana-improve-box {
+  border: 1px solid;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ana-improve-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ana-improve-pillar {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+}
+
+.ana-improve-delta {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ana-improve-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── 9. AI Period Analysis Card ── */
+.ana-ai-card {
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.05), rgba(59, 130, 246, 0.03));
+  border: 1px solid rgba(2, 132, 199, 0.15);
+}
+
+.ana-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.ana-ai-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--accent-primary, #0284C7);
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  flex-shrink: 0;
+}
+
+.ana-ai-body {
+  padding: 16px;
+  background: var(--surface-card, #FFFFFF);
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+}
+
+.ana-ai-paragraph {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary, #0F172A);
+}
+
+/* ── 10. Achievements Card ── */
+.ana-achieve-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.ana-achieve-box {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(15, 23, 42, 0.02);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+}
+
+.ana-achieve-box.completed {
+  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.ana-achieve-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ana-achieve-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ana-achieve-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #0F172A);
+}
+
+.ana-achieve-status {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #64748B);
+}
+
+/* ── Responsive Layouts (Mobile, Tablet, Desktop) ── */
+/* Mobile (< 768px): Vertical stacked (1fr) */
+@media (max-width: 767.98px) {
+  .ana-content {
+    padding: 16px 16px 110px;
+    gap: 16px;
+  }
+  .ana-card {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+  .ana-hero-body {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 20px;
+  }
+  .ana-score-ring-wrap {
+    justify-content: center;
+  }
+  .ana-chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .ana-overview-grid,
+  .ana-summary-grid,
+  .ana-improve-grid,
+  .ana-achieve-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .ana-filter-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+/* Tablet (>= 768px and < 1200px): 2 Columns */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .ana-content {
+    max-width: 960px;
+    padding: 24px 32px 120px;
+    gap: 20px;
+  }
+  .ana-hero-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ana-overview-grid,
+  .ana-summary-grid,
+  .ana-improve-grid,
+  .ana-achieve-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+}
+
+/* Desktop (>= 1200px): Wide container, 4 Columns */
+@media (min-width: 1200px) {
+  .ana-content {
+    max-width: 1360px;
+    padding: 32px 48px 130px;
+    gap: 24px;
+  }
+  .ana-card {
+    padding: 28px 32px;
+    border-radius: 24px;
+  }
+  .ana-hero-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 48px;
+  }
+  .ana-overview-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .ana-summary-grid,
+  .ana-improve-grid,
+  .ana-achieve-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+  .ana-card-title {
+    font-size: 20px;
+  }
+}
+
+/* ── Dark Mode Local Overrides for Dashboard.css ── */
+[data-theme="dark"] .ana-card,
+[data-theme="dark"] .ana-hero-card,
+[data-theme="dark"] .ana-score-ring,
+[data-theme="dark"] .ana-custom-dates,
+[data-theme="dark"] .ana-ai-body,
+[data-theme="dark"] .ana-filter-btn.active,
+[data-theme="dark"] .ana-overview-box,
+[data-theme="dark"] .ana-habit-row,
+[data-theme="dark"] .ana-achieve-card,
+[data-theme="dark"] .ana-improve-item {
+  background: var(--surface-card, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+}
+
+[data-theme="dark"] .ana-date-field input[type="date"] {
+  background: var(--input-bg, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.15)) !important;
+}
+
+[data-theme="dark"] .ana-date-field,
+[data-theme="dark"] .ana-habit-label,
+[data-theme="dark"] .ana-overview-label {
+  color: var(--text-secondary, #CBD5E1) !important;
+}
+
