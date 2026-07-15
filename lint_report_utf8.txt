@@ -1,0 +1,323 @@
+﻿
+C:\Users\User\Desktop\MFU Longevity Passport\src\App.tsx
+   95:11  error    Error: Cannot access variable before it is declared
+
+`handleLoginSuccess` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\App.tsx:95:11
+  93 |         // If we are on the login page, move to home after session is established
+  94 |         if (currentPage === 'login') {
+> 95 |           handleLoginSuccess();
+     |           ^^^^^^^^^^^^^^^^^^ `handleLoginSuccess` accessed before it is declared
+  96 |         }
+  97 |       } else if (event === 'SIGNED_OUT') {
+  98 |         handleLogout();
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\App.tsx:120:3
+  118 |   }, []);
+  119 |
+> 120 |   const handleLoginSuccess = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 121 |     setCurrentPage('home');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 122 |     // Trigger install prompt once after every successful login
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 123 |     setShowPwaPrompt(false);
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 124 |     setTimeout(() => setShowPwaPrompt(true), 50); // brief reset so prop re-fires
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 125 |   };
+      | ^^^^^ `handleLoginSuccess` is declared here
+  126 |
+  127 |   const handleLogout = () => {
+  128 |     localStorage.removeItem('authToken');                                                          react-hooks/immutability
+   98:9   error    Error: Cannot access variable before it is declared
+
+`handleLogout` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\App.tsx:98:9
+   96 |         }
+   97 |       } else if (event === 'SIGNED_OUT') {
+>  98 |         handleLogout();
+      |         ^^^^^^^^^^^^ `handleLogout` accessed before it is declared
+   99 |       }
+  100 |     });
+  101 |
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\App.tsx:127:3
+  125 |   };
+  126 |
+> 127 |   const handleLogout = () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 128 |     localStorage.removeItem('authToken');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 129 |     localStorage.removeItem('currentPage');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 130 |     localStorage.removeItem('userEmail');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 131 |     localStorage.removeItem('userId');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 132 |     localStorage.removeItem('profileData');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 133 |     setCurrentPage('login');
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 134 |   };
+      | ^^^^^ `handleLogout` is declared here
+  135 |
+  136 |   const handleNavigate = (page: PageType) => {
+  137 |     localStorage.setItem('currentPage', page);  react-hooks/immutability
+  118:6   warning  React Hook useEffect has a missing dependency: 'currentPage'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\components\PWAInstallPrompt.tsx
+  18:24  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-explicit-any
+  46:7   error  Error: Cannot access variable before it is declared
+
+`animateClose` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\components\PWAInstallPrompt.tsx:46:7
+  44 |     window.addEventListener('appinstalled', () => {
+  45 |       localStorage.setItem(STORAGE_KEY, 'true');
+> 46 |       animateClose();
+     |       ^^^^^^^^^^^^ `animateClose` accessed before it is declared
+  47 |     });
+  48 |     return () => window.removeEventListener('beforeinstallprompt', handler);
+  49 |   }, []);
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\components\PWAInstallPrompt.tsx:61:3
+  59 |   }, [triggerOnLogin]);
+  60 |
+> 61 |   const animateClose = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 62 |     setClosing(true);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 63 |     setTimeout(() => { setVisible(false); setClosing(false); }, 400);
+     | ^^^^^^^^^^^^^^^^^^^^^
+> 64 |   };
+     | ^^^^^ `animateClose` is declared here
+  65 |
+  66 |   const handleDone = () => {
+  67 |     localStorage.setItem(STORAGE_KEY, 'true');  react-hooks/immutability
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\contexts\LanguageContext.tsx
+  14:14  error  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\hooks\useDailyReset.ts
+  30:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Activity.tsx
+  31:5  error    Error: Cannot access variable before it is declared
+
+`loadActivities` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Activity.tsx:31:5
+  29 |
+  30 |   useEffect(() => {
+> 31 |     loadActivities();
+     |     ^^^^^^^^^^^^^^ `loadActivities` accessed before it is declared
+  32 |   }, []);
+  33 |
+  34 |   useEffect(() => {
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Activity.tsx:38:3
+  36 |   }, [activities]);
+  37 |
+> 38 |   const loadActivities = async () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 39 |     if (isApiConfigured) {
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 40 |       try {
+     โ€ฆ
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 66 |     }
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 67 |   };
+     | ^^^^^ `loadActivities` is declared here
+  68 |
+  69 |   const calculateTodayTotal = () => {
+  70 |     const today = new Date().toDateString();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         react-hooks/immutability
+  35:5  error    Error: Cannot access variable before it is declared
+
+`calculateTodayTotal` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Activity.tsx:35:5
+  33 |
+  34 |   useEffect(() => {
+> 35 |     calculateTodayTotal();
+     |     ^^^^^^^^^^^^^^^^^^^ `calculateTodayTotal` accessed before it is declared
+  36 |   }, [activities]);
+  37 |
+  38 |   const loadActivities = async () => {
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Activity.tsx:69:3
+  67 |   };
+  68 |
+> 69 |   const calculateTodayTotal = () => {
+     |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 70 |     const today = new Date().toDateString();
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 71 |     const todayActivities = activities.filter(
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 72 |       a => new Date(a.timestamp).toDateString() === today
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 73 |     );
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 74 |     const minutes = todayActivities.reduce((sum, a) => sum + a.duration, 0);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 75 |     const calories = todayActivities.reduce((sum, a) => sum + a.caloriesBurned, 0);
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 76 |     setTodayTotal({ minutes, calories });
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 77 |   };
+     | ^^^^^ `calculateTodayTotal` is declared here
+  78 |
+  79 |   const activityTypes = [
+  80 |     { type: 'walking', icon: '๐ถ', caloriesPerMin: 4, name: t('activity.walking') },  react-hooks/immutability
+  36:6  warning  React Hook useEffect has a missing dependency: 'calculateTodayTotal'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Dashboard.tsx
+   21:42  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  143:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  147:49  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  238:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  240:96  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Fasting.tsx
+   89:17  error    Error: Cannot access variable before it is declared
+
+`finishFasting` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Fasting.tsx:89:17
+  87 |           clearFastingLocalStorage();
+  88 |           postToSW({ type: 'CANCEL_FASTING_ALARM' });
+> 89 |           await finishFasting(hours);
+     |                 ^^^^^^^^^^^^^ `finishFasting` accessed before it is declared
+  90 |           return;
+  91 |         }
+  92 |       }
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Fasting.tsx:171:3
+  169 |   };
+  170 |
+> 171 |   async function finishFasting(hoursFasted: number) {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 172 |     // Duplicate prevention: only fire goal notification once per session
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 173 |     if (goalNotifiedRef.current) return;
+      โ€ฆ
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 209 |     window.dispatchEvent(new Event('healthDataUpdated'));
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 210 |   }
+      | ^^^^ `finishFasting` is declared here
+  211 |
+  212 |   useEffect(() => {
+  213 |     let interval: number | undefined;  react-hooks/immutability
+  130:6   warning  React Hook useEffect has missing dependencies: 'finishFasting' and 'onOpenFoodRecognition'. Either include them or remove the dependency array. If 'onOpenFoodRecognition' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     react-hooks/exhaustive-deps
+  136:56  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  158:13  error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/ban-ts-comment
+  204:9   error    Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 @typescript-eslint/ban-ts-comment
+  230:6   warning  React Hook useEffect has a missing dependency: 'finishFasting'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Home.tsx
+   30:42  error    Unexpected any. Specify a different type                                                                        @typescript-eslint/no-explicit-any
+  106:6   warning  React Hook useEffect has a missing dependency: 'tips.length'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Login.tsx
+  175:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Profile.tsx
+  100:18  error  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/no-unused-vars
+  108:5   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Profile.tsx:108:5
+  106 |
+  107 |   useEffect(() => {
+> 108 |     fetchProfileData();
+      |     ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  109 |     
+  110 |     // Listen for updates from EditProfile
+  111 |     const handleProfileUpdate = () => fetchProfileData();  react-hooks/set-state-in-effect
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Sleep.tsx
+   28:7   error  'b' is never reassigned. Use 'const' instead                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        prefer-const
+  297:9   error  Unexpected empty object pattern                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     no-empty-pattern
+  319:21  error  Error: Cannot access variable before it is declared
+
+`loadSleepLogs` is accessed before it is declared, which prevents the earlier access from updating when this value changes over time.
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Sleep.tsx:319:21
+  317 |   };
+  318 |
+> 319 |   useEffect(() => { loadSleepLogs(); }, []);
+      |                     ^^^^^^^^^^^^^ `loadSleepLogs` accessed before it is declared
+  320 |
+  321 |   const loadSleepLogs = async () => {
+  322 |     if (isApiConfigured && !isSupabaseConfigured()) {
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Sleep.tsx:321:3
+  319 |   useEffect(() => { loadSleepLogs(); }, []);
+  320 |
+> 321 |   const loadSleepLogs = async () => {
+      |   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 322 |     if (isApiConfigured && !isSupabaseConfigured()) {
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 323 |       try {
+      โ€ฆ
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 342 |     if (saved) setSleepLogs(JSON.parse(saved));
+      | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+> 343 |   };
+      | ^^^^^ `loadSleepLogs` is declared here
+  344 |
+  345 |   const logSleep = async () => {
+  346 |     const duration = calcDuration(bedtime, waketime);  react-hooks/immutability
+  328:73  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            @typescript-eslint/no-explicit-any
+  339:16  error  'e' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-unused-vars
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Team.tsx
+  22:52  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  23:48  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  50:45  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  61:38  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  74:47  error    Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/no-explicit-any
+  86:5   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\Team.tsx:86:5
+  84 |
+  85 |   useEffect(() => {
+> 86 |     fetchData();
+     |     ^^^^^^^^^ Avoid calling setState() directly within an effect
+  87 |   }, []);
+  88 |
+  89 |   const handleInvite = async () => {  react-hooks/set-state-in-effect
+  87:6   warning  React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   react-hooks/exhaustive-deps
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\pages\UserManagement.tsx
+   13:78  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  113:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  118:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  160:38  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  195:47  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  234:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  429:85  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\User\Desktop\MFU Longevity Passport\src\sw.ts
+  36:9  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+  64:7  error  Use "@ts-expect-error" instead of "@ts-ignore", as "@ts-ignore" will do nothing if the following line is error-free  @typescript-eslint/ban-ts-comment
+
+โ– 48 problems (42 errors, 6 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
