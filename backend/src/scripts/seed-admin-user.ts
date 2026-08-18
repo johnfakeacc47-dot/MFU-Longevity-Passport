@@ -12,7 +12,7 @@ async function bootstrap() {
   try {
     // Create an admin user
     const adminUser = await usersService.findByMfuId('admin-001');
-    
+
     let user;
     if (!adminUser) {
       console.log('Creating admin user...');
@@ -32,7 +32,7 @@ async function bootstrap() {
 
     // Generate JWT token
     const { accessToken } = await authService.issueJwt(user);
-    
+
     console.log('\n🔑 JWT Token for admin:');
     console.log('─'.repeat(80));
     console.log(accessToken);
@@ -40,7 +40,7 @@ async function bootstrap() {
     console.log('\n📝 To use this token for admin login:');
     console.log('Update Login.tsx with this token for admin user');
     console.log('\n✅ Token expires in 7 days');
-    
+
   } catch (error) {
     console.error('Error:', error);
   } finally {

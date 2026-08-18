@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FaEye, FaEyeSlash, FaLeaf, FaRocket } from 'react-icons/fa';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { DevLoginModal } from '../components/DevLoginModal';
 
 interface LoginProps {
@@ -18,6 +19,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showDevModal, setShowDevModal] = useState(false);
   const { t } = useLanguage();
+  useSEO(`${t('login.welcome')} · MFU Longevity Passport`, t('login.subtitle'));
 
   // Check if we are in a development/testing environment
   const isDevEnv =

@@ -19,6 +19,7 @@ import {
 } from 'react-icons/fa';
 
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { getScoreColor } from '../utils/longevityScore';
 import { getAnalyticsData } from '../utils/analyticsScore';
 import type { TimeRangeFilter, AnalyticsResult } from '../utils/analyticsScore';
@@ -65,6 +66,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onOpenFoodRecognition,
 }) => {
   const { language, t } = useLanguage();
+  useSEO(`${t('dashboard.title')} · MFU Longevity Passport`, 'Analytics and trends across all your health pillars.');
   const [timeRange, setTimeRange] = useState<TimeRangeFilter>('week');
   const [customStart, setCustomStart] = useState<string>(() =>
     new Date(Date.now() - 14 * 86400000).toISOString().split('T')[0]

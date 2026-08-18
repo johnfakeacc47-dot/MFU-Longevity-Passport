@@ -4,6 +4,7 @@ import type { User, CreateUserPayload } from '../services/userApi';
 import { isSupabaseConfigured, getAllProfiles, updateProfile, deleteProfile, adminCreateUser, supabase } from '../services/supabaseClient';
 import { userApi } from '../services/userApi';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 
@@ -20,6 +21,7 @@ interface UserManagementProps {
 
 export default function UserManagement({ onNavigate, onOpenFoodRecognition }: UserManagementProps) {
   const { t } = useLanguage();
+  useSEO('User Management · MFU Longevity Passport', 'Manage users and permissions across the platform.');
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

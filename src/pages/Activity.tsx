@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FaBicycle, FaDumbbell, FaFire, FaRunning, FaStopwatch, FaSwimmer, FaTimes, FaTrash, FaWalking, FaYinYang, FaArrowLeft, FaHeartbeat } from 'react-icons/fa';
 import { BottomNav } from '../components/BottomNav';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { healthApi, isApiConfigured } from '../services/healthApi';
 import '../styles/components/activity.css'; // Will create this
 
@@ -33,7 +35,8 @@ const ACTIVITY_TYPES = [
 export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t, language } = useLanguage();
   const isTh = language === 'th';
-  
+  useSEO(`${t('activity.title')} · MFU Longevity Passport`, 'Track workouts, steps, and daily physical activity.');
+
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState('');
@@ -59,7 +62,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
       }
     }
     const saved = localStorage.getItem('activities');
-    if (saved) setActivities(JSON.parse(saved));
+    if (saved) setActivities(safeParse(saved, []));
   }, []);
 
   useEffect(() => { loadActivities(); }, [loadActivities]);

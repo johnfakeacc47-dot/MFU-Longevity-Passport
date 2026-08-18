@@ -4,6 +4,8 @@ import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { healthApi, isApiConfigured } from '../services/healthApi';
 import { isSupabaseConfigured } from '../services/supabaseClient';
 import { SleepQualityIndicator, calculateSleepQuality } from '../components/SleepQualityIndicator';
@@ -29,6 +31,7 @@ const QUALITY_COLORS = ['', '#ef4444','#ef4444','#f97316','#f97316','#f59e0b','#
 
 export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
+  useSEO(`${t('sleep.title')} · MFU Longevity Passport`, 'Log and review your sleep quality and duration.');
   const [sleepLogs, setSleepLogs]   = useState<SleepLog[]>([]);
   const [showModal, setShowModal]   = useState(false);
   const [bedtime, setBedtime]       = useState('22:00');
@@ -56,7 +59,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
       }
     }
     const saved = localStorage.getItem('sleepLogs');
-    if (saved) setSleepLogs(JSON.parse(saved));
+    if (saved) setSleepLogs(safeParse(saved, []));
   }, []);
 
   const calcWeekAvg = React.useCallback(() => {

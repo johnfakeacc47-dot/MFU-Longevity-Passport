@@ -22,6 +22,7 @@ export default defineConfig([
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'react-hooks/immutability': 'off',
       'react-hooks/refs': 'off',
       'react-hooks/set-state-in-effect': 'off',

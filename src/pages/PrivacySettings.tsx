@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FaExclamationTriangle, FaFileAlt, FaHandshake, FaListAlt, FaShieldAlt, FaSkullCrossbones } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { BottomNav } from '../components/BottomNav';
 import { getCurrentUserProfile, updateScoreVisibility, deleteUserAccount } from '../services/supabaseClient';
 import { BackButton } from '../components/BackButton';
@@ -15,6 +17,7 @@ interface PrivacySettingsProps {
 export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t, language } = useLanguage();
   const isTh = language === 'th';
+  useSEO(`${t('privacySettings.title')} · MFU Longevity Passport`, 'Manage your privacy and data preferences.');
   const [shareScore, setShareScore] = useState(false);
   const [shareHabits, setShareHabits] = useState(false);
   const [anonymousAI, setAnonymousAI] = useState(true);
@@ -94,7 +97,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
 
       // Part 2: Call Edge Function to delete auth user
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const session = JSON.parse(localStorage.getItem('sb-' + new URL(supabaseUrl).hostname.split('.')[0] + '-auth-token') || '{}');
+      const session = safeParse<any>(localStorage.getItem('sb-' + new URL(supabaseUrl).hostname.split('.')[0] + '-auth-token'), {});
       const accessToken = session?.access_token;
 
       if (supabaseUrl && accessToken) {

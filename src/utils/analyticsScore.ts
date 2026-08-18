@@ -23,6 +23,7 @@ import {
   getSleepTargetByAge,
   getActivityTargetByAge,
 } from './longevityScore';
+import { safeGetItem } from './safeStorage';
 
 export type TimeRangeFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
@@ -195,12 +196,12 @@ export function getAnalyticsData(
   }
 
   // 2. Read logs from localStorage
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
-  const fastingState: FastingState = JSON.parse(localStorage.getItem('fastingState') || '{}');
-  const waterGlasses: number = parseInt(localStorage.getItem('waterIntake') || '6', 10);
+  const meals = safeGetItem<MealLog[]>('meals', []);
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
+  const fastingState = safeGetItem<FastingState>('fastingState', { isFasting: false, startTime: null, endTime: null, fastingHours: 0 });
+  const waterGlasses: number = parseInt(localStorage.getItem('waterIntake') || '6', 10) || 6;
 
   const sleepTarget = getSleepTargetByAge(age);
   const activityTarget = getActivityTargetByAge(age);

@@ -5,6 +5,7 @@ import { LuCamera, LuImage, LuSparkles, LuX, LuFlame, LuHeart, LuApple, LuRefres
 import { THAI_FOOD_CLASSES } from '../config/foodClasses';
 import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi } from '../services/healthApi';
+import { safeGetItem } from '../utils/safeStorage';
 import '../styles/FoodRecognition.css';
 
 interface FoodRecognitionProps {
@@ -1042,7 +1043,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             };
                             
                             try {
-                              const existingMeals = JSON.parse(localStorage.getItem('meals') || '[]');
+                              const existingMeals = safeGetItem<any[]>('meals', []);
                               existingMeals.push(meal);
                               localStorage.setItem('meals', JSON.stringify(existingMeals));
                               
@@ -1065,7 +1066,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                   correctedPrediction: predictions[selectedPredictionIndex].className,
                                   timestamp: Date.now()
                                 };
-                                const existingFeedback = JSON.parse(localStorage.getItem('aiFeedback') || '[]');
+                                const existingFeedback = safeGetItem<any[]>('aiFeedback', []);
                                 existingFeedback.push(feedback);
                                 localStorage.setItem('aiFeedback', JSON.stringify(existingFeedback));
                               }

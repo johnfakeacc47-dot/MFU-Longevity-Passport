@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { useTheme } from '../contexts/ThemeContext';
 import type { Theme } from '../contexts/ThemeContext';
 import { BottomNav } from '../components/BottomNav';
@@ -30,6 +31,7 @@ interface SettingsProps {
 export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecognition = () => {} }) => {
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
+  useSEO(`${t('settings.title')} · MFU Longevity Passport`, 'Configure app preferences and account options.');
 
   const [fastingAlert, setFastingAlert] = useState<boolean>(true);
   const [activityAlert, setActivityAlert] = useState<boolean>(true);

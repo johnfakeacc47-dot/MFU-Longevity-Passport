@@ -6,6 +6,7 @@ import type {
   LongevityBreakdown,
 } from './longevityScore';
 import { calculateLongevityScore } from './longevityScore';
+import { safeGetItem } from './safeStorage';
 
 // ── 1. DAILY GOALS ─────────────────────────────────────────────────────────────
 
@@ -27,10 +28,10 @@ export interface DailyGoalsResult {
 
 export const getDailyGoals = (): DailyGoalsResult => {
   const ts = new Date().setHours(0, 0, 0, 0);
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+  const meals = safeGetItem<MealLog[]>('meals', []);
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
 
   const todayMeals = meals.filter(m => new Date(m.timestamp).getTime() >= ts);
   const todayActivities = activities.filter(a => new Date(a.timestamp).getTime() >= ts);
@@ -41,7 +42,7 @@ export const getDailyGoals = (): DailyGoalsResult => {
   const totalDuration = todayActivities.reduce((sum, a) => sum + (a.duration || 0), 0);
   const sleepDuration = todaySleep ? todaySleep.duration : 0;
 
-  const profile = JSON.parse(localStorage.getItem('profileData') || '{}');
+  const profile = safeGetItem<any>('profileData', {});
   const targetCalories = profile.targetCalories || 2000;
   const targetExercise = 30; // 30 min minimum daily goal
   const targetSleepMin = 7;
@@ -165,10 +166,10 @@ export interface WeeklyChallengeItem {
 
 export const getWeeklyChallenges = (): WeeklyChallengeItem[] => {
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
+  const meals = safeGetItem<MealLog[]>('meals', []);
 
   const weekActivities = activities.filter(a => new Date(a.timestamp).getTime() >= sevenDaysAgo);
   const weekSleep = sleepLogs.filter(s => new Date(s.timestamp).getTime() >= sevenDaysAgo);
@@ -240,9 +241,9 @@ export interface BadgeItem {
 }
 
 export const getAchievements = (): BadgeItem[] => {
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
+  const meals = safeGetItem<MealLog[]>('meals', []);
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
 
   const uniqueActiveDays = new Set([
     ...meals.map(m => new Date(m.timestamp).toISOString().split('T')[0]),
@@ -327,7 +328,7 @@ export const getLongevityIndex = (currentScore?: LongevityBreakdown): LongevityI
     ageOffset = -1;
   }
 
-  const profile = JSON.parse(localStorage.getItem('profileData') || '{}');
+  const profile = safeGetItem<any>('profileData', {});
   let realAge = profile.age || 35;
   if (profile.birthDate) {
     const diff = Date.now() - new Date(profile.birthDate).getTime();
@@ -489,10 +490,10 @@ export const getTodayTimeline = (lang: string): TimelineEvent[] => {
   const ts = new Date().setHours(0, 0, 0, 0);
   const events: TimelineEvent[] = [];
 
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+  const meals = safeGetItem<MealLog[]>('meals', []);
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
 
   meals.filter(m => new Date(m.timestamp).getTime() >= ts).forEach((m, idx) => {
     const d = new Date(m.timestamp);
@@ -561,7 +562,7 @@ export interface WaterLog {
 
 export const getTodayWater = (): WaterLog => {
   const todayStr = new Date().toISOString().split('T')[0];
-  const logs: Record<string, WaterLog> = JSON.parse(localStorage.getItem('waterLogs') || '{}');
+  const logs = safeGetItem<Record<string, WaterLog>>('waterLogs', {});
   if (logs[todayStr]) {
     return logs[todayStr];
   }
@@ -570,7 +571,7 @@ export const getTodayWater = (): WaterLog => {
 
 export const saveTodayWater = (glassesToAdd: number): WaterLog => {
   const todayStr = new Date().toISOString().split('T')[0];
-  const logs: Record<string, WaterLog> = JSON.parse(localStorage.getItem('waterLogs') || '{}');
+  const logs = safeGetItem<Record<string, WaterLog>>('waterLogs', {});
   const current = logs[todayStr] || { date: todayStr, glasses: 0, ml: 0, targetMl: 2000 };
 
   const newGlasses = Math.max(0, current.glasses + glassesToAdd);
@@ -602,7 +603,7 @@ export interface MoodHistoryItem {
 }
 
 export const getMoodHistory = (): MoodHistoryItem[] => {
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
   return mentalLogs
     .map((m, idx) => {
       const d = new Date(m.timestamp);
@@ -636,9 +637,7 @@ export interface CalendarDayItem {
 export const getHealthCalendar = (daysCount = 30): CalendarDayItem[] => {
   const items: CalendarDayItem[] = [];
   const today = new Date();
-  const historicalScores: Record<string, LongevityBreakdown> = JSON.parse(
-    localStorage.getItem('historicalScoresMap') || '{}'
-  );
+  const historicalScores = safeGetItem<Record<string, LongevityBreakdown>>('historicalScoresMap', {});
 
   const todayStr = today.toISOString().split('T')[0];
   historicalScores[todayStr] = calculateLongevityScore();

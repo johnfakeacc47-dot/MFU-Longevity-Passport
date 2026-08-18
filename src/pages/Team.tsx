@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FaCheck, FaCrown, FaLock, FaUserPlus, FaUser } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
@@ -26,6 +27,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const [isLoading, setIsLoading] = useState(true);
   const [isInviting, setIsInviting] = useState(false);
   const { t } = useLanguage();
+  useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
 
   const currentDayIndex = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
   const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });

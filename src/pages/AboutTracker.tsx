@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { FaBed, FaCircle, FaDumbbell, FaFlask, FaGraduationCap, FaHourglassHalf, FaLeaf } from "react-icons/fa";
 import { BackButton } from '../components/BackButton';
@@ -13,6 +14,7 @@ interface AboutTrackerProps {
 
 export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
+  useSEO('The Science · MFU Longevity Passport', 'Learn the science behind the Longevity Passport scoring system.');
 
   const pillars = [
     { title: 'Nutrition', icon: <FaLeaf />, desc: 'Personalized AI-tracking to optimize nutrient density and caloric balance.' },

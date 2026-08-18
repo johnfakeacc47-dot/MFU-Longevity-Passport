@@ -84,6 +84,12 @@ export const th: Record<string, string> = {
   'profile.version': 'เวอร์ชัน',
   'profile.settings': 'การตั้งค่า',
 
+  // Set Goals Page
+  'setGoals.title': 'ตั้งเป้าหมายสุขภาพ',
+
+  // Privacy Settings Page
+  'privacySettings.title': 'ความเป็นส่วนตัวและข้อมูล',
+
   // Edit Profile
   'editProfile.status': 'สถานะโปรไฟล์',
   'editProfile.title': 'แก้ไขข้อมูลส่วนบุคคล',

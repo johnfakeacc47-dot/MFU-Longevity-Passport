@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { safeParse } from '../utils/safeStorage';
 
 export const useDailyReset = () => {
   useEffect(() => {
@@ -22,13 +23,13 @@ export const useDailyReset = () => {
           if (data && data !== '[]') {
             // we could filter for today's items, but for simplicity, we just clear everything.
             // If the user hasn't opened the app since yesterday, there are no today's items anyway.
-            const items = JSON.parse(data);
+            const items: { timestamp: string | number | Date }[] = safeParse(data, []);
             const todayTimestamp = new Date();
             todayTimestamp.setHours(0, 0, 0, 0);
-            
+
             // Only keep items that actually happened today
             const filtered = items.filter((item: { timestamp: string | number | Date }) => new Date(item.timestamp).getTime() >= todayTimestamp.getTime());
-            
+
             if (filtered.length !== items.length) {
               localStorage.setItem(key, JSON.stringify(filtered));
               shouldDispatch = true;

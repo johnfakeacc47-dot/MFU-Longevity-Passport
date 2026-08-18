@@ -6,10 +6,16 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(configService: ConfigService) {
+    const secret = configService.get<string>('JWT_SECRET');
+    // Fail fast instead of silently signing/verifying tokens with a hardcoded
+    // literal — that masks a misconfigured deploy rather than surfacing it.
+    if (!secret) {
+      throw new Error('JWT_SECRET must be set (see backend/.env.example).');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET') || 'change-me',
+      secretOrKey: secret,
     });
   }
 
