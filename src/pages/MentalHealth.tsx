@@ -5,8 +5,10 @@ import {
 } from 'react-icons/fa';
 import { BottomNav } from '../components/BottomNav';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { getPillarStatusKey } from '../utils/longevityScore';
 import type { MentalLog } from '../utils/longevityScore';
+import { safeGetItem } from '../utils/safeStorage';
 import { MoodHistoryCard } from '../components/coach/MoodHistoryCard';
 import '../styles/MentalHealth.css';
 
@@ -78,6 +80,7 @@ const SliderRow: React.FC<{
 
 export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t, language } = useLanguage();
+  useSEO(`${t('mental.title')} · MFU Longevity Passport`, 'Track your mood and mental well-being.');
   const [mood,   setMood]   = useState<MoodType>('neutral');
   const [stress, setStress] = useState(5);
   const [energy, setEnergy] = useState(6);
@@ -88,7 +91,7 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
   useEffect(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const ts    = today.getTime();
-    const logs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+    const logs = safeGetItem<MentalLog[]>('mentalLogs', []);
     const existing = logs.find(l => new Date(l.timestamp).getTime() >= ts);
     if (existing) {
       setTodayLog(existing);
@@ -111,7 +114,7 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
     };
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const ts    = today.getTime();
-    const logs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+    const logs = safeGetItem<MentalLog[]>('mentalLogs', []);
     const filtered = logs.filter(l => new Date(l.timestamp).getTime() < ts);
     localStorage.setItem('mentalLogs', JSON.stringify([log, ...filtered]));
     setTodayLog(log);
@@ -123,7 +126,7 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
   const handleDelete = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const ts    = today.getTime();
-    const logs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+    const logs = safeGetItem<MentalLog[]>('mentalLogs', []);
     const filtered = logs.filter(l => new Date(l.timestamp).getTime() < ts);
     localStorage.setItem('mentalLogs', JSON.stringify(filtered));
     setTodayLog(null);

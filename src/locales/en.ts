@@ -84,6 +84,12 @@ export const en: Record<string, string> = {
   'profile.version': 'Version',
   'profile.settings': 'Settings',
 
+  // Set Goals Page
+  'setGoals.title': 'Set Health Goals',
+
+  // Privacy Settings Page
+  'privacySettings.title': 'Privacy & Data',
+
   // Edit Profile
   'editProfile.status': 'Profile Status',
   'editProfile.title': 'Edit Personal Information',

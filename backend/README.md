@@ -1,113 +1,73 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# MFU Longevity Passport — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS + TypeORM + PostgreSQL API for the [MFU Longevity Passport](../README.md) app. Handles
+auth (MFU OIDC + JWT), and logging/scoring for meals, activity, sleep, and fasting.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Prerequisites
 
-## Description
+- Node.js v18+
+- Docker (for the local PostgreSQL/TimescaleDB container)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Environment variables
+
+Copy `.env.example` to `.env` and fill in the values.
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `PORT` | no | Defaults to `3001`. |
+| `DATABASE_URL` | **yes** | Postgres connection string. |
+| `DB_SYNCHRONIZE` | no | `true` auto-syncs the schema from entities — dev only, never `true` in production. |
+| `ENCRYPTION_KEY` | **yes** | Exactly 32 characters. AES-256 at-rest encryption for `meal.imageUrl` and `health_log.data`. **Must stay stable** — rotating or losing it makes previously-encrypted rows permanently undecryptable. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex').slice(0,32))"`. |
+| `JWT_SECRET` | **yes** | Signs/verifies session JWTs. |
+| `CORS_ORIGIN` | no | Comma-separated list of allowed frontend origins. Defaults to `http://localhost:5173,http://localhost:3000` for local dev — set this to your deployed frontend's origin in any other environment. |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_AUTH_URL`, `OIDC_TOKEN_URL`, `OIDC_USERINFO_URL`, `OIDC_CALLBACK_URL` | no | MFU SSO (OIDC) login. Without these, use the `GET /auth/mock-login` dev-only stub instead. |
+
+The server throws at startup (rather than silently falling back to an insecure default) if
+`DATABASE_URL`, `JWT_SECRET`, or `ENCRYPTION_KEY` is missing or malformed.
 
 ## Local development
 
-### Database (TimescaleDB)
-
 ```bash
-docker-compose up -d
+# from the repo root
+npm run backend:install    # or: cd backend && npm install
+npm run backend:db:up      # starts Postgres via docker-compose
+npm run backend:dev        # starts Nest in watch mode on $PORT (default 3001)
 ```
 
-### Backend
+Or from inside `backend/`:
 
 ```bash
 npm install
+docker compose up -d
 npm run start:dev
 ```
 
-## Project setup
+## Scripts
 
 ```bash
-$ npm install
+npm run start        # start
+npm run start:dev    # start in watch mode
+npm run start:prod   # run the compiled build (dist/main)
+npm run build         # compile with nest build
+npm run lint          # eslint --fix — reformats matching files in place, review the diff before committing
+npm run test          # unit tests
+npm run test:e2e      # e2e tests
+npm run test:cov      # coverage
+npm run seed:test     # seed a test user + print a JWT (src/scripts/seed-test-user.ts)
 ```
 
-## Compile and run the project
+There's also `src/scripts/seed-admin-user.ts` for seeding an admin user, runnable with
+`ts-node -r tsconfig-paths/register src/scripts/seed-admin-user.ts`.
 
-```bash
-# development
-$ npm run start
+## Architecture notes
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Auth**: `passport-openidconnect` for MFU SSO login, `passport-jwt` for subsequent
+  request auth. `RolesGuard` + `@Roles()` gate admin-only endpoints.
+- **Validation**: a global `ValidationPipe` (`whitelist`, `forbidNonWhitelisted`, `transform`)
+  is registered in `main.ts` — DTOs must carry `class-validator` decorators to actually
+  enforce anything.
+- **Encryption**: `EncryptionTransformer` (`src/database/encryption.transformer.ts`) is a
+  TypeORM column transformer applying AES-256-GCM to specific PII/media fields. See the
+  `ENCRYPTION_KEY` note above before touching it.
+- **DB connection**: `TypeOrmModule.forRootAsync` is configured with `retryAttempts`/
+  `retryDelay` so the server doesn't crash on boot if Postgres is still starting up.

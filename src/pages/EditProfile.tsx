@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { isSupabaseConfigured, getCurrentUserProfile, updateCurrentUserProfile } from '../services/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 
@@ -21,6 +23,7 @@ const ACTIVITY_OPTIONS = [
 
 export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
+  useSEO(`${t('editProfile.title')} · MFU Longevity Passport`, 'Update your personal information.');
   const [fullName, setFullName]         = useState('');
   const [email, setEmail]               = useState('');
   const [birthDate, setBirthDate]       = useState('');
@@ -63,7 +66,7 @@ export const EditProfile: React.FC<EditProfileProps> = ({ onNavigate, onOpenFood
       // Fallback localStorage
       const stored = localStorage.getItem('profileData');
       if (stored) {
-        const data = JSON.parse(stored);
+        const data = safeParse<any>(stored, {});
         setFullName(data.fullName ?? '');
         setEmail(data.email ?? '');
         setBirthDate(data.birthDate ?? '');

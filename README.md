@@ -1,73 +1,76 @@
-# React + TypeScript + Vite
+# MFU Longevity Passport
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The MFU Longevity Passport is a comprehensive health and longevity tracking application. It features modules for monitoring daily activity, eating habits, mental health, and sleep patterns to help users maintain a healthy lifestyle.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Activity Tracking**: Monitor daily physical activities.
+- **Eating & Diet**: Log dietary habits (includes Food Recognition powered by TensorFlow).
+- **Mental Health**: Track mental well-being and stress levels.
+- **Sleep Tracking**: Keep logs of sleep quality and duration.
+- **Dashboard**: A comprehensive overview of health metrics.
+- **Goal Setting**: Set and monitor personal health goals.
+- **PWA Support**: Installable as a Progressive Web App.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React, TypeScript, Vite
+- **Styling**: Tailwind CSS, Mantine UI components
+- **Backend & Database**: Node.js backend with PostgreSQL / Supabase
+- **Machine Learning**: TensorFlow.js (for food recognition capabilities)
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js (v18 or higher recommended)
+- Docker (for local database)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Installation
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+1. Clone the repository and install frontend dependencies:
+   ```bash
+   npm install
+   ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+2. Install backend dependencies:
+   ```bash
+   npm run backend:install
+   ```
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+3. Set up environment variables for the backend:
+   Copy `backend/.env.example` to `backend/.env` and update the values as needed.
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+   `DATABASE_URL`, `JWT_SECRET`, and `ENCRYPTION_KEY` are **required** — the backend now fails
+   fast on startup if any of them is missing (previously it would silently fall back to an
+   insecure default, which masked misconfiguration and, for `ENCRYPTION_KEY`, silently
+   corrupted encrypted data on every restart). Generate a key for `ENCRYPTION_KEY` with:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex').slice(0,32))"
+   ```
+
+   See [backend/README.md](backend/README.md) for the full list of environment variables.
+
+### Running the Application
+
+1. Start the local database using Docker:
+   ```bash
+   npm run backend:db:up
+   ```
+
+2. Start the backend development server:
+   ```bash
+   npm run backend:dev
+   ```
+
+3. Start the frontend development server:
+   ```bash
+   npm run dev
+   ```
+
+The frontend will be available at `http://localhost:5173`.
+
+## Documentation
+
+For details on the development process, branching strategies, and contribution guidelines, please refer to [process.md](process.md).

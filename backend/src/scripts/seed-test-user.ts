@@ -12,7 +12,7 @@ async function bootstrap() {
   try {
     // Create a test user
     const testUser = await usersService.findByMfuId('test-student-001');
-    
+
     let user;
     if (!testUser) {
       console.log('Creating test user...');
@@ -32,7 +32,7 @@ async function bootstrap() {
 
     // Generate JWT token
     const { accessToken } = await authService.issueJwt(user);
-    
+
     console.log('\n🔑 JWT Token for testing:');
     console.log('─'.repeat(80));
     console.log(accessToken);
@@ -41,7 +41,7 @@ async function bootstrap() {
     console.log('1. In browser console: localStorage.setItem("authToken", "' + accessToken + '")');
     console.log('2. In API requests: Authorization: Bearer ' + accessToken);
     console.log('\n✅ Token expires in 7 days');
-    
+
   } catch (error) {
     console.error('Error:', error);
   } finally {

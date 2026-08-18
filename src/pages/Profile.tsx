@@ -11,6 +11,8 @@ import {
   updateUserGoalAndActivity,
 } from '../services/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { AchievementsGrid } from '../components/coach/AchievementsGrid';
@@ -143,6 +145,7 @@ const buildAIRecommendation = (bmi: number, goal: string, tdee: number, targetCa
 // ── Component ────────────────────────────────────────────────────────────────
 export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognition, onLogout }) => {
   const { language, t } = useLanguage();
+  useSEO(`${t('profile.title')} · MFU Longevity Passport`, 'Manage your personal information and account settings.');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -186,7 +189,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
       }
       // Fallback localStorage
       const stored = localStorage.getItem('profileData');
-      if (stored) setProfileData(JSON.parse(stored));
+      if (stored) setProfileData((prev) => safeParse(stored, prev));
     } finally {
       setIsLoading(false);
     }

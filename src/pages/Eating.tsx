@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeGetItem } from '../utils/safeStorage';
 import type { MealLog, Macros } from '../utils/longevityScore';
 import { getTodayWater, saveTodayWater } from '../utils/healthCoach';
 import {
@@ -68,6 +70,7 @@ const fmtHMS = (sec: number) => {
 export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognition, view = 'dashboard' }) => {
   const { t, language } = useLanguage();
   const isTh = language === 'th';
+  useSEO(`${t('food.title')} · MFU Longevity Passport`, 'Log meals, track macros, water intake, and your eating schedule.');
   const subView = view;
 
   // ── State ───────────────────────────────────────────────────────────────────
@@ -90,13 +93,13 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
 
   // ── Profile targets ─────────────────────────────────────────────────────────
   const targets = useMemo(() => {
-    const profile = JSON.parse(localStorage.getItem('profileData') || '{}');
+    const profile = safeGetItem<any>('profileData', {});
     return { ...DEFAULT_TARGETS, calories: profile.targetCalories || DEFAULT_TARGETS.calories };
   }, []);
 
   // ── Loaders ─────────────────────────────────────────────────────────────────
   const loadMeals = useCallback(() => {
-    const all: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
+    const all = safeGetItem<MealLog[]>('meals', []);
     setMeals(all);
   }, []);
 
@@ -107,7 +110,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
 
   const loadFasting = useCallback(() => {
     const active = localStorage.getItem('fastingActive') === 'true';
-    const hist: FastingSession[] = JSON.parse(localStorage.getItem('fastingHistory') || '[]');
+    const hist = safeGetItem<FastingSession[]>('fastingHistory', []);
     setFastHistory(hist.slice(-7).reverse());
     if (active) {
       const st = localStorage.getItem('fastingStartTime');
@@ -136,6 +139,11 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
 
   useEffect(() => {
     loadMeals(); loadWater(); loadFasting();
+  }, [loadMeals, loadWater, loadFasting]);
+
+  // Separate effect (keyed on `view`/`onNavigate`) so `onResetView` always closes over the
+  // current subview instead of the one Eating first mounted with — a stale closure otherwise.
+  useEffect(() => {
     const onUpdate = () => { loadMeals(); loadWater(); };
     const onResetView = () => {
       if (view !== 'dashboard') {
@@ -152,7 +160,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
       window.removeEventListener('pageChange', onUpdate);
       window.removeEventListener('eatingResetView', onResetView);
     };
-  }, [loadMeals, loadWater, loadFasting]);
+  }, [view, onNavigate, loadMeals, loadWater]);
 
   useEffect(() => {
     if (!isRunning || !startTime) return;
@@ -263,7 +271,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   };
 
   const stopFasting = () => {
-    const hist: FastingSession[] = JSON.parse(localStorage.getItem('fastingHistory') || '[]');
+    const hist = safeGetItem<FastingSession[]>('fastingHistory', []);
     if (startTime) {
       const session: FastingSession = {
         startTime: startTime.toISOString(),

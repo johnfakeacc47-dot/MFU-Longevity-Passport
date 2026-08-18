@@ -140,7 +140,7 @@ export class HealthService {
     const { start, end } = this.getTodayRange();
     console.log(`[SCORE] Fetching today's score for user ${userId}`);
     console.log(`[SCORE] Date range: ${start} to ${end}`);
-    
+
     const [meals, activities, sleepLogs, fastingSessions] = await Promise.all([
       this.getMealsByDateRange(userId, start, end),
       this.getActivitiesByDateRange(userId, start, end),

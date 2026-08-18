@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FaBed, FaBolt, FaHourglassHalf, FaRunning } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 
@@ -14,6 +15,7 @@ interface SetGoalsProps {
 export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t, language } = useLanguage();
   const isTh = language === 'th';
+  useSEO(`${t('setGoals.title')} · MFU Longevity Passport`, 'Set and adjust your personal health goals.');
   const [fastingGoal, setFastingGoal] = useState(16);
   const [sleepGoal, setSleepGoal] = useState(8);
   const [activityGoal, setActivityGoal] = useState(30);

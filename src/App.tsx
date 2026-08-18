@@ -21,6 +21,7 @@ import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { FoodRecognition } from './components/FoodRecognition'
+import { useDailyReset } from './hooks/useDailyReset'
 
 class FoodRecognitionErrorBoundary extends React.Component<
   { onClose: () => void; children: React.ReactNode },
@@ -64,6 +65,10 @@ function App() {
   const [showPwaPrompt, setShowPwaPrompt] = useState(false)
   // FIX: Track auth loading state to prevent login flash bug
   const [isAuthLoading, setIsAuthLoading] = useState(true)
+
+  // Clears yesterday's meals/activities/sleep logs on day rollover so they
+  // don't keep bleeding into "today's" score. Previously written but never wired up.
+  useDailyReset()
 
   useEffect(() => {
     // FIX: Validate session with Supabase instead of just checking localStorage token

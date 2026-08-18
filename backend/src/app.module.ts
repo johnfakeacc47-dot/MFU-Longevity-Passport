@@ -17,8 +17,15 @@ import * as entities from './entities';
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
         url: configService.get('DATABASE_URL'),
-        entities: Object.values(entities).filter((e) => typeof e === 'function'),
+        entities: Object.values(entities).filter(
+          (e) => typeof e === 'function',
+        ),
         synchronize: configService.get('DB_SYNCHRONIZE') === 'true',
+        // Postgres (e.g. the docker-compose container) can still be finishing startup
+        // when this process boots — retry instead of crashing the whole server on the
+        // first connection attempt.
+        retryAttempts: 10,
+        retryDelay: 3000,
       }),
     }),
     UsersModule,

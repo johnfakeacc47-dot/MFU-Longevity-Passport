@@ -5,6 +5,8 @@ import {
 } from 'react-icons/fa';
 
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSEO } from '../hooks/useSEO';
+import { safeParse } from '../utils/safeStorage';
 import { BottomNav } from '../components/BottomNav';
 import { ScoreRing } from '../components/ScoreRing';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
@@ -89,6 +91,7 @@ const PILLARS = [
 // ── Component ──────────────────────────────────────────────────
 export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t, language } = useLanguage();
+  useSEO(t('home.title'), 'Your daily longevity score, goals, and AI health coach at a glance.');
   const [score,     setScore]     = useState(calculateLongevityScore());
   const [isLoading, setIsLoading] = useState(true);
   const [isLiveDB,  setIsLiveDB]  = useState(false);
@@ -111,9 +114,15 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
   }), [score]);
 
   const indexData = useMemo(() => getLongevityIndex(ringScore as any), [ringScore]);
+  // `score` isn't read directly below — these helpers pull fresh data straight from
+  // localStorage — but it's kept as the recompute trigger so goals/streak/timeline
+  // refresh whenever the score changes (e.g. after logging a meal or workout).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const dailyGoals = useMemo(() => getDailyGoals(), [score]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const healthStreak = useMemo(() => getHealthStreak(), [score]);
   const aiCoachAdvice = useMemo(() => getAICoachAdvice(language, ringScore as any), [language, ringScore]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const todayTimeline = useMemo(() => getTodayTimeline(language), [language, score]);
 
 
@@ -128,7 +137,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
           setIsLiveDB(!!user);
           if (user) {
             const stored = localStorage.getItem('profileData');
-            if (stored) setUserName(JSON.parse(stored).fullName || user.email?.split('@')[0] || '');
+            if (stored) setUserName(safeParse<any>(stored, {}).fullName || user.email?.split('@')[0] || '');
             else        setUserName(user.email?.split('@')[0] || '');
           }
           const dbScore = await getTodayHealthScore();
@@ -138,7 +147,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
           }
         } else {
           const stored = localStorage.getItem('profileData');
-          if (stored) setUserName(JSON.parse(stored).fullName || '');
+          if (stored) setUserName(safeParse<any>(stored, {}).fullName || '');
         }
         setScore(calculateLongevityScore());
       } finally {

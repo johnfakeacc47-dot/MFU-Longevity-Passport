@@ -7,6 +7,8 @@
  * Eating scoring — it is not a standalone top-level pillar.
  */
 
+import { safeGetItem } from './safeStorage';
+
 // ── Local storage interfaces ──────────────────────────────────────────────────
 
 export interface Macros {
@@ -89,11 +91,11 @@ export const calculateLongevityScore = (age: number = 25): LongevityBreakdown =>
   today.setHours(0, 0, 0, 0);
   const ts = today.getTime();
 
-  const meals: MealLog[] = JSON.parse(localStorage.getItem('meals') || '[]');
-  const fastingState: FastingState = JSON.parse(localStorage.getItem('fastingState') || '{}');
-  const activities: ActivityLog[] = JSON.parse(localStorage.getItem('activities') || '[]');
-  const sleepLogs: SleepLog[] = JSON.parse(localStorage.getItem('sleepLogs') || '[]');
-  const mentalLogs: MentalLog[] = JSON.parse(localStorage.getItem('mentalLogs') || '[]');
+  const meals = safeGetItem<MealLog[]>('meals', []);
+  const fastingState = safeGetItem<FastingState>('fastingState', { isFasting: false, startTime: null, endTime: null, fastingHours: 0 });
+  const activities = safeGetItem<ActivityLog[]>('activities', []);
+  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
+  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
 
   const todayMeals = meals.filter((m) => new Date(m.timestamp).getTime() >= ts);
   const todayActivities = activities.filter((a) => new Date(a.timestamp).getTime() >= ts);
