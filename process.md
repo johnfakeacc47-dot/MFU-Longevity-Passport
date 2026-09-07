@@ -65,6 +65,16 @@ This document outlines the standard development workflow and guidelines for the 
   (`recognizeFood()`) — currently Claude (`ANTHROPIC_API_KEY`), swappable to Gemini without
   touching the frontend or the response contract. The local TensorFlow.js model still handles
   the 10 Thai dishes; a per-user toggle (`localStorage.foodRecognitionEngine`) picks the engine.
+- **AI health reports** (`supabase/functions/health-insights/`) reads the caller's
+  `health_scores` rows, asks Claude (`HEALTH_INSIGHTS_MODEL`, default `claude-sonnet-5`) for a
+  grounded interpretation, and caches it in `ai_reports` — regenerates ~weekly or on an
+  explicit refresh (not every page load). Provider isolated to `generateReport()`.
+- **Daily score / analytics.** `health_scores` is the authoritative per-user-per-day rollup
+  (4-pillar score + daily aggregates). The score resets to 0 at **00:00 Asia/Bangkok**
+  (`useDailyReset` → `bangkokTime.ts`); the ending day is frozen into Supabase before the raw
+  localStorage logs are cleared. `getAnalyticsData` is async and reads only real rows — days
+  with no row are excluded from averages and absent from the trend line (never fabricated).
+  Any new day-boundary logic must use `bangkokTime.ts`, never `new Date().toISOString()`.
 - Edge Functions restrict CORS to the `ALLOWED_ORIGINS` secret (comma-separated); set it per
   environment with `supabase secrets set`. Never put a model/provider API key in a `VITE_` var.
 
