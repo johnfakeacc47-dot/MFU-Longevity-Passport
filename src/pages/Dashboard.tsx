@@ -23,6 +23,7 @@ import { useSEO } from '../hooks/useSEO';
 import { getScoreColor } from '../utils/longevityScore';
 import { getAnalyticsData, emptyAnalytics } from '../utils/analyticsScore';
 import type { TimeRangeFilter, AnalyticsResult } from '../utils/analyticsScore';
+import { getHealthInsights, type HealthInsightsResult } from '../services/healthInsightsApi';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { AnalyticsChart } from '../components/AnalyticsChart';
@@ -101,6 +102,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   }, [timeRange, customStart, customEnd, language]);
 
+  // Real AI period report (week / month only; other ranges use the rule-based text).
+  const [aiInsight, setAiInsight] = useState<HealthInsightsResult | null>(null);
+  const aiPeriod: 'week' | 'month' | null =
+    timeRange === 'week' ? 'week' : timeRange === 'month' ? 'month' : null;
+  useEffect(() => {
+    let cancelled = false;
+    setAiInsight(null);
+    if (!aiPeriod) return;
+    getHealthInsights(aiPeriod, { lang: language })
+      .then((r) => { if (!cancelled) setAiInsight(r); })
+      .catch(() => { if (!cancelled) setAiInsight(null); });
+    return () => { cancelled = true; };
+  }, [aiPeriod, language]);
+
   const {
     currentAvg,
     deltaPercent,
@@ -111,6 +126,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     aiReport,
     achievements,
   } = data;
+
+  const aiRep = aiInsight?.enoughData ? aiInsight.report : undefined;
+  const aiParagraph = aiRep
+    ? [aiRep.headline, aiRep.focusNext && `${language === 'th' ? 'โฟกัสต่อไป: ' : 'Focus next: '}${aiRep.focusNext}`]
+        .filter(Boolean).join(' ')
+    : aiReport;
 
   const totalScoreColor = getScoreColor(currentAvg.total);
 
@@ -507,11 +528,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </div>
             <div>
               <h2 className="ana-card-title">{t('dashboard.aiPeriodReport')}</h2>
-              <p className="ana-card-subtitle">{t('dashboard.aiPeriodReportSub')}</p>
+              <p className="ana-card-subtitle">
+                {aiRep
+                  ? (language === 'th' ? 'วิเคราะห์ด้วย AI จากข้อมูลของคุณ' : 'AI analysis of your logged data')
+                  : t('dashboard.aiPeriodReportSub')}
+              </p>
             </div>
           </div>
           <div className="ana-ai-body" style={isLoadingAnalytics ? { opacity: 0.5 } : undefined}>
-            <p className="ana-ai-paragraph">{aiReport}</p>
+            <p className="ana-ai-paragraph">{aiParagraph}</p>
+            {aiRep && aiRep.suggestions.length > 0 && (
+              <ul className="ana-ai-suggestions">
+                {aiRep.suggestions.slice(0, 3).map((s, i) => (
+                  <li key={i}>{s.action}</li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 

@@ -796,3 +796,17 @@
   color: var(--text-secondary, #CBD5E1) !important;
 }
 
+
+/* AI period report — real-AI additions */
+.ana-ai-suggestions {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.ana-ai-suggestions li {
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary, #475569);
+}
