@@ -1,29 +1,23 @@
 /**
  * ╔══════════════════════════════════════════════════════════════╗
- * ║  HEALTH ANALYTICS SCORE ENGINE (Rule-Based Only)            ║
+ * ║  HEALTH ANALYTICS ENGINE                                     ║
  * ║                                                              ║
- * ║  Reads historical logs (meals, activities, sleep, mental)   ║
- * ║  and computes period averages, trends, summaries, goals,    ║
- * ║  and rule-based AI interpretation.                          ║
+ * ║  Reads the per-day `health_scores` rollup rows from Supabase ║
+ * ║  (score breakdown + daily aggregates) and derives period     ║
+ * ║  averages, trends, the health summary, goal progress and a   ║
+ * ║  rule-based interpretation. Days with no row = not tracked   ║
+ * ║  (excluded from averages, absent from the trend line) — the  ║
+ * ║  engine never fabricates numbers.                            ║
+ * ║                                                              ║
+ * ║  The real AI report lives in the `health-insights` Edge      ║
+ * ║  Function; `aiReport` here is the offline fallback.          ║
  * ╚══════════════════════════════════════════════════════════════╝
  */
 
-import type {
-  MealLog,
-  ActivityLog,
-  SleepLog,
-  MentalLog,
-  FastingState,
-} from './longevityScore';
-import {
-  calcNutritionScore,
-  calcExerciseScore,
-  calcSleepScore,
-  calcMentalScore,
-  getSleepTargetByAge,
-  getActivityTargetByAge,
-} from './longevityScore';
-import { safeGetItem } from './safeStorage';
+import { calculateLongevityScore, getSleepTargetByAge } from './longevityScore';
+import { getHealthHistory } from '../services/supabaseClient';
+import { getTodayAggregates } from './dailyAggregates';
+import { bangkokDateStr, addDaysStr, daysBetweenStr } from './bangkokTime';
 
 export type TimeRangeFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
@@ -59,8 +53,8 @@ export interface HealthSummary {
 export interface GoalAchievement {
   caloriesProgress: number; // 0-100
   exerciseProgress: number; // 0-100
-  sleepProgress: number;    // 0-100
-  overallProgress: number;  // 0-100
+  sleepProgress: number; // 0-100
+  overallProgress: number; // 0-100
 }
 
 export interface ImprovementStatus {
@@ -91,396 +85,277 @@ export interface AnalyticsResult {
   goalAchievement: GoalAchievement;
   improvementAnalysis: ImprovementStatus[];
   aiReport: string;
+  /** How many days in the current period actually have a logged row. */
+  loggedDays: number;
   achievements: AchievementBadge[];
 }
 
-/** Helper to format date YYYY-MM-DD */
-function formatYYYYMMDD(d: Date): string {
-  return d.toISOString().split('T')[0];
+// ── health_scores row shape (historical column names: activity=exercise, fasting=mental) ──
+interface ScoreRow {
+  date: string;
+  nutrition: number | null;
+  sleep: number | null;
+  activity: number | null;
+  fasting: number | null;
+  total: number | null;
+  calories_in: number | null;
+  calories_out: number | null;
+  sleep_hours: number | null;
+  water_glasses: number | null;
+  protein_g: number | null;
+  mood_score: number | null;
+  stress_level: number | null;
 }
 
-/** Helper to get date label for chart */
-function getDateLabel(d: Date, range: TimeRangeFilter): string {
-  if (range === 'today') {
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
-  }
-  if (range === 'week') {
-    return d.toLocaleDateString('en-US', { weekday: 'short' });
-  }
-  if (range === 'month' || range === 'quarter') {
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-  if (range === 'year') {
-    return d.toLocaleDateString('en-US', { month: 'short' });
-  }
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+interface DayPoint {
+  dateStr: string;
+  nutrition: number;
+  exercise: number;
+  sleep: number;
+  mental: number;
+  total: number;
+  calories_in: number | null;
+  calories_out: number | null;
+  sleep_hours: number | null;
+  water_glasses: number | null;
+  protein_g: number | null;
+  mood_score: number | null;
+  stress_level: number | null;
 }
 
-export function getAnalyticsData(
+const rowToDay = (r: ScoreRow): DayPoint => ({
+  dateStr: r.date,
+  nutrition: r.nutrition ?? 0,
+  exercise: r.activity ?? 0,
+  sleep: r.sleep ?? 0,
+  mental: r.fasting ?? 0,
+  total: r.total ?? 0,
+  calories_in: r.calories_in,
+  calories_out: r.calories_out,
+  sleep_hours: r.sleep_hours,
+  water_glasses: r.water_glasses,
+  protein_g: r.protein_g,
+  mood_score: r.mood_score,
+  stress_level: r.stress_level,
+});
+
+const RANGE_DAYS: Record<Exclude<TimeRangeFilter, 'custom'>, number> = {
+  today: 1,
+  week: 7,
+  month: 30,
+  quarter: 90,
+  year: 365,
+};
+
+function periodBounds(
+  timeRange: TimeRangeFilter,
+  customStart?: string,
+  customEnd?: string,
+): { from: string; to: string; prevFrom: string; prevTo: string } {
+  const today = bangkokDateStr();
+
+  if (timeRange === 'custom' && customStart && customEnd) {
+    const span = Math.max(1, daysBetweenStr(customStart, customEnd));
+    return {
+      from: customStart,
+      to: customEnd,
+      prevFrom: addDaysStr(customStart, -span),
+      prevTo: addDaysStr(customStart, -1),
+    };
+  }
+
+  const days = RANGE_DAYS[(timeRange as Exclude<TimeRangeFilter, 'custom'>)] ?? 7;
+  const from = addDaysStr(today, -(days - 1));
+  return {
+    from,
+    to: today,
+    prevFrom: addDaysStr(from, -days),
+    prevTo: addDaysStr(from, -1),
+  };
+}
+
+function labelFor(dateStr: string, timeRange: TimeRangeFilter): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
+  if (timeRange === 'week') return dt.toLocaleDateString('en-US', { weekday: 'short' });
+  if (timeRange === 'year') return dt.toLocaleDateString('en-US', { month: 'short' });
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+const avg = (nums: number[]): number =>
+  nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+
+const periodAverage = (days: DayPoint[]): PeriodAverage => ({
+  total: Math.round(avg(days.map((x) => x.total))),
+  nutrition: Math.round(avg(days.map((x) => x.nutrition))),
+  exercise: Math.round(avg(days.map((x) => x.exercise))),
+  sleep: Math.round(avg(days.map((x) => x.sleep))),
+  mental: Math.round(avg(days.map((x) => x.mental))),
+});
+
+function buildSummary(days: DayPoint[]): HealthSummary {
+  const nn = (sel: (d: DayPoint) => number | null): number[] =>
+    days.map(sel).filter((v): v is number => v != null);
+
+  const avgMood = avg(nn((d) => d.mood_score));
+  return {
+    avgCaloriesIntake: Math.round(avg(nn((d) => d.calories_in))),
+    avgCaloriesBurned: Math.round(avg(nn((d) => d.calories_out))),
+    avgSleepHours: Number(avg(nn((d) => d.sleep_hours)).toFixed(1)),
+    avgMoodScore: Number(avgMood.toFixed(1)),
+    avgMoodLabel:
+      avgMood >= 8.5 ? 'Great' : avgMood >= 7 ? 'Good' : avgMood >= 5 ? 'Neutral' : avgMood > 0 ? 'Needs Check' : '—',
+    avgStressLevel: Number(avg(nn((d) => d.stress_level)).toFixed(1)),
+    avgWaterIntake: Math.round(avg(nn((d) => d.water_glasses))),
+    avgProteinIntake: Math.round(avg(nn((d) => d.protein_g))),
+  };
+}
+
+function ruleBasedReport(
+  timeRange: TimeRangeFilter,
+  cur: PeriodAverage,
+  deltaPct: number,
+  improvements: ImprovementStatus[],
+  loggedDays: number,
+  lang: string,
+): string {
+  const th = lang === 'th';
+  if (loggedDays === 0) {
+    return th
+      ? 'ยังไม่มีข้อมูลในช่วงเวลานี้ เริ่มบันทึกการกิน การออกกำลังกาย การนอน และสุขภาพจิต เพื่อดูสรุปและคำแนะนำ'
+      : 'No data logged for this period yet. Start tracking your eating, exercise, sleep and mental health to see a summary and suggestions.';
+  }
+  const best = [...improvements].sort((a, b) => b.delta - a.delta)[0];
+  const worst = [...improvements].sort((a, b) => a.delta - b.delta)[0];
+  const period = th
+    ? timeRange === 'today' ? 'วันนี้' : timeRange === 'week' ? 'สัปดาห์นี้' : timeRange === 'month' ? 'เดือนนี้' : timeRange === 'year' ? 'ปีนี้' : 'ช่วงนี้'
+    : timeRange === 'today' ? 'today' : timeRange === 'week' ? 'this week' : timeRange === 'month' ? 'this month' : timeRange === 'year' ? 'this year' : 'this period';
+
+  if (th) {
+    return `ในช่วง${period} คุณบันทึกข้อมูล ${loggedDays} วัน คะแนนเฉลี่ยอยู่ที่ ${cur.total}/100 (${deltaPct >= 0 ? `+${deltaPct}%` : `${deltaPct}%`} เทียบกับช่วงก่อนหน้า) จุดที่ดีขึ้นมากที่สุดคือ${best.pillar} (${best.delta >= 0 ? `+${best.delta}` : best.delta} คะแนน) ส่วน${worst.pillar}${worst.delta < 0 ? `ลดลง ${Math.abs(worst.delta)} คะแนน — ลองให้ความสำคัญกับด้านนี้มากขึ้น` : 'ยังคงที่'}`;
+  }
+  return `Over ${period} you logged ${loggedDays} day${loggedDays === 1 ? '' : 's'}. Your average score was ${cur.total}/100 (${deltaPct >= 0 ? `+${deltaPct}%` : `${deltaPct}%`} vs the previous period). Biggest gain: ${best.pillar} (${best.delta >= 0 ? `+${best.delta}` : best.delta} pts). ${worst.pillar} ${worst.delta < 0 ? `slipped ${Math.abs(worst.delta)} pts — worth focusing on next.` : 'held steady.'}`;
+}
+
+export async function getAnalyticsData(
   timeRange: TimeRangeFilter = 'week',
   customStart?: string,
   customEnd?: string,
   age: number = 25,
-  lang: string = 'th'
-): AnalyticsResult {
-  const now = new Date();
-  let startDate = new Date(now);
-  let endDate = new Date(now);
-  let prevStartDate = new Date(now);
-  let prevEndDate = new Date(now);
+  lang: string = 'th',
+): Promise<AnalyticsResult> {
+  const { from, to, prevFrom, prevTo } = periodBounds(timeRange, customStart, customEnd);
 
-  // 1. Determine time intervals
-  if (timeRange === 'today') {
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 1);
-    prevEndDate = new Date(prevStartDate);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else if (timeRange === 'week') {
-    startDate.setDate(now.getDate() - 6);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 7);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else if (timeRange === 'month') {
-    startDate.setDate(now.getDate() - 29);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 30);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else if (timeRange === 'quarter') {
-    startDate.setDate(now.getDate() - 89);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 90);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else if (timeRange === 'year') {
-    startDate.setDate(now.getDate() - 364);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 365);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else if (timeRange === 'custom' && customStart && customEnd) {
-    startDate = new Date(customStart);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(customEnd);
-    endDate.setHours(23, 59, 59, 999);
-    const diffDays = Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24)));
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - diffDays);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-    prevEndDate.setHours(23, 59, 59, 999);
-  } else {
-    // Default fallback to week
-    startDate.setDate(now.getDate() - 6);
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setHours(23, 59, 59, 999);
-    prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - 7);
-    prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-  }
+  const [curRows, prevRows] = await Promise.all([
+    getHealthHistory(from, to) as Promise<ScoreRow[]>,
+    getHealthHistory(prevFrom, prevTo) as Promise<ScoreRow[]>,
+  ]);
 
-  // 2. Read logs from localStorage
-  const meals = safeGetItem<MealLog[]>('meals', []);
-  const activities = safeGetItem<ActivityLog[]>('activities', []);
-  const sleepLogs = safeGetItem<SleepLog[]>('sleepLogs', []);
-  const mentalLogs = safeGetItem<MentalLog[]>('mentalLogs', []);
-  const fastingState = safeGetItem<FastingState>('fastingState', { isFasting: false, startTime: null, endTime: null, fastingHours: 0 });
-  const waterGlasses: number = parseInt(localStorage.getItem('waterIntake') || '6', 10) || 6;
+  const curDays: DayPoint[] = curRows.map(rowToDay);
+  const prevDays: DayPoint[] = prevRows.map(rowToDay);
 
-  const sleepTarget = getSleepTargetByAge(age);
-  const activityTarget = getActivityTargetByAge(age);
-
-  // Helper to compute daily scores
-  const computeDayScores = (dayStart: Date, dayEnd: Date) => {
-    const tStart = dayStart.getTime();
-    const tEnd = dayEnd.getTime();
-
-    const dMeals = meals.filter((m) => {
-      const t = new Date(m.timestamp).getTime();
-      return t >= tStart && t <= tEnd;
-    });
-    const dActivities = activities.filter((a) => {
-      const t = new Date(a.timestamp).getTime();
-      return t >= tStart && t <= tEnd;
-    });
-    const dSleep = sleepLogs.find((s) => {
-      const t = new Date(s.timestamp).getTime();
-      return t >= tStart && t <= tEnd;
-    });
-    const dMental = mentalLogs.find((m) => {
-      const t = new Date(m.timestamp).getTime();
-      return t >= tStart && t <= tEnd;
-    });
-
-    // If day is today and has active IF, pass real fasting state
-    const isTodayDay = formatYYYYMMDD(dayStart) === formatYYYYMMDD(new Date());
-    const dayFasting = isTodayDay ? fastingState : { isFasting: false, startTime: null, endTime: null, fastingHours: 16 };
-
-    const nutrition = calcNutritionScore(dMeals, dayFasting);
-    const exercise = calcExerciseScore(dActivities, activityTarget);
-    const sleep = calcSleepScore(dSleep, sleepTarget);
-    const mental = calcMentalScore(dMental);
-    const total = Math.min(100, nutrition + exercise + sleep + mental);
-
-    return {
-      nutrition,
-      exercise,
-      sleep,
-      mental,
-      total,
-      dMeals,
-      dActivities,
-      dSleep,
-      dMental,
+  // Overlay the live (possibly-unsynced) score for today.
+  const todayStr = bangkokDateStr();
+  if (to === todayStr) {
+    const live = calculateLongevityScore(age);
+    const liveAgg = getTodayAggregates();
+    const idx = curDays.findIndex((d) => d.dateStr === todayStr);
+    const liveDay: DayPoint = {
+      dateStr: todayStr,
+      nutrition: live.nutrition,
+      exercise: live.exercise,
+      sleep: live.sleep,
+      mental: live.mental,
+      total: live.total,
+      calories_in: liveAgg.calories_in ?? (idx >= 0 ? curDays[idx].calories_in : null),
+      calories_out: liveAgg.calories_out ?? (idx >= 0 ? curDays[idx].calories_out : null),
+      sleep_hours: liveAgg.sleep_hours ?? (idx >= 0 ? curDays[idx].sleep_hours : null),
+      water_glasses: liveAgg.water_glasses ?? (idx >= 0 ? curDays[idx].water_glasses : null),
+      protein_g: liveAgg.protein_g ?? (idx >= 0 ? curDays[idx].protein_g : null),
+      mood_score: liveAgg.mood_score ?? (idx >= 0 ? curDays[idx].mood_score : null),
+      stress_level: liveAgg.stress_level ?? (idx >= 0 ? curDays[idx].stress_level : null),
     };
-  };
+    const liveHasSomething =
+      live.total > 0 || liveAgg.calories_in != null || liveAgg.sleep_hours != null || liveAgg.mood_score != null;
+    if (idx >= 0) curDays[idx] = liveDay;
+    else if (liveHasSomething) curDays.push(liveDay);
+  }
 
-  // 3. Generate trend points and accumulate scores for current period
-  const trendPoints: TrendPoint[] = [];
-  let sumTotal = 0;
-  let sumNut = 0;
-  let sumExe = 0;
-  let sumSle = 0;
-  let sumMen = 0;
-  let dayCount = 0;
+  const loggedDays = curDays.length;
+  const currentAvg = periodAverage(curDays);
+  const prevAvg = periodAverage(prevDays);
+  const deltaPercent = prevAvg.total > 0
+    ? Math.round(((currentAvg.total - prevAvg.total) / prevAvg.total) * 100)
+    : 0;
 
-  // For health summary accumulation
-  let sumCaloriesIn = 0;
-  let mealsDaysCount = 0;
-  let sumCaloriesBurned = 0;
-  let sumSleepHours = 0;
-  let sleepDaysCount = 0;
-  let sumMood = 0;
-  let moodDaysCount = 0;
-  let sumStress = 0;
-  let stressDaysCount = 0;
-
-  const moodValueMap: Record<string, number> = { great: 10, good: 8, neutral: 6, bad: 4, awful: 2 };
-
-  if (timeRange === 'today') {
-    const res = computeDayScores(startDate, endDate);
-    trendPoints.push({
-      dateStr: formatYYYYMMDD(startDate),
-      label: 'Today',
-      total: res.total || 76,
-      nutrition: res.nutrition || 18,
-      exercise: res.exercise || 18,
-      sleep: res.sleep || 20,
-      mental: res.mental || 20,
-    });
-    sumTotal += res.total || 76;
-    sumNut += res.nutrition || 18;
-    sumExe += res.exercise || 18;
-    sumSle += res.sleep || 20;
-    sumMen += res.mental || 20;
-    dayCount = 1;
-
-    const totalCals = res.dMeals.reduce((s, m) => s + m.calories, 0);
-    if (totalCals > 0) { sumCaloriesIn += totalCals; mealsDaysCount++; }
-    sumCaloriesBurned += res.dActivities.reduce((s, a) => s + Math.round(a.duration * 6.5), 0);
-    if (res.dSleep) { sumSleepHours += res.dSleep.duration; sleepDaysCount++; }
-    if (res.dMental) {
-      sumMood += moodValueMap[res.dMental.mood] || 6;
-      moodDaysCount++;
-      sumStress += res.dMental.stress;
-      stressDaysCount++;
+  // ── Trend points ────────────────────────────────────────────────────────────
+  let trendPoints: TrendPoint[];
+  if (timeRange === 'year') {
+    const byMonth = new Map<string, DayPoint[]>();
+    for (const d of curDays) {
+      const key = d.dateStr.slice(0, 7);
+      const arr = byMonth.get(key) ?? [];
+      arr.push(d);
+      byMonth.set(key, arr);
     }
-  } else if (timeRange === 'year') {
-    const curYear = endDate.getFullYear();
-    for (let m = 0; m < 12; m++) {
-      const mStart = new Date(curYear, m, 1, 0, 0, 0);
-      const mEnd = new Date(curYear, m + 1, 0, 23, 59, 59);
-      if (mStart > endDate) continue;
-
-      let mTotal = 0, mNut = 0, mExe = 0, mSle = 0, mMen = 0, mDays = 0;
-      for (let d = 1; d <= mEnd.getDate(); d++) {
-        const dDate = new Date(curYear, m, d, 12, 0, 0);
-        if (dDate < startDate || dDate > endDate) continue;
-        const dStart = new Date(curYear, m, d, 0, 0, 0);
-        const dEnd = new Date(curYear, m, d, 23, 59, 59);
-        const res = computeDayScores(dStart, dEnd);
-        mTotal += res.total || 78;
-        mNut += res.nutrition || 19;
-        mExe += res.exercise || 18;
-        mSle += res.sleep || 21;
-        mMen += res.mental || 20;
-        mDays++;
-      }
-      if (mDays > 0) {
-        trendPoints.push({
-          dateStr: `${curYear}-${String(m + 1).padStart(2, '0')}`,
-          label: mStart.toLocaleDateString('en-US', { month: 'short' }),
-          total: Math.round(mTotal / mDays),
-          nutrition: Math.round(mNut / mDays),
-          exercise: Math.round(mExe / mDays),
-          sleep: Math.round(mSle / mDays),
-          mental: Math.round(mMen / mDays),
-        });
-        sumTotal += mTotal / mDays;
-        sumNut += mNut / mDays;
-        sumExe += mExe / mDays;
-        sumSle += mSle / mDays;
-        sumMen += mMen / mDays;
-        dayCount++;
-      }
-    }
-  } else {
-    const cursor = new Date(startDate);
-    while (cursor <= endDate) {
-      const dStart = new Date(cursor);
-      dStart.setHours(0, 0, 0, 0);
-      const dEnd = new Date(cursor);
-      dEnd.setHours(23, 59, 59, 999);
-
-      const res = computeDayScores(dStart, dEnd);
-      const hasLogs = res.dMeals.length > 0 || res.dActivities.length > 0 || res.dSleep || res.dMental;
-      const dayTotal = hasLogs ? res.total : 78 + Math.round(Math.sin(cursor.getDate()) * 4);
-      const dayNut = hasLogs ? res.nutrition : 20 + Math.round(Math.cos(cursor.getDate()) * 2);
-      const dayExe = hasLogs ? res.exercise : 18 + Math.round(Math.sin(cursor.getDate()) * 3);
-      const daySle = hasLogs ? res.sleep : 20;
-      const dayMen = hasLogs ? res.mental : 20;
-
-      trendPoints.push({
-        dateStr: formatYYYYMMDD(cursor),
-        label: getDateLabel(cursor, timeRange),
-        total: Math.min(100, dayTotal),
-        nutrition: Math.min(25, dayNut),
-        exercise: Math.min(25, dayExe),
-        sleep: Math.min(25, daySle),
-        mental: Math.min(25, dayMen),
+    trendPoints = [...byMonth.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, days]) => {
+        const m = Number(key.slice(5, 7));
+        return {
+          dateStr: key,
+          label: new Date(2000, m - 1, 1).toLocaleDateString('en-US', { month: 'short' }),
+          total: Math.round(avg(days.map((x) => x.total))),
+          nutrition: Math.round(avg(days.map((x) => x.nutrition))),
+          exercise: Math.round(avg(days.map((x) => x.exercise))),
+          sleep: Math.round(avg(days.map((x) => x.sleep))),
+          mental: Math.round(avg(days.map((x) => x.mental))),
+        };
       });
-
-      sumTotal += Math.min(100, dayTotal);
-      sumNut += Math.min(25, dayNut);
-      sumExe += Math.min(25, dayExe);
-      sumSle += Math.min(25, daySle);
-      sumMen += Math.min(25, dayMen);
-      dayCount++;
-
-      const totalCals = res.dMeals.reduce((s, m) => s + m.calories, 0);
-      if (totalCals > 0) { sumCaloriesIn += totalCals; mealsDaysCount++; }
-      const calsBurned = res.dActivities.reduce((s, a) => s + Math.round(a.duration * 6.5), 0);
-      if (calsBurned > 0) { sumCaloriesBurned += calsBurned; }
-      if (res.dSleep) { sumSleepHours += res.dSleep.duration; sleepDaysCount++; }
-      if (res.dMental) {
-        sumMood += moodValueMap[res.dMental.mood] || 7;
-        moodDaysCount++;
-        sumStress += res.dMental.stress;
-        stressDaysCount++;
-      }
-
-      cursor.setDate(cursor.getDate() + 1);
-    }
+  } else {
+    trendPoints = curDays
+      .slice()
+      .sort((a, b) => a.dateStr.localeCompare(b.dateStr))
+      .map((d) => ({
+        dateStr: d.dateStr,
+        label: timeRange === 'today' ? (lang === 'th' ? 'วันนี้' : 'Today') : labelFor(d.dateStr, timeRange),
+        total: d.total,
+        nutrition: d.nutrition,
+        exercise: d.exercise,
+        sleep: d.sleep,
+        mental: d.mental,
+      }));
   }
 
-  const safeDiv = (num: number, denom: number) => (denom > 0 ? num / denom : 0);
-  const currentAvg: PeriodAverage = {
-    total: Math.round(safeDiv(sumTotal, dayCount)) || 82,
-    nutrition: Math.round(safeDiv(sumNut, dayCount)) || 21,
-    exercise: Math.round(safeDiv(sumExe, dayCount)) || 19,
-    sleep: Math.round(safeDiv(sumSle, dayCount)) || 21,
-    mental: Math.round(safeDiv(sumMen, dayCount)) || 21,
-  };
+  // ── Health summary ──────────────────────────────────────────────────────────
+  const healthSummary = buildSummary(curDays);
 
-  // 4. Compute previous period averages
-  let prevSumTotal = 0;
-  let prevSumNut = 0;
-  let prevSumExe = 0;
-  let prevSumSle = 0;
-  let prevSumMen = 0;
-  let prevDays = 0;
-
-  const prevCursor = new Date(prevStartDate);
-  while (prevCursor <= prevEndDate) {
-    const dStart = new Date(prevCursor);
-    dStart.setHours(0, 0, 0, 0);
-    const dEnd = new Date(prevCursor);
-    dEnd.setHours(23, 59, 59, 999);
-    const res = computeDayScores(dStart, dEnd);
-    const hasLogs = res.dMeals.length > 0 || res.dActivities.length > 0 || res.dSleep || res.dMental;
-    prevSumTotal += hasLogs ? res.total : 78;
-    prevSumNut += hasLogs ? res.nutrition : 19;
-    prevSumExe += hasLogs ? res.exercise : 18;
-    prevSumSle += hasLogs ? res.sleep : 20;
-    prevSumMen += hasLogs ? res.mental : 21;
-    prevDays++;
-    prevCursor.setDate(prevCursor.getDate() + 1);
-  }
-
-  const prevAvg: PeriodAverage = {
-    total: Math.round(safeDiv(prevSumTotal, prevDays)) || 78,
-    nutrition: Math.round(safeDiv(prevSumNut, prevDays)) || 19,
-    exercise: Math.round(safeDiv(prevSumExe, prevDays)) || 18,
-    sleep: Math.round(safeDiv(prevSumSle, prevDays)) || 20,
-    mental: Math.round(safeDiv(prevSumMen, prevDays)) || 21,
-  };
-
-  const deltaPercent = prevAvg.total > 0 ? Math.round(((currentAvg.total - prevAvg.total) / prevAvg.total) * 100) : 5;
-
-  // 5. Health Summary calculation
-  const avgCaloriesIntake = mealsDaysCount > 0 ? Math.round(sumCaloriesIn / mealsDaysCount) : 1950;
-  const avgCaloriesBurned = Math.round((sumCaloriesBurned || dayCount * 380) / dayCount);
-  const avgSleepHours = sleepDaysCount > 0 ? Number((sumSleepHours / sleepDaysCount).toFixed(1)) : 7.6;
-  const avgMoodScore = moodDaysCount > 0 ? Number((sumMood / moodDaysCount).toFixed(1)) : 8.2;
-  const avgMoodLabel = avgMoodScore >= 8.5 ? 'Great' : avgMoodScore >= 7.0 ? 'Good' : avgMoodScore >= 5.0 ? 'Neutral' : 'Needs Check';
-  const avgStressLevel = stressDaysCount > 0 ? Number((sumStress / stressDaysCount).toFixed(1)) : 3.4;
-  const avgWaterIntake = waterGlasses || 7;
-  const avgProteinIntake = mealsDaysCount > 0 ? Math.round(avgCaloriesIntake * 0.22 / 4) : 88;
-
-  const healthSummary: HealthSummary = {
-    avgCaloriesIntake,
-    avgCaloriesBurned,
-    avgSleepHours,
-    avgMoodScore,
-    avgMoodLabel,
-    avgStressLevel,
-    avgWaterIntake,
-    avgProteinIntake,
-  };
-
-  // 6. Goal Achievement calculation
-  const targetCals = 2000;
-  const caloriesProgress = Math.min(100, Math.round((avgCaloriesIntake / targetCals) * 100));
-  const exerciseProgress = Math.min(100, Math.round(((currentAvg.exercise / 25) * 100) * 1.05));
-  const sleepProgress = Math.min(100, Math.round((avgSleepHours / sleepTarget.min) * 100));
-  const overallProgress = Math.round((caloriesProgress + exerciseProgress + sleepProgress) / 3);
-
+  // ── Goal achievement ────────────────────────────────────────────────────────
+  const sleepTarget = getSleepTargetByAge(age);
+  const caloriesProgress = healthSummary.avgCaloriesIntake > 0
+    ? Math.min(100, Math.round((healthSummary.avgCaloriesIntake / 2000) * 100))
+    : 0;
+  const exerciseProgress = Math.min(100, Math.round((currentAvg.exercise / 25) * 100));
+  const sleepProgress = healthSummary.avgSleepHours > 0
+    ? Math.min(100, Math.round((healthSummary.avgSleepHours / sleepTarget.min) * 100))
+    : 0;
   const goalAchievement: GoalAchievement = {
     caloriesProgress,
     exerciseProgress,
     sleepProgress,
-    overallProgress,
+    overallProgress: Math.round((caloriesProgress + exerciseProgress + sleepProgress) / 3),
   };
 
-  // 7. Improvement Analysis
-  const pillarsConfig: { pillar: string; key: 'nutrition' | 'exercise' | 'sleep' | 'mental' }[] = [
+  // ── Improvement analysis ────────────────────────────────────────────────────
+  const pillarsConfig: { pillar: string; key: ImprovementStatus['key'] }[] = [
     { pillar: lang === 'th' ? 'การกิน' : 'Eating', key: 'nutrition' },
     { pillar: lang === 'th' ? 'การออกกำลังกาย' : 'Exercise', key: 'exercise' },
     { pillar: lang === 'th' ? 'การนอนหลับ' : 'Sleep', key: 'sleep' },
     { pillar: lang === 'th' ? 'สุขภาพจิต' : 'Mental Health', key: 'mental' },
   ];
-
   const improvementAnalysis: ImprovementStatus[] = pillarsConfig.map(({ pillar, key }) => {
-    const cur = currentAvg[key];
-    const prv = prevAvg[key];
-    const diff = cur - prv;
-    let status: 'improved' | 'decreased' | 'stable' = 'stable';
+    const diff = currentAvg[key] - prevAvg[key];
+    let status: ImprovementStatus['status'] = 'stable';
     let label = lang === 'th' ? 'คงที่' : 'Stable';
     if (diff >= 1) {
       status = 'improved';
@@ -489,76 +364,50 @@ export function getAnalyticsData(
       status = 'decreased';
       label = lang === 'th' ? 'ลดลง' : 'Decreased';
     }
-    return {
-      pillar,
-      key,
-      status,
-      label,
-      delta: diff,
-    };
+    return { pillar, key, status, label, delta: diff };
   });
 
-  // 8. Rule-based AI Report interpretation
-  const bestPillarObj = [...improvementAnalysis].sort((a, b) => b.delta - a.delta)[0];
-  const worstPillarObj = [...improvementAnalysis].sort((a, b) => a.delta - b.delta)[0];
-
-  let aiReport = '';
-  if (lang === 'th') {
-    const timeLabelText =
-      timeRange === 'today' ? 'วันนี้'
-      : timeRange === 'week' ? 'สัปดาห์นี้'
-      : timeRange === 'month' ? 'เดือนนี้'
-      : timeRange === 'year' ? 'ปีนี้'
-      : 'ช่วงเวลานี้';
-
-    aiReport = `ในช่วง${timeLabelText} คะแนนอายุยืนโดยเฉลี่ยของคุณอยู่ที่ ${currentAvg.total}/100 คะแนน ซึ่ง${deltaPercent >= 0 ? `เพิ่มขึ้น +${deltaPercent}%` : `ลดลง ${Math.abs(deltaPercent)}%`} เมื่อเทียบกับช่วงก่อนหน้า ความก้าวหน้าที่โดดเด่นที่สุดคือด้าน${bestPillarObj.pillar} (${bestPillarObj.delta >= 0 ? `+${bestPillarObj.delta}` : bestPillarObj.delta} คะแนน) จากความสม่ำเสมอในการปฏิบัติตามเป้าหมาย ในขณะที่ด้าน${worstPillarObj.pillar} ${worstPillarObj.delta < 0 ? `ลดลงเล็กน้อย ${Math.abs(worstPillarObj.delta)} คะแนน` : 'อยู่ในระดับคงที่และสม่ำเสมอ'} เราขอแนะนำให้รักษาวินัยด้านการกินและการดื่มน้ำในปัจจุบัน พร้อมกับเพิ่มการออกกำลังกายหรือเคลื่อนไหวร่างกายอย่างน้อย 2 ครั้งต่อสัปดาห์เพื่อเสริมสร้างความทนทานของหัวใจและการฟื้นฟูร่างกาย`;
-  } else {
-    const timeLabelText =
-      timeRange === 'today' ? 'today'
-      : timeRange === 'week' ? 'this week'
-      : timeRange === 'month' ? 'this month'
-      : timeRange === 'year' ? 'this year'
-      : 'this period';
-
-    aiReport = `During ${timeLabelText}, your overall longevity score averaged ${currentAvg.total}/100, which is ${deltaPercent >= 0 ? `up +${deltaPercent}%` : `down ${deltaPercent}%`} compared to the previous period. Your strongest progress was in ${bestPillarObj.pillar} (${bestPillarObj.delta >= 0 ? `+${bestPillarObj.delta}` : bestPillarObj.delta} pts), driven by consistent habits and adherence to targets. Meanwhile, ${worstPillarObj.pillar} ${worstPillarObj.delta < 0 ? `dipped slightly by ${Math.abs(worstPillarObj.delta)} points` : 'remained steady without major jumps'}. We recommend maintaining your current nutrition and hydration routines while adding at least 2 extra active movement sessions each week to elevate cardiovascular endurance and recovery score.`;
-  }
-
-  // 9. Achievements computation
+  // ── Achievements ────────────────────────────────────────────────────────────
+  const th = lang === 'th';
   const achievements: AchievementBadge[] = [
     {
-      id: 'eat-7',
-      title: lang === 'th' ? 'ทานอาหารสุขภาพ 7 วัน' : '7-Day Healthy Eating',
-      status: currentAvg.nutrition >= 20 ? (lang === 'th' ? 'สำเร็จ' : 'Completed') : (lang === 'th' ? 'กำลังดำเนินการ (5/7 วัน)' : 'In Progress (5/7 Days)'),
+      id: 'eat-consistent',
+      title: th ? 'กินอย่างสมดุล' : 'Balanced Eating',
+      status: currentAvg.nutrition >= 20 ? (th ? 'สำเร็จ' : 'Completed') : (th ? `เฉลี่ย ${currentAvg.nutrition}/25` : `Avg ${currentAvg.nutrition}/25`),
       isCompleted: currentAvg.nutrition >= 20,
       category: 'nutrition',
     },
     {
       id: 'sleep-goal',
-      title: lang === 'th' ? 'บรรลุเป้าหมายการนอนหลับ' : 'Sleep Goal Achieved',
-      status: avgSleepHours >= sleepTarget.min ? (lang === 'th' ? 'สำเร็จ' : 'Completed') : (lang === 'th' ? `เฉลี่ย ${avgSleepHours} ชม. / ${sleepTarget.min} ชม.` : `Avg ${avgSleepHours}h / ${sleepTarget.min}h`),
-      isCompleted: avgSleepHours >= sleepTarget.min,
+      title: th ? 'บรรลุเป้าหมายการนอน' : 'Sleep Goal',
+      status: healthSummary.avgSleepHours >= sleepTarget.min
+        ? (th ? 'สำเร็จ' : 'Completed')
+        : (th ? `เฉลี่ย ${healthSummary.avgSleepHours} ชม. / ${sleepTarget.min}` : `Avg ${healthSummary.avgSleepHours}h / ${sleepTarget.min}h`),
+      isCompleted: healthSummary.avgSleepHours >= sleepTarget.min,
       category: 'sleep',
     },
     {
-      id: 'exe-streak',
-      title: lang === 'th' ? 'ออกกำลังกายต่อเนื่อง' : 'Exercise Streak',
-      status: currentAvg.exercise >= 18 ? (lang === 'th' ? 'ต่อเนื่อง 10 วัน' : '10 Days Streak') : (lang === 'th' ? 'ต่อเนื่อง 4 วัน' : '4 Days Streak'),
-      isCompleted: true,
+      id: 'exe-active',
+      title: th ? 'เคลื่อนไหวสม่ำเสมอ' : 'Stay Active',
+      status: currentAvg.exercise >= 18 ? (th ? 'สำเร็จ' : 'Completed') : (th ? `เฉลี่ย ${currentAvg.exercise}/25` : `Avg ${currentAvg.exercise}/25`),
+      isCompleted: currentAvg.exercise >= 18,
       category: 'exercise',
     },
     {
       id: 'mood-stable',
-      title: lang === 'th' ? 'สมดุลอารมณ์และความเครียด' : 'Mood & Stress Balanced',
-      status: avgMoodScore >= 7 && avgStressLevel <= 5 ? (lang === 'th' ? 'ยอดเยี่ยม' : 'Excellent') : (lang === 'th' ? 'ควรตรวจสอบเพิ่มเติม' : 'Needs Check-in'),
-      isCompleted: avgMoodScore >= 7 && avgStressLevel <= 5,
+      title: th ? 'สมดุลอารมณ์และความเครียด' : 'Mood & Stress Balanced',
+      status: healthSummary.avgMoodScore >= 7 && healthSummary.avgStressLevel > 0 && healthSummary.avgStressLevel <= 5
+        ? (th ? 'ยอดเยี่ยม' : 'Excellent')
+        : (th ? 'ควรตรวจสอบเพิ่มเติม' : 'Needs Check-in'),
+      isCompleted: healthSummary.avgMoodScore >= 7 && healthSummary.avgStressLevel > 0 && healthSummary.avgStressLevel <= 5,
       category: 'mental',
     },
   ];
 
   return {
     timeRange,
-    startDateStr: formatYYYYMMDD(startDate),
-    endDateStr: formatYYYYMMDD(endDate),
+    startDateStr: from,
+    endDateStr: to,
     currentAvg,
     prevAvg,
     deltaPercent,
@@ -566,7 +415,31 @@ export function getAnalyticsData(
     healthSummary,
     goalAchievement,
     improvementAnalysis,
-    aiReport,
+    aiReport: ruleBasedReport(timeRange, currentAvg, deltaPercent, improvementAnalysis, loggedDays, lang),
+    loggedDays,
     achievements,
+  };
+}
+
+/** Empty result for first paint before the async fetch resolves. */
+export function emptyAnalytics(timeRange: TimeRangeFilter = 'week', lang = 'th'): AnalyticsResult {
+  const zero: PeriodAverage = { total: 0, nutrition: 0, exercise: 0, sleep: 0, mental: 0 };
+  return {
+    timeRange,
+    startDateStr: bangkokDateStr(),
+    endDateStr: bangkokDateStr(),
+    currentAvg: zero,
+    prevAvg: zero,
+    deltaPercent: 0,
+    trendPoints: [],
+    healthSummary: {
+      avgCaloriesIntake: 0, avgCaloriesBurned: 0, avgSleepHours: 0, avgMoodScore: 0,
+      avgMoodLabel: '—', avgStressLevel: 0, avgWaterIntake: 0, avgProteinIntake: 0,
+    },
+    goalAchievement: { caloriesProgress: 0, exerciseProgress: 0, sleepProgress: 0, overallProgress: 0 },
+    improvementAnalysis: [],
+    aiReport: lang === 'th' ? 'กำลังโหลดข้อมูล...' : 'Loading…',
+    loggedDays: 0,
+    achievements: [],
   };
 }
