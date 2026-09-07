@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import 'dotenv/config';
 import { DataSource } from 'typeorm';
 import { Activity } from '../entities/activity.entity';
 import { AuditLog } from '../entities/audit-log.entity';

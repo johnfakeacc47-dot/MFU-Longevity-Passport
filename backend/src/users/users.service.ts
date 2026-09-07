@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { User, UserRole } from '../entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateSelfDto } from './dto/update-self.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 
 export interface UpsertUserInput {
   mfuId: string;
@@ -41,7 +43,7 @@ export class UsersService {
     return this.usersRepository.save(updated);
   }
 
-  async createNewUser(dto: CreateUserDto) {
+  async createNewUser(dto: CreateUserDto): Promise<UserResponseDto> {
     const user = this.usersRepository.create();
     user.email = dto.email;
     user.mfuId = dto.mfuId;
@@ -49,21 +51,20 @@ export class UsersService {
     user.role = dto.role;
     user.faculty = dto.faculty;
     user.department = dto.department;
-    return this.usersRepository.save(user);
+    const saved = await this.usersRepository.save(user);
+    return UserResponseDto.fromEntity(saved);
   }
 
-  async getAllUsers() {
-    return this.usersRepository.find({
+  async getAllUsers(): Promise<UserResponseDto[]> {
+    const users = await this.usersRepository.find({
       order: { createdAt: 'DESC' },
     });
+    return users.map((user) => UserResponseDto.fromEntity(user));
   }
 
-  async getUserById(id: string) {
-    const user = await this.usersRepository.findOne({ where: { id } });
-    if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
-    }
-    return user;
+  async getUserById(id: string): Promise<UserResponseDto> {
+    const user = await this.findEntityOrThrow(id);
+    return UserResponseDto.fromEntity(user);
   }
 
   async exportUserData(id: string) {
@@ -74,28 +75,52 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    return user;
+    return {
+      ...UserResponseDto.fromEntity(user),
+      meals: user.meals,
+      activities: user.activities,
+      sleepLogs: user.sleepLogs,
+      fastingSessions: user.fastingSessions,
+    };
   }
 
-  async updateUser(id: string, dto: UpdateUserDto) {
-    const user = await this.getUserById(id);
+  async updateUser(id: string, dto: UpdateUserDto): Promise<UserResponseDto> {
+    const user = await this.findEntityOrThrow(id);
     if (dto.name !== undefined) user.name = dto.name;
     if (dto.email !== undefined) user.email = dto.email;
     if (dto.role !== undefined) user.role = dto.role;
     if (dto.faculty !== undefined) user.faculty = dto.faculty;
     if (dto.department !== undefined) user.department = dto.department;
-    return this.usersRepository.save(user);
+    const saved = await this.usersRepository.save(user);
+    return UserResponseDto.fromEntity(saved);
   }
 
-  async deleteUser(id: string) {
-    const user = await this.getUserById(id);
-    return this.usersRepository.remove(user);
+  async updateSelf(id: string, dto: UpdateSelfDto): Promise<UserResponseDto> {
+    const user = await this.findEntityOrThrow(id);
+    if (dto.name !== undefined) user.name = dto.name;
+    if (dto.email !== undefined) user.email = dto.email;
+    const saved = await this.usersRepository.save(user);
+    return UserResponseDto.fromEntity(saved);
   }
 
-  async deleteMyAccount(id: string) {
+  async deleteUser(id: string): Promise<{ success: true }> {
+    const user = await this.findEntityOrThrow(id);
+    await this.usersRepository.remove(user);
+    return { success: true };
+  }
+
+  async deleteMyAccount(id: string): Promise<{ success: true }> {
     // Under PDPA, users can request their own account deletion
-    const user = await this.getUserById(id);
-    // Hard delete or soft delete, we'll hard remove for PDPA full compliance
-    return this.usersRepository.remove(user);
+    const user = await this.findEntityOrThrow(id);
+    await this.usersRepository.remove(user);
+    return { success: true };
+  }
+
+  private async findEntityOrThrow(id: string): Promise<User> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
   }
 }

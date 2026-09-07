@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { UsersService } from '../users/users.service';
@@ -40,7 +41,6 @@ async function bootstrap() {
     console.log('\n📝 To use this token for admin login:');
     console.log('Update Login.tsx with this token for admin user');
     console.log('\n✅ Token expires in 7 days');
-
   } catch (error) {
     console.error('Error:', error);
   } finally {

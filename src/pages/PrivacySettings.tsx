@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FaExclamationTriangle, FaFileAlt, FaHandshake, FaListAlt, FaShieldAlt, FaSkullCrossbones } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
-import { safeParse } from '../utils/safeStorage';
 import { BottomNav } from '../components/BottomNav';
-import { getCurrentUserProfile, updateScoreVisibility, deleteUserAccount } from '../services/supabaseClient';
+import { supabase, getCurrentUserProfile, updateScoreVisibility, deleteUserAccount } from '../services/supabaseClient';
 import { BackButton } from '../components/BackButton';
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
@@ -96,18 +95,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
       await deleteUserAccount();
 
       // Part 2: Call Edge Function to delete auth user
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const session = safeParse<any>(localStorage.getItem('sb-' + new URL(supabaseUrl).hostname.split('.')[0] + '-auth-token'), {});
-      const accessToken = session?.access_token;
-
-      if (supabaseUrl && accessToken) {
-        await fetch(`${supabaseUrl}/functions/v1/delete-user`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      if (supabase) {
+        const { error: fnError } = await supabase.functions.invoke('delete-user', { body: {} });
+        if (fnError) console.error('delete-user function error:', fnError);
       }
 
       // Clear local storage and redirect

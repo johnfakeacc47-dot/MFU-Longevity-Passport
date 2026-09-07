@@ -1,35 +1,48 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Security response headers (nosniff, frameguard, HSTS, removes x-powered-by, ...).
+  // Registered before any route handling.
+  app.use(helmet());
+
   // Reject/strip malformed request bodies before they ever reach a service or
-  // TypeORM — without this, class-validator decorators on DTOs do nothing.
+  // TypeORM - without this, class-validator decorators on DTOs do nothing.
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // strip properties not declared on the DTO
-      forbidNonWhitelisted: true, // reject requests that include them, instead of silently dropping
-      transform: true, // convert payloads (e.g. numeric strings) into the DTO's declared types
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     }),
   );
 
-  // Enable CORS for frontend. Falls back to localhost for local dev; set
-  // CORS_ORIGIN (comma-separated for multiple) in production.
-  const corsOrigin = process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
-    : ['http://localhost:5173', 'http://localhost:3000'];
+  // Explicit CORS allow-list - never reflect an arbitrary Origin. Falls back to
+  // local dev origins only; production must set CORS_ORIGIN (enforced at startup
+  // by assertProductionConfig in security-config.ts).
+  const corsOrigin = (
+    process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',')
+      : ['http://localhost:5173', 'http://localhost:3000']
+  )
+    .map((o) => o.trim())
+    .filter((o) => o.length > 0);
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
-  console.log(`🚀 Backend server running on http://localhost:${port}`);
+  console.log(`Backend server running on http://localhost:${port}`);
 }
 bootstrap().catch((err) => {
-  console.error('❌ Failed to start backend server:', err);
+  console.error('Failed to start backend server:', err);
   process.exit(1);
 });

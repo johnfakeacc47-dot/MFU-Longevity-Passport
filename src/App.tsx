@@ -74,10 +74,14 @@ function App() {
     // FIX: Validate session with Supabase instead of just checking localStorage token
     const initAuth = async () => {
       try {
-        // Check local dev session first (Bypass Supabase for Dev Mode)
+        // Local dev session (bypasses Supabase). Gated on import.meta.env.DEV so
+        // this branch is removed from production builds — a hand-crafted
+        // localStorage 'dev-user' / 'dev-mock-token' entry cannot grant a
+        // session on the live site.
         const isDevSession =
-          localStorage.getItem('userId') === 'dev-user' ||
-          localStorage.getItem('authToken') === 'dev-mock-token';
+          import.meta.env.DEV &&
+          (localStorage.getItem('userId') === 'dev-user' ||
+            localStorage.getItem('authToken') === 'dev-mock-token');
 
         if (isDevSession) {
           const savedPage = localStorage.getItem('currentPage') as PageType;

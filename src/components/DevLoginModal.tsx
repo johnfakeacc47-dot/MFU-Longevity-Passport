@@ -38,12 +38,24 @@ export const DevLoginModal: React.FC<DevLoginModalProps> = ({ isOpen, onClose, o
 
     // Simulate short transition for realistic loading feel
     setTimeout(() => {
-      const validPin =
-        import.meta.env.VITE_DEV_LOGIN_PIN ||
-        import.meta.env.DEV_ACCESS_PIN ||
-        '3333';
+      const configuredPin = import.meta.env.VITE_DEV_LOGIN_PIN;
 
-      if (pin.trim() === String(validPin).trim()) {
+      // Fail closed: dev login only works in a real `vite` dev build with an
+      // explicit PIN configured. No hardcoded fallback.
+      if (
+        !import.meta.env.DEV ||
+        !configuredPin ||
+        String(configuredPin).trim() === ''
+      ) {
+        setIsLoading(false);
+        setError('Developer login is not available in this environment.');
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 600);
+        setPin('');
+        return;
+      }
+
+      if (pin.trim() === String(configuredPin).trim()) {
         // Create dev user session in local storage (bypass Supabase completely)
         const devUser = {
           id: 'dev-user',

@@ -21,12 +21,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const { t } = useLanguage();
   useSEO(`${t('login.welcome')} · MFU Longevity Passport`, t('login.subtitle'));
 
-  // Check if we are in a development/testing environment
-  const isDevEnv =
-    import.meta.env.DEV ||
-    import.meta.env.MODE !== 'production' ||
-    import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true' ||
-    import.meta.env.VITE_ENABLE_DEV_ACCESS === 'true';
+  // Dev Quick Login is available ONLY in a local `vite` dev build.
+  // import.meta.env.DEV is a hard compile-time boolean (false in every production
+  // build regardless of env vars), so a stray VITE_ENABLE_* var set in a prod
+  // deploy can no longer reveal the dev-admin login.
+  const isDevEnv = import.meta.env.DEV === true;
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,8 +58,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               id: data.user.id,
               email: data.user.email || username,
               name: '',
-              role: 'student',
-              total_points: 0,
             }, { onConflict: 'id' });
           } catch (profileErr) {
             console.warn('Profile auto-create fallback failed:', profileErr);

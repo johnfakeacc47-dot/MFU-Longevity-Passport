@@ -8,74 +8,33 @@ export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-// Create an admin client for protected operations like user creation
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
-export const adminSupabase = supabaseUrl && supabaseServiceRoleKey
-  ? createClient(supabaseUrl, supabaseServiceRoleKey)
-  : null;
-
 // Helper to check if Supabase is configured
 export const isSupabaseConfigured = () => {
     return !!supabase;
 };
 
-// --- Seed Data ---
-export const seedDatabase = async () => {
-  if (!supabase) return;
-
-  const mockUsers = [
-    { name: 'John Doe', email: 'john@mfu.ac.th', mfu_id: '643010001', role: 'student', total_points: 8750, avatar_url: '' },
-    { name: 'Somchai Rakdee', email: 'somchai@mfu.ac.th', mfu_id: '643010002', role: 'staff', total_points: 7200, avatar_url: '' },
-    { name: 'Admin User', email: 'admin@mfu.ac.th', mfu_id: 'admin01', role: 'admin', total_points: 9500, avatar_url: '' },
-  ];
-
-  // 1. Seed Profiles
-  for (const user of mockUsers) {
-    const { data: existing } = await supabase.from('profiles').select('id').eq('email', user.email).maybeSingle();
-    
-    if (!existing) {
-      const { data: inserted, error } = await supabase.from('profiles').insert([user]).select();
-      
-      if (error) {
-        console.error('Error seeding profile:', error);
+async function callAdminUsers(payload: Record<string, unknown>): Promise<any> {
+  if (!supabase) throw new Error('Supabase not configured');
+  const { data, error } = await supabase.functions.invoke('admin-users', { body: payload });
+  if (error) {
+    let msg = error.message;
+    try {
+      const ctx = (error as any).context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        if (body?.error) msg = body.error;
       }
-      
-      if (inserted && inserted[0]) {
-        const userId = inserted[0].id;
-        
-        // 2. Seed Health Scores (Today)
-        await supabase.from('health_scores').insert([{
-          user_id: userId,
-          date: new Date().toISOString().split('T')[0],
-          sleep: 22,
-          nutrition: 18,
-          fasting: 20,
-          activity: 15,
-          total: 75
-        }]);
-
-        // 3. Seed Challenges (Mon-Fri)
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const challengePayload = [];
-        for (let i = 0; i < 5; i++) {
-          challengePayload.push({
-            user_id: userId,
-            day_name: days[i],
-            completed: true
-          });
-        }
-        await supabase.from('challenges').insert(challengePayload);
-      }
-    }
+    } catch { /* keep msg */ }
+    throw new Error(msg);
   }
-  return { success: true };
-};
+  return data;
+}
 
 // --- Data Fetching Helpers ---
 export const getLeaderboard = async () => {
   if (!supabase) return [];
   const { data, error } = await supabase
-    .from('profiles')
+    .from('leaderboard_profiles')
     .select('id, name, total_points, avatar_url, role, is_score_public')
     .order('total_points', { ascending: false });
   
@@ -149,7 +108,7 @@ export const getMyTeamLeaderboard = async () => {
 
   // 2. Fetch profiles for all member IDs
   const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
+    .from('leaderboard_profiles')
     .select('id, name, total_points, avatar_url, role, is_score_public')
     .in('id', memberIds)
     .order('total_points', { ascending: false });
@@ -203,106 +162,40 @@ export const getChallengeStatus = async () => {
 
 export const getAllProfiles = async () => {
   if (!supabase) return [];
-  const { data, error } = await supabase.from('profiles').select('*');
-  if (error) return [];
-  return data;
-};
-
-export const createProfile = async (profile: any) => {
-    if (!supabase) return null;
-    const { data, error } = await supabase
-        .from('profiles')
-        .insert([{
-            name: profile.name,
-            email: profile.email,
-            role: profile.role,
-            faculty: profile.faculty,
-            department: profile.department,
-            mfu_id: profile.mfuId,
-            total_points: 0,
-            longevity_score: 0
-        }])
-        .select()
-        .single();
-    
-    if (error) {
-        console.error('Error creating profile:', error);
-        throw error;
-    }
-    return data;
+  try {
+    const data = await callAdminUsers({ action: 'list' });
+    return data?.users ?? [];
+  } catch (e) {
+    console.error('Error fetching profiles:', e);
+    return [];
+  }
 };
 
 // Admin function to fully establish a user (Auth + Profile data)
 export const adminCreateUser = async (profileData: any) => {
-    if (!adminSupabase || !supabase) {
-        throw new Error('Admin Supabase client is not configured. Check VITE_SUPABASE_SERVICE_ROLE_KEY.');
-    }
-
-    // 1. Create User in Auth Database via Admin API
-    const defaultPassword = 'Password123!'; // Default password for manually created accounts
-    const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-        email: profileData.email,
-        password: defaultPassword,
-        email_confirm: true, // Auto-confirm so they can login immediately
-    });
-
-    if (authError) {
-        console.error('Admin Create Auth User Error:', authError);
-        throw authError; // Usually "Email already registered"
-    }
-
-    if (!authData.user) {
-        throw new Error('Failed to create authentication user.');
-    }
-
-    // 2. Insert into public.profiles table using the generated Auth ID
-    const { data: profileRecord, error: profileError } = await adminSupabase
-        .from('profiles')
-        .insert([{
-            id: authData.user.id,
-            name: profileData.name,
-            email: profileData.email,
-            role: profileData.role,
-            faculty: profileData.faculty,
-            department: profileData.department,
-            mfu_id: profileData.mfuId,
-            total_points: 0,
-            longevity_score: 0
-        }])
-        .select()
-        .single();
-
-    if (profileError) {
-        // Rollback: Attempt to delete the auth user if profile creation fails
-        await adminSupabase.auth.admin.deleteUser(authData.user.id);
-        console.error('Admin Create Profile Error:', profileError);
-        throw profileError;
-    }
-
-    return profileRecord;
+  const data = await callAdminUsers({
+    action: 'create',
+    email: profileData.email,
+    name: profileData.name,
+    role: profileData.role,
+    faculty: profileData.faculty,
+    department: profileData.department,
+    mfuId: profileData.mfuId,
+  });
+  return data.user; // { id, email, name, mfu_id, role, faculty, department, created_at }
 };
 
 export const updateProfile = async (id: string, updates: any) => {
-    if (!supabase) return null;
-    const { data, error } = await supabase
-        .from('profiles')
-        .update({
-            name: updates.name,
-            email: updates.email,
-            role: updates.role,
-            faculty: updates.faculty,
-            department: updates.department,
-            mfu_id: updates.mfuId // Ensure mapping back to DB
-        })
-        .eq('id', id)
-        .select()
-        .single();
-    
-    if (error) {
-        console.error('Error updating profile:', error);
-        throw error;
-    }
-    return data;
+  const data = await callAdminUsers({
+    action: 'update',
+    id,
+    name: updates.name,
+    role: updates.role,
+    faculty: updates.faculty,
+    department: updates.department,
+    email: updates.email,
+  });
+  return data.user;
 };
 
 export const getCurrentUserProfile = async () => {
@@ -379,16 +272,7 @@ export const updateUserGoalAndActivity = async (
 };
 
 export const deleteProfile = async (id: string) => {
-    if (!supabase) return;
-    const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', id);
-    
-    if (error) {
-        console.error('Error deleting profile:', error);
-        throw error;
-    }
+  await callAdminUsers({ action: 'delete', id });
 };
 
 export const syncDailyScoreToSupabase = async (score: {
@@ -450,20 +334,6 @@ export const syncDailyScoreToSupabase = async (score: {
   if (result.error) {
     console.error('Error syncing daily score to Supabase:', result.error);
     return null;
-  }
-
-  // 3. Update the user's lifetime total_points in the profiles table for leaderboards
-  const { data: allScores } = await supabase
-    .from('health_scores')
-    .select('total')
-    .eq('user_id', user.id);
-
-  if (allScores) {
-    const lifetimePoints = allScores.reduce((sum, record) => sum + (record.total || 0), 0);
-    await supabase
-      .from('profiles')
-      .update({ total_points: lifetimePoints })
-      .eq('id', user.id);
   }
 
   return result.data;
@@ -546,7 +416,7 @@ export const deleteUserAccount = async () => {
     const { error } = await supabase
       .from(table)
       .delete()
-      .eq(table === 'team_members' ? 'user_id' : 'id', user.id);
+      .eq(table === 'profiles' ? 'id' : 'user_id', user.id);
 
     if (error) {
       console.error(`Error deleting from ${table}:`, error);

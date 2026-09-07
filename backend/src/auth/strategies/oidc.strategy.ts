@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-openidconnect';
 import { AuthService, OidcProfile } from '../auth.service';
+import { isOidcConfigured } from '../oidc.config';
 
 @Injectable()
 export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
@@ -10,6 +11,16 @@ export class OidcStrategy extends PassportStrategy(Strategy, 'oidc') {
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
   ) {
+    // Defensive: AuthModule only registers this provider when isOidcConfigured()
+    // is true. If that ever regresses, fail with a clear message rather than
+    // passport-openidconnect's opaque 'requires an issuer option' TypeError
+    // (which throws synchronously from `new Strategy(...)` and crashes bootstrap).
+    if (!isOidcConfigured()) {
+      throw new Error(
+        'OidcStrategy was instantiated without a complete OIDC_* configuration. ' +
+          'It must only be registered when isOidcConfigured() returns true.',
+      );
+    }
     super({
       issuer: configService.get<string>('OIDC_ISSUER'),
       authorizationURL: configService.get<string>('OIDC_AUTH_URL'),
