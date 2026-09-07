@@ -26,6 +26,7 @@ import {
   getAICoachAdvice,
   getTodayTimeline,
 } from '../utils/healthCoach';
+import { getHealthCalendarData } from '../utils/analyticsScore';
 import { LongevityIndexCard } from '../components/coach/LongevityIndexCard';
 import { DailyGoalsCard } from '../components/coach/DailyGoalsCard';
 import { AICoachCard } from '../components/coach/AICoachCard';
@@ -120,7 +121,10 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const dailyGoals = useMemo(() => getDailyGoals(), [score]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const healthStreak = useMemo(() => getHealthStreak(), [score]);
+  const localStreak = useMemo(() => getHealthStreak(), [score]);
+  // Real streak from the Supabase daily history; the localStorage counter is the fallback.
+  const [dbStreak, setDbStreak] = useState<number | null>(null);
+  const healthStreak = { ...localStreak, streakDays: dbStreak ?? localStreak.streakDays };
   const aiCoachAdvice = useMemo(() => getAICoachAdvice(language, ringScore as any), [language, ringScore]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const todayTimeline = useMemo(() => getTodayTimeline(language), [language, score]);
@@ -155,9 +159,16 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
       }
     };
 
+    const fetchStreak = () => {
+      getHealthCalendarData(30)
+        .then((r) => setDbStreak(r.streakDays))
+        .catch(() => setDbStreak(null));
+    };
+
     fetchScore();
+    fetchStreak();
     const interval = setInterval(fetchScore, 60000);
-    const onUpdate = () => fetchScore();
+    const onUpdate = () => { fetchScore(); fetchStreak(); };
     window.addEventListener('healthDataUpdated', onUpdate);
     window.addEventListener('storage', onUpdate);
     return () => {
