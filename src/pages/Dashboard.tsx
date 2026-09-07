@@ -21,7 +21,7 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { getScoreColor } from '../utils/longevityScore';
-import { getAnalyticsData } from '../utils/analyticsScore';
+import { getAnalyticsData, emptyAnalytics } from '../utils/analyticsScore';
 import type { TimeRangeFilter, AnalyticsResult } from '../utils/analyticsScore';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
@@ -75,20 +75,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
     new Date().toISOString().split('T')[0]
   );
   const [activeTab, setActiveTab] = useState<'nutrition' | 'exercise' | 'sleep' | 'mental'>('nutrition');
-  const [data, setData] = useState<AnalyticsResult>(() =>
-    getAnalyticsData('week', undefined, undefined, 25, language)
-  );
+  const [data, setData] = useState<AnalyticsResult>(() => emptyAnalytics('week', language));
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
 
   useEffect(() => {
-    const updateData = () => {
-      setData(getAnalyticsData(timeRange, customStart, customEnd, 25, language));
+    let cancelled = false;
+    const updateData = async () => {
+      setIsLoadingAnalytics(true);
+      try {
+        const result = await getAnalyticsData(timeRange, customStart, customEnd, 25, language);
+        if (!cancelled) setData(result);
+      } finally {
+        if (!cancelled) setIsLoadingAnalytics(false);
+      }
     };
-    updateData();
+    void updateData();
 
-    const handleUpdate = () => updateData();
+    const handleUpdate = () => void updateData();
     window.addEventListener('healthDataUpdated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
+      cancelled = true;
       window.removeEventListener('healthDataUpdated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
@@ -503,7 +510,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <p className="ana-card-subtitle">{t('dashboard.aiPeriodReportSub')}</p>
             </div>
           </div>
-          <div className="ana-ai-body">
+          <div className="ana-ai-body" style={isLoadingAnalytics ? { opacity: 0.5 } : undefined}>
             <p className="ana-ai-paragraph">{aiReport}</p>
           </div>
         </section>

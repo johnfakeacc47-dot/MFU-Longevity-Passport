@@ -1,69 +1,73 @@
 import { useEffect } from 'react';
-import { safeParse } from '../utils/safeStorage';
+import { bangkokDateStr, msUntilNextBangkokMidnight } from '../utils/bangkokTime';
+import { calculateLongevityScore } from '../utils/longevityScore';
+import { syncDailyScoreToSupabase } from '../services/supabaseClient';
+
+// The score resets to 0 at 00:00 Asia/Bangkok. When the local day rolls over,
+// the day that just ended is finalised into Supabase (health_scores) BEFORE the
+// raw localStorage logs are cleared — so the analytics history and the AI report
+// keep a permanent record while today starts fresh.
+const DAILY_KEYS = ['meals', 'activities', 'sleepLogs', 'mentalLogs'];
 
 export const useDailyReset = () => {
   useEffect(() => {
-    const checkAndResetDailyData = () => {
-      const todayString = new Date().toISOString().split('T')[0];
-      const lastActiveDate = localStorage.getItem('lastActiveDate');
+    let midnightTimer: ReturnType<typeof setTimeout>;
 
-      if (lastActiveDate && lastActiveDate !== todayString) {
-        console.log(`[Daily Reset] Transitioning from ${lastActiveDate} to ${todayString}. Clearing old logs.`);
-        
-        // We only clear out daily event logs to save local space.
-        // Supabase already safely stores the calculated `health_scores` on every edit.
-        // We intentionally leave fastingState alone if they are currently having a running timer.
-        
-        let shouldDispatch = false;
-        
-        // Clean up arrays
-        const keysToReset = ['meals', 'activities', 'sleepLogs'];
-        keysToReset.forEach(key => {
-          const data = localStorage.getItem(key);
-          if (data && data !== '[]') {
-            // we could filter for today's items, but for simplicity, we just clear everything.
-            // If the user hasn't opened the app since yesterday, there are no today's items anyway.
-            const items: { timestamp: string | number | Date }[] = safeParse(data, []);
-            const todayTimestamp = new Date();
-            todayTimestamp.setHours(0, 0, 0, 0);
+    const rollOverIfNeeded = async () => {
+      const today = bangkokDateStr();
+      const lastActive = localStorage.getItem('lastActiveDate');
 
-            // Only keep items that actually happened today
-            const filtered = items.filter((item: { timestamp: string | number | Date }) => new Date(item.timestamp).getTime() >= todayTimestamp.getTime());
+      if (!lastActive) {
+        localStorage.setItem('lastActiveDate', today);
+        return;
+      }
+      if (lastActive === today) return;
 
-            if (filtered.length !== items.length) {
-              localStorage.setItem(key, JSON.stringify(filtered));
-              shouldDispatch = true;
-            }
-          }
-        });
-
-        // Clean up offline queue if it gets too large or just let it sync normally.
-        // (Leaving offline queue as-is so we don't drop pending requests).
-
-        if (shouldDispatch) {
-          window.dispatchEvent(new Event('healthDataUpdated'));
+      // 1. Freeze the ending day's score into Supabase under ITS date (the raw
+      //    logs still in localStorage belong to `lastActive`, not to `today`).
+      try {
+        const endingScore = calculateLongevityScore();
+        if (endingScore.total > 0) {
+          await syncDailyScoreToSupabase(endingScore, lastActive);
         }
+      } catch (err) {
+        console.error('[Daily Reset] final sync failed:', err);
       }
 
-      // Always update last active date to today
-      if (lastActiveDate !== todayString) {
-        localStorage.setItem('lastActiveDate', todayString);
+      // 2. Clear the raw daily logs (keep a running fasting timer alone).
+      for (const key of DAILY_KEYS) {
+        if (localStorage.getItem(key)) localStorage.setItem(key, '[]');
       }
+      // Water is keyed by date, so old entries fall away on their own; drop any
+      // stale non-dated key if present.
+      if (localStorage.getItem('waterIntake')) localStorage.removeItem('waterIntake');
+
+      localStorage.setItem('lastActiveDate', today);
+      localStorage.removeItem('yesterdayScore');
+
+      // 3. Recompute the UI to a fresh zero.
+      window.dispatchEvent(new Event('healthDataUpdated'));
     };
 
-    // Run on initial mount
-    checkAndResetDailyData();
+    const scheduleMidnight = () => {
+      clearTimeout(midnightTimer);
+      midnightTimer = setTimeout(async () => {
+        await rollOverIfNeeded();
+        scheduleMidnight();
+      }, msUntilNextBangkokMidnight() + 2000);
+    };
 
-    // Optionally check if the user leaves the tab open overnight
-    // We check every minute
-    const interval = setInterval(checkAndResetDailyData, 60000);
+    void rollOverIfNeeded();
+    scheduleMidnight();
 
-    // Run also when window gets focus
-    window.addEventListener('focus', checkAndResetDailyData);
+    const onFocus = () => void rollOverIfNeeded();
+    const safety = setInterval(() => void rollOverIfNeeded(), 5 * 60 * 1000);
+    window.addEventListener('focus', onFocus);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', checkAndResetDailyData);
+      clearTimeout(midnightTimer);
+      clearInterval(safety);
+      window.removeEventListener('focus', onFocus);
     };
   }, []);
 };

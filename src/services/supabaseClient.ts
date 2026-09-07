@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
+import { bangkokDateStr } from '../utils/bangkokTime';
+import { getTodayAggregates } from '../utils/dailyAggregates';
+import type { LongevityBreakdown } from '../utils/longevityScore';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -123,16 +126,15 @@ export const getMyTeamLeaderboard = async () => {
 
 export const getTodayHealthScore = async () => {
   if (!supabase) return null;
-  
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('health_scores')
     .select('*')
     .eq('user_id', user.id)
-    .eq('date', today)
+    .eq('date', bangkokDateStr())
     .maybeSingle();
 
   if (error) {
@@ -275,68 +277,64 @@ export const deleteProfile = async (id: string) => {
   await callAdminUsers({ action: 'delete', id });
 };
 
-export const syncDailyScoreToSupabase = async (score: {
-  sleep: number;
-  nutrition: number;
-  fasting: number;
-  activity: number;
-  total: number;
-}) => {
+// health_scores is one authoritative row per user per Bangkok-local day: the
+// 4-pillar score breakdown + that day's numeric aggregates. Written on every
+// `healthDataUpdated` and once more by the daily reset before it clears the
+// raw logs. Column mapping (historical names): activity=exercise, fasting=mental.
+export const syncDailyScoreToSupabase = async (
+  score: LongevityBreakdown,
+  dateOverride?: string,
+) => {
   if (!supabase) return null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Removed the destructive upsert here. Profiles are handled during login.
+  const agg = getTodayAggregates();
 
-  const today = new Date().toISOString().split('T')[0];
-
-  // 2. Bulletproof: Manually check if today's score exists to bypass the need for setting up a UNIQUE constraint in SQL
-  const { data: existing } = await supabase
+  const { data, error } = await supabase
     .from('health_scores')
-    .select('id')
-    .eq('user_id', user.id)
-    .eq('date', today)
-    .maybeSingle();
-
-  let result;
-
-  if (existing) {
-    // Update existing score for today
-    result = await supabase
-      .from('health_scores')
-      .update({
-        sleep: score.sleep,
-        nutrition: score.nutrition,
-        fasting: score.fasting,
-        activity: score.activity,
-        total: score.total
-      })
-      .eq('id', existing.id)
-      .select()
-      .single();
-  } else {
-    // Insert new score for today
-    result = await supabase
-      .from('health_scores')
-      .insert({
+    .upsert(
+      {
         user_id: user.id,
-        date: today,
-        sleep: score.sleep,
+        date: dateOverride ?? bangkokDateStr(),
         nutrition: score.nutrition,
-        fasting: score.fasting,
-        activity: score.activity,
-        total: score.total
-      })
-      .select()
-      .single();
-  }
+        sleep: score.sleep,
+        activity: score.exercise,
+        fasting: score.mental,
+        total: score.total,
+        ...agg,
+      },
+      { onConflict: 'user_id,date' },
+    )
+    .select()
+    .single();
 
-  if (result.error) {
-    console.error('Error syncing daily score to Supabase:', result.error);
+  if (error) {
+    console.error('Error syncing daily score to Supabase:', error);
     return null;
   }
+  return data;
+};
 
-  return result.data;
+// Historical daily rows for a Bangkok-date range (inclusive), oldest first.
+export const getHealthHistory = async (fromDate: string, toDate: string) => {
+  if (!supabase) return [];
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('health_scores')
+    .select('*')
+    .eq('user_id', user.id)
+    .gte('date', fromDate)
+    .lte('date', toDate)
+    .order('date', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching health history:', error);
+    return [];
+  }
+  return data ?? [];
 };
 
 export const startFastingTimer = async (targetHours: number) => {
