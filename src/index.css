@@ -6295,6 +6295,71 @@ section + section {
 }
 .team-invite-btn:disabled { opacity: 0.5; cursor: default; }
 
+/* ── Invite by QR / code ─────────────────────────────────────────── */
+.team-invite-card {
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(255,255,255,0.65);
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(15,23,42,0.04), 0 0 0 1px rgba(125,220,255,0.08);
+  backdrop-filter: blur(12px);
+  display: flex; flex-direction: column; gap: 16px;
+}
+.team-invite-card-head { display: flex; align-items: flex-start; gap: 12px; }
+.team-invite-card-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(59,130,246,0.12); color: #3b82f6; font-size: 16px;
+}
+.team-invite-card-title { font-size: 15px; font-weight: 800; color: #0f172a; margin: 0; }
+.team-invite-card-sub { font-size: 12px; color: #64748b; margin: 2px 0 0; line-height: 1.5; }
+
+.team-qr-wrap {
+  align-self: center;
+  background: #fff; border-radius: 16px; padding: 12px;
+  box-shadow: 0 2px 10px rgba(15,23,42,0.08);
+}
+.team-qr-svg { width: 180px; height: 180px; display: block; }
+.team-qr-svg svg { width: 100%; height: 100%; display: block; }
+
+.team-handle-row { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.team-handle {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px; font-weight: 700; color: #0f172a;
+  background: #f1f5f9; padding: 6px 12px; border-radius: 10px; letter-spacing: 0.3px;
+}
+.team-handle-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; cursor: pointer; background: none;
+  font-size: 12px; font-weight: 700; color: #3b82f6; padding: 6px 8px;
+}
+
+.team-invite-actions { display: flex; gap: 10px; }
+.team-invite-share, .team-invite-add {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 14px; padding: 11px 14px; cursor: pointer;
+  font-size: 13px; font-weight: 700;
+}
+.team-invite-share { background: #f1f5f9; border: 1.5px solid #e2e8f0; color: #334155; }
+.team-invite-add {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  border: none; color: #fff; box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+}
+.team-invite-add--full { width: 100%; }
+
+.team-add-preview {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8fafc; border-radius: 12px; padding: 10px 12px;
+}
+.team-add-preview-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.team-add-preview-avatar--ph {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4); color: #fff; font-weight: 800; font-size: 15px;
+}
+.team-add-preview-name { font-size: 14px; font-weight: 700; color: #0f172a; }
+.team-add-error { font-size: 13px; color: #ef4444; font-weight: 600; margin: 0; }
+.team-add-success { font-size: 13px; color: #10b981; font-weight: 700; margin: 0; }
+
 .team-challenge-card {
   background: rgba(255,255,255,0.88);
   border: 1px solid rgba(255,255,255,0.65);
@@ -6795,6 +6860,7 @@ section + section {
 [data-theme="dark"] .dev-modal-card,
 [data-theme="dark"] .sleep-quality-card,
 [data-theme="dark"] .team-challenge-card,
+[data-theme="dark"] .team-invite-card,
 [data-theme="dark"] .team-leaderboard-section,
 [data-theme="dark"] .team-lb-card,
 [data-theme="dark"] .activity-stat-card,
@@ -6857,6 +6923,14 @@ section + section {
   color: var(--text-primary, #F1F5F9) !important;
   border-color: var(--border-glass, rgba(255,255,255,0.12)) !important;
 }
+
+[data-theme="dark"] .team-invite-card-title { color: var(--text-primary, #F1F5F9); }
+[data-theme="dark"] .team-invite-card-sub { color: var(--text-secondary, #94A3B8); }
+[data-theme="dark"] .team-handle { background: rgba(255,255,255,0.08); color: #F1F5F9; }
+[data-theme="dark"] .team-invite-share { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); color: #E2E8F0; }
+[data-theme="dark"] .team-add-preview { background: rgba(255,255,255,0.06); }
+[data-theme="dark"] .team-add-preview-name { color: #F1F5F9; }
+[data-theme="dark"] .team-qr-wrap { background: #fff; }
 
 /* Sub-surface / active / hover cards in dark mode */
 [data-theme="dark"] .activity-type-card:hover,

@@ -59,6 +59,22 @@ class FoodRecognitionErrorBoundary extends React.Component<
 
 type PageType = 'login' | 'home' | 'eating' | 'eating-food-log' | 'eating-macros' | 'eating-water' | 'eating-schedule' | 'eating-history' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'activity' | 'sleep' | 'mental-health' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker' | 'settings'
 
+// A shared invite link looks like `/?add=swift-lotus-73`. Capture the handle into
+// localStorage (the Team page's TeamInvite picks it up), then scrub it from the
+// URL so it isn't re-processed or leaked into history/analytics.
+function consumeAddParam(): boolean {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const handle = params.get('add')
+    if (!handle) return false
+    localStorage.setItem('pendingTeamAdd', handle.trim().toLowerCase())
+    window.history.replaceState({}, '', window.location.pathname)
+    return true
+  } catch {
+    return false
+  }
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('login')
   const [showFoodRecognition, setShowFoodRecognition] = useState(false)
@@ -74,6 +90,7 @@ function App() {
     // FIX: Validate session with Supabase instead of just checking localStorage token
     const initAuth = async () => {
       try {
+        const hasPendingAdd = consumeAddParam()
         // Local dev session (bypasses Supabase). Gated on import.meta.env.DEV so
         // this branch is removed from production builds — a hand-crafted
         // localStorage 'dev-user' / 'dev-mock-token' entry cannot grant a
@@ -85,7 +102,9 @@ function App() {
 
         if (isDevSession) {
           const savedPage = localStorage.getItem('currentPage') as PageType;
-          if (savedPage && savedPage !== 'login') {
+          if (hasPendingAdd) {
+            setCurrentPage('team');
+          } else if (savedPage && savedPage !== 'login') {
             setCurrentPage(savedPage);
           } else {
             setCurrentPage('home');
@@ -99,7 +118,9 @@ function App() {
           if (session) {
             // Valid live session found — restore saved page
             const savedPage = localStorage.getItem('currentPage') as PageType
-            if (savedPage && savedPage !== 'login') {
+            if (hasPendingAdd) {
+              setCurrentPage('team')
+            } else if (savedPage && savedPage !== 'login') {
               setCurrentPage(savedPage)
             } else {
               setCurrentPage('home')
@@ -115,7 +136,7 @@ function App() {
           const token = localStorage.getItem('authToken')
           const savedPage = localStorage.getItem('currentPage') as PageType
           if (token) {
-            setCurrentPage(savedPage && savedPage !== 'login' ? savedPage : 'home')
+            setCurrentPage(hasPendingAdd ? 'team' : (savedPage && savedPage !== 'login' ? savedPage : 'home'))
           } else {
             setCurrentPage('login')
           }
@@ -170,7 +191,11 @@ function App() {
   }, [])
 
   function handleLoginSuccess() {
-    setCurrentPage('home')
+    // Arrived via a `/?add=<handle>` invite link → land on Team so TeamInvite
+    // can pick up the pending handle and open the add dialog.
+    const landing: PageType = localStorage.getItem('pendingTeamAdd') ? 'team' : 'home'
+    localStorage.setItem('currentPage', landing)
+    setCurrentPage(landing)
     setShowPwaPrompt(false)
     setTimeout(() => setShowPwaPrompt(true), 50)
   }

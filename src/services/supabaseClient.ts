@@ -48,45 +48,10 @@ export const getLeaderboard = async () => {
   return data;
 };
 
-export const inviteTeamMemberByEmail = async (email: string) => {
-  if (!supabase) return { success: false, error: 'Database not configured' };
-  
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Not authenticated' };
-
-  // 1. Find user by email
-  const { data: memberProfile, error: userError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .maybeSingle();
-
-  if (userError || !memberProfile) {
-    return { success: false, error: 'User not found in the system. They must register via MFU SSO first.' };
-  }
-
-  if (memberProfile.id === user.id) {
-    return { success: false, error: 'You cannot invite yourself.' };
-  }
-
-  // 2. Add to team_members
-  const { error: inviteError } = await supabase
-    .from('team_members')
-    .insert([{
-      user_id: user.id,
-      member_id: memberProfile.id
-    }]);
-
-  if (inviteError) {
-    if (inviteError.code === '23505') { // Unique violation
-      return { success: false, error: 'User is already in your team.' };
-    }
-    console.error('Error inviting team member:', inviteError);
-    return { success: false, error: 'Failed to send invite.' };
-  }
-
-  return { success: true };
-};
+// Team invites are handled by handle/QR code — see services/teamInvite.ts, which
+// calls the add_team_member_by_handle RPC. The old email lookup was removed: RLS
+// on `profiles` hides any user whose score is private, so `.eq('email', …)`
+// returned nothing for almost everyone.
 
 export const getMyTeamLeaderboard = async () => {
   if (!supabase) return [];

@@ -65,6 +65,11 @@ This document outlines the standard development workflow and guidelines for the 
   (`recognizeFood()`) — currently Claude (`ANTHROPIC_API_KEY`), swappable to Gemini without
   touching the frontend or the response contract. The local TensorFlow.js model still handles
   the 10 Thai dishes; a per-user toggle (`localStorage.foodRecognitionEngine`) picks the engine.
+- **Team invites** use a short per-user handle (`profiles.handle`, e.g. `swift-lotus-73`,
+  server-assigned in `handle_new_user()`) shown as a QR code / copyable code on the Team
+  page. Adding a teammate goes through the `find_profile_by_handle` / `add_team_member_by_handle`
+  SECURITY DEFINER RPCs (`authenticated` only) — RLS on `profiles` otherwise hides every
+  user with a private score. A shared link is `/?add=<handle>`, consumed in `App.tsx`.
 - **AI health reports** (`supabase/functions/health-insights/`) reads the caller's
   `health_scores` rows, asks Claude (`HEALTH_INSIGHTS_MODEL`, default `claude-sonnet-5`) for a
   grounded interpretation, and caches it in `ai_reports` — regenerates ~weekly or on an

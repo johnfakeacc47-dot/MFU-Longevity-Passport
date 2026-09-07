@@ -26,6 +26,7 @@ The MFU Longevity Passport is a comprehensive health and longevity tracking appl
 | Sign-in, session, user data (`profiles`, `health_scores`, `challenges`, `team_members`) | Supabase, protected by Row Level Security |
 | Privileged user management (list / create / update / delete users) | `admin-users` Supabase Edge Function (verifies caller is `role = 'admin'`) |
 | Self-service account deletion | `delete-user` Supabase Edge Function |
+| Adding a teammate by handle / QR code | `find_profile_by_handle` + `add_team_member_by_handle` SECURITY DEFINER RPCs (`authenticated` only) |
 | Meal / activity / sleep / fasting logging + scoring API | NestJS backend + its own PostgreSQL |
 
 The frontend only ever holds the Supabase **anon** key. A `service_role` key must never be

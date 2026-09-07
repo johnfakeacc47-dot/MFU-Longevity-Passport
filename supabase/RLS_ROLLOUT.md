@@ -102,6 +102,7 @@ REST checks (use PostgREST with the anon key + a real user JWT):
 3. Dev Quick Login (`DevLoginModal`) creates only a localStorage session, no Supabase JWT. Under RLS every Supabase-backed screen reads empty for a dev-login user. Use a real Supabase login to test data flows.
 4. `syncDailyScoreToSupabase`'s direct `profiles.total_points` PATCH now returns a permission error that the FE ignores; `trg_recompute_profile_points` keeps the value correct. Remove that FE block (see fe cluster).
 5. Pre-existing bug (not caused by RLS): `deleteUserAccount` filters `health_scores` by `id` instead of `user_id`, so health rows are never deleted on account deletion. The DELETE policy is correct for when that bug is fixed.
+6. RESOLVED (`0002_user_handles.sql`): team invites used `profiles.select().eq('email', …)`, which RLS makes return nothing unless the target opted into a public score — so inviting almost anyone failed. Replaced by a `profiles.handle` column (short random code, e.g. `swift-lotus-73`, server-assigned in `handle_new_user()`) plus two SECURITY DEFINER RPCs — `find_profile_by_handle(text)` (preview: name + avatar only) and `add_team_member_by_handle(text)` (resolves handle, inserts the caller's `team_members` row, returns `{ok,reason}`). Both are `EXECUTE`-granted to `authenticated` only. Frontend: `src/services/teamInvite.ts`, QR/manual UI in `src/components/team/TeamInvite.tsx`, deep link `/?add=<handle>` handled in `App.tsx`.
 
 ## Rollback
 
