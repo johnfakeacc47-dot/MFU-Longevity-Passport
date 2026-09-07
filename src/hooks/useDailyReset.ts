@@ -24,15 +24,17 @@ export const useDailyReset = () => {
       if (lastActive === today) return;
 
       // 1. Freeze the ending day's score into Supabase under ITS date (the raw
-      //    logs still in localStorage belong to `lastActive`, not to `today`).
+      //    logs still in localStorage belong to `lastActive`, not to `today`),
+      //    and stash its total for the Home "vs yesterday" delta.
+      const endingScore = calculateLongevityScore();
       try {
-        const endingScore = calculateLongevityScore();
         if (endingScore.total > 0) {
           await syncDailyScoreToSupabase(endingScore, lastActive);
         }
       } catch (err) {
         console.error('[Daily Reset] final sync failed:', err);
       }
+      localStorage.setItem('yesterdayScore', String(endingScore.total));
 
       // 2. Clear the raw daily logs (keep a running fasting timer alone).
       for (const key of DAILY_KEYS) {
@@ -43,7 +45,6 @@ export const useDailyReset = () => {
       if (localStorage.getItem('waterIntake')) localStorage.removeItem('waterIntake');
 
       localStorage.setItem('lastActiveDate', today);
-      localStorage.removeItem('yesterdayScore');
 
       // 3. Recompute the UI to a fresh zero.
       window.dispatchEvent(new Event('healthDataUpdated'));

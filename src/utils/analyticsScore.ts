@@ -18,6 +18,7 @@ import { calculateLongevityScore, getSleepTargetByAge } from './longevityScore';
 import { getHealthHistory } from '../services/supabaseClient';
 import { getTodayAggregates } from './dailyAggregates';
 import { bangkokDateStr, addDaysStr, daysBetweenStr } from './bangkokTime';
+import type { CalendarDayItem } from './healthCoach';
 
 export type TimeRangeFilter = 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
 
@@ -419,6 +420,66 @@ export async function getAnalyticsData(
     loggedDays,
     achievements,
   };
+}
+
+// ── Health calendar + streak (same Supabase rows as the trend chart) ──────────
+export interface HealthCalendarData {
+  days: CalendarDayItem[];
+  /** Consecutive days up to today (or yesterday, if today isn't logged yet) with total > 0. */
+  streakDays: number;
+}
+
+export async function getHealthCalendarData(daysCount = 30, age = 25): Promise<HealthCalendarData> {
+  const today = bangkokDateStr();
+  const from = addDaysStr(today, -(daysCount - 1));
+  const rows = (await getHealthHistory(from, today)) as ScoreRow[];
+  const byDate = new Map(rows.map((r) => [r.date, rowToDay(r)]));
+
+  // Overlay the live score for today.
+  const live = calculateLongevityScore(age);
+  if (live.total > 0) {
+    byDate.set(today, {
+      dateStr: today,
+      nutrition: live.nutrition,
+      exercise: live.exercise,
+      sleep: live.sleep,
+      mental: live.mental,
+      total: live.total,
+      calories_in: null, calories_out: null, sleep_hours: null,
+      water_glasses: null, protein_g: null, mood_score: null, stress_level: null,
+    });
+  }
+
+  const days: CalendarDayItem[] = [];
+  for (let i = daysCount - 1; i >= 0; i--) {
+    const dateStr = addDaysStr(today, -i);
+    const d = byDate.get(dateStr);
+    const [, , dd] = dateStr.split('-').map(Number);
+    const score = d?.total ?? 0;
+    const status: CalendarDayItem['status'] =
+      score >= 80 ? 'good' : score >= 50 ? 'medium' : score > 0 ? 'bad' : 'empty';
+    days.push({
+      dateStr,
+      dayNum: dd,
+      score,
+      status,
+      nutrition: d?.nutrition ?? 0,
+      exercise: d?.exercise ?? 0,
+      sleep: d?.sleep ?? 0,
+      mental: d?.mental ?? 0,
+    });
+  }
+
+  // Streak: walk back from today; allow today to be empty (not logged yet).
+  let streakDays = 0;
+  let cursor = today;
+  if ((byDate.get(cursor)?.total ?? 0) === 0) cursor = addDaysStr(cursor, -1);
+  while ((byDate.get(cursor)?.total ?? 0) > 0) {
+    streakDays++;
+    cursor = addDaysStr(cursor, -1);
+  }
+
+  return { days, streakDays };
 }
 
 /** Empty result for first paint before the async fetch resolves. */

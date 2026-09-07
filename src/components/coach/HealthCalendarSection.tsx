@@ -1,14 +1,32 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { FaCalendarAlt, FaTimes, FaUtensils, FaDumbbell, FaBed, FaBrain } from 'react-icons/fa';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getHealthCalendar } from '../../utils/healthCoach';
 import type { CalendarDayItem } from '../../utils/healthCoach';
+import { getHealthCalendarData } from '../../utils/analyticsScore';
+import { bangkokDateStr } from '../../utils/bangkokTime';
 import '../../styles/Coach.css';
 
 export const HealthCalendarSection: React.FC = () => {
   const { t } = useLanguage();
   const [selectedDay, setSelectedDay] = useState<CalendarDayItem | null>(null);
-  const calendarDays = getHealthCalendar(30);
+  // Same Supabase history as the trend chart; localStorage calendar is the offline fallback.
+  const [calendarDays, setCalendarDays] = useState<CalendarDayItem[]>(() => getHealthCalendar(30));
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      getHealthCalendarData(30)
+        .then((r) => { if (!cancelled && r.days.length) setCalendarDays(r.days); })
+        .catch(() => { if (!cancelled) setCalendarDays(getHealthCalendar(30)); });
+    };
+    load();
+    window.addEventListener('healthDataUpdated', load);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('healthDataUpdated', load);
+    };
+  }, []);
 
   const getStatusColor = (status: CalendarDayItem['status']) => {
     switch (status) {
@@ -52,7 +70,7 @@ export const HealthCalendarSection: React.FC = () => {
       <div className="calendar-grid">
         {calendarDays.map((day) => {
           const color = getStatusColor(day.status);
-          const isToday = day.dateStr === new Date().toISOString().split('T')[0];
+          const isToday = day.dateStr === bangkokDateStr();
           return (
             <button
               key={day.dateStr}
