@@ -15,15 +15,19 @@ Copy `.env.example` to `.env` and fill in the values.
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `PORT` | no | Defaults to `3001`. |
+| `NODE_ENV` | no (yes in prod) | Set to `production` in any deployed environment. When `production`, the server refuses to start with a weak `JWT_SECRET`, `DB_SYNCHRONIZE=true`, a wrong-length `ENCRYPTION_KEY`, a missing `DATABASE_URL`, or a missing `CORS_ORIGIN`. |
 | `DATABASE_URL` | **yes** | Postgres connection string. |
-| `DB_SYNCHRONIZE` | no | `true` auto-syncs the schema from entities — dev only, never `true` in production. |
+| `DB_SYNCHRONIZE` | no | `true` auto-syncs the schema from entities - dev only. Forced OFF whenever `NODE_ENV=production` regardless of this value. |
 | `ENCRYPTION_KEY` | **yes** | Exactly 32 characters. AES-256 at-rest encryption for `meal.imageUrl` and `health_log.data`. **Must stay stable** — rotating or losing it makes previously-encrypted rows permanently undecryptable. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex').slice(0,32))"`. |
-| `JWT_SECRET` | **yes** | Signs/verifies session JWTs. |
+| `JWT_SECRET` | **yes** | Signs/verifies session JWTs. Min 32 random characters, must not contain the words change/secret-key/dev/example. Enforced in EVERY environment - the server will not start otherwise. Generate: `node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"`. |
 | `CORS_ORIGIN` | no | Comma-separated list of allowed frontend origins. Defaults to `http://localhost:5173,http://localhost:3000` for local dev — set this to your deployed frontend's origin in any other environment. |
-| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_AUTH_URL`, `OIDC_TOKEN_URL`, `OIDC_USERINFO_URL`, `OIDC_CALLBACK_URL` | no | MFU SSO (OIDC) login. Without these, use the `GET /auth/mock-login` dev-only stub instead. |
+| `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `OIDC_AUTH_URL`, `OIDC_TOKEN_URL`, `OIDC_USERINFO_URL`, `OIDC_CALLBACK_URL` | no | MFU SSO (OIDC) login. All six of issuer + the 4 URLs + client id/secret must be set together. When any is missing, `/auth/login` and `/auth/callback` are not registered (404). Without OIDC, use `GET /auth/mock-login` (requires `ENABLE_MOCK_LOGIN=true`, dev/non-production only). |
+| `ENABLE_MOCK_LOGIN` | no | Dev only. `true` exposes `GET /auth/mock-login`, which mints a valid session JWT for a fake student with no credentials. Ignored (route stays 404) when `NODE_ENV=production`. |
 
-The server throws at startup (rather than silently falling back to an insecure default) if
-`DATABASE_URL`, `JWT_SECRET`, or `ENCRYPTION_KEY` is missing or malformed.
+The server refuses to start (rather than booting insecurely) when: `ENCRYPTION_KEY` is missing or
+not exactly 32 chars (always); `JWT_SECRET` is missing, shorter than 32 chars, or contains a
+placeholder word (always); or `NODE_ENV=production` and any of `DATABASE_URL` / `CORS_ORIGIN` is
+missing or `DB_SYNCHRONIZE=true`. See `src/config/security-config.ts`.
 
 ## Local development
 

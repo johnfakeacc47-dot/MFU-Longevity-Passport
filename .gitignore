@@ -23,6 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.*
+!.env.example
 **/.env
+**/.env.*
+!**/.env.example
 node_modules/
 dist/
+
+# AI agent / tooling artifacts
+.agents/
+skills-lock.json
+.claude/settings.local.json

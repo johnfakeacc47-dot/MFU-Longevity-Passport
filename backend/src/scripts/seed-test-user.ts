@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../app.module';
 import { UsersService } from '../users/users.service';
@@ -38,10 +39,13 @@ async function bootstrap() {
     console.log(accessToken);
     console.log('─'.repeat(80));
     console.log('\n📝 To use this token:');
-    console.log('1. In browser console: localStorage.setItem("authToken", "' + accessToken + '")');
+    console.log(
+      '1. In browser console: localStorage.setItem("authToken", "' +
+        accessToken +
+        '")',
+    );
     console.log('2. In API requests: Authorization: Bearer ' + accessToken);
     console.log('\n✅ Token expires in 7 days');
-
   } catch (error) {
     console.error('Error:', error);
   } finally {

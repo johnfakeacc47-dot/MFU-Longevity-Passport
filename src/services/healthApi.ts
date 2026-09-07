@@ -48,8 +48,10 @@ const addToOfflineQueue = (path: string, options: RequestInit) => {
       timestamp: Date.now(),
     });
     saveOfflineQueue(queue);
-    console.log(`[Offline Sync] Added ${options.method} ${path} to offline queue.`);
-    
+    if (import.meta.env.DEV) {
+      console.log(`[Offline Sync] Added ${options.method} ${path} to offline queue.`);
+    }
+
     // Dispatch an event to notify the UI that we're offline and a change is pending sync
     window.dispatchEvent(new CustomEvent('offlineRequestQueued'));
   }
@@ -64,8 +66,10 @@ export const syncOfflineData = async () => {
   if (queue.length === 0) return;
   
   syncInProgress = true;
-  console.log(`[Offline Sync] Synchronizing ${queue.length} pending requests...`);
-  
+  if (import.meta.env.DEV) {
+    console.log(`[Offline Sync] Synchronizing ${queue.length} pending requests...`);
+  }
+
   const remainingQueue: OfflineRequest[] = [];
   
   for (const req of queue) {
@@ -76,9 +80,13 @@ export const syncOfflineData = async () => {
         headers: getHeaders(),
         body: JSON.stringify(req.body),
       });
-      console.log(`[Offline Sync] Successfully synced ${req.method} ${req.path}`);
+      if (import.meta.env.DEV) {
+        console.log(`[Offline Sync] Successfully synced ${req.method} ${req.path}`);
+      }
     } catch (error) {
-      console.error(`[Offline Sync] Failed to sync ${req.method} ${req.path}`, error);
+      if (import.meta.env.DEV) {
+        console.error(`[Offline Sync] Failed to sync ${req.method} ${req.path}`, error);
+      }
       remainingQueue.push(req); // Keep in queue for next time
     }
   }
@@ -110,7 +118,9 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
   }
 
   try {
-    console.log(`[API] Making ${options.method || 'GET'} request to ${API_URL}${path}`);
+    if (import.meta.env.DEV) {
+      console.log(`[API] Making ${options.method || 'GET'} request to ${API_URL}${path}`);
+    }
     const response = await fetch(`${API_URL}${path}`, {
       ...options,
       headers: {
@@ -119,21 +129,30 @@ export const request = async <T>(path: string, options: RequestInit = {}): Promi
       },
     });
 
-    console.log(`[API] Response status: ${response.status}`);
-    
+    if (import.meta.env.DEV) {
+      console.log(`[API] Response status: ${response.status}`);
+    }
+
     if (!response.ok) {
       const text = await response.text();
-      console.error(`[API] Error response: ${text}`);
-      throw new Error(text || 'Request failed');
+      if (import.meta.env.DEV) {
+        console.error(`[API] Error response: ${text}`);
+        throw new Error(text || `Request failed (${response.status})`);
+      }
+      throw new Error(`Request failed (${response.status})`);
     }
 
     const data = await response.json() as Promise<T>;
-    console.log(`[API] Response data:`, data);
+    if (import.meta.env.DEV) {
+      console.log(`[API] Response data:`, data);
+    }
     return data;
   } catch (error) {
     // If it's a network error (TypeError due to fetch failing to connect)
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.warn(`[API] Network error. Treating as offline for ${path}`);
+      if (import.meta.env.DEV) {
+        console.warn(`[API] Network error. Treating as offline for ${path}`);
+      }
       addToOfflineQueue(path, options);
       
       // Return a spoofed successful response for POST/PUT/DELETE

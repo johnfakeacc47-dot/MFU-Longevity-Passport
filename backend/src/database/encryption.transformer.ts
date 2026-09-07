@@ -80,9 +80,14 @@ export class EncryptionTransformer implements ValueTransformer {
       }
 
       return decrypted;
-    } catch (error) {
-      console.error('Decryption failed', error);
-      return value; // Return original on failure
+    } catch {
+      // A decrypt failure means the ciphertext is corrupt or ENCRYPTION_KEY has
+      // been changed. Never hand back the raw ciphertext as if it were plaintext:
+      // that silently corrupts reads and can leak encrypted blobs through the API.
+      // Fail loud; do not log the value or the underlying error object.
+      throw new Error(
+        'Failed to decrypt an encrypted column value (ENCRYPTION_KEY changed or data corrupt).',
+      );
     }
   }
 }
