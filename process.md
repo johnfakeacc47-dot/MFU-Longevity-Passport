@@ -60,8 +60,13 @@ This document outlines the standard development workflow and guidelines for the 
   account) run server-side in `supabase/functions/admin-users/` and `supabase/functions/delete-user/`,
   which verify the caller's JWT and role before using the `service_role` key. Frontend code
   calls them via `supabase.functions.invoke(...)` — never the anon client directly.
+- **Cloud food recognition** (`supabase/functions/recognize-food/`) proxies a vision LLM so
+  the API key never reaches the browser. The provider is isolated to one function
+  (`recognizeFood()`) — currently Claude (`ANTHROPIC_API_KEY`), swappable to Gemini without
+  touching the frontend or the response contract. The local TensorFlow.js model still handles
+  the 10 Thai dishes; a per-user toggle (`localStorage.foodRecognitionEngine`) picks the engine.
 - Edge Functions restrict CORS to the `ALLOWED_ORIGINS` secret (comma-separated); set it per
-  environment with `supabase secrets set`.
+  environment with `supabase secrets set`. Never put a model/provider API key in a `VITE_` var.
 
 ## Frontend Stability Conventions
 

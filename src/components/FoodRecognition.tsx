@@ -5,8 +5,12 @@ import { LuCamera, LuImage, LuSparkles, LuX, LuFlame, LuHeart, LuApple, LuRefres
 import { THAI_FOOD_CLASSES } from '../config/foodClasses';
 import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi } from '../services/healthApi';
+import { recognizeFoodWithAi, type AiFoodResult } from '../services/foodAiApi';
 import { safeGetItem } from '../utils/safeStorage';
 import '../styles/FoodRecognition.css';
+
+type RecognitionEngine = 'local' | 'ai';
+const ENGINE_KEY = 'foodRecognitionEngine';
 
 interface FoodRecognitionProps {
   onClose: () => void;
@@ -24,6 +28,9 @@ interface NutritionData {
   protein: number;
   fat: number;
   healthScore: number;
+  sugar?: number;
+  sodium?: number;
+  fiber?: number;
 }
 
 export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuccess }) => {
@@ -49,7 +56,16 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
   const [selectedPredictionIndex, setSelectedPredictionIndex] = useState<number>(0);
   const [isEditingPrediction, setIsEditingPrediction] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [engine, setEngine] = useState<RecognitionEngine>(() =>
+    safeGetItem<RecognitionEngine>(ENGINE_KEY, 'local') === 'ai' ? 'ai' : 'local',
+  );
+  const [aiResult, setAiResult] = useState<AiFoodResult | null>(null);
   const { t } = useLanguage();
+
+  const chooseEngine = (next: RecognitionEngine) => {
+    setEngine(next);
+    try { localStorage.setItem(ENGINE_KEY, next); } catch { /* storage unavailable */ }
+  };
 
   // Cycling professional status messages during AI processing
   useEffect(() => {
@@ -131,15 +147,20 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
   }, []);
 
   useEffect(() => {
-    // Ensure TensorFlow.js is ready before loading model
-    tf.ready().then(() => {
-      loadModel();
-    });
+    // Local engine: load the on-device TF.js model. AI engine: skip it entirely
+    // (no ~17MB model download, no TensorFlow init).
+    if (engine === 'local') {
+      tf.ready().then(() => {
+        loadModel();
+      });
+    } else {
+      setIsLoading(false);
+    }
     return () => {
       stopCamera();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [engine]);
 
   const loadModel = async () => {
     try {
@@ -419,6 +440,70 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     }
   };
 
+  // ── Cloud AI recognition (engine === 'ai', or the "ระบุด้วย AI" escalation button) ──
+  const runAiRecognition = async (imageUrl: string) => {
+    const hint =
+      predictions.length > 0
+        ? { dish: predictions[0].className, confidence: predictions[0].probability / 100 }
+        : undefined;
+
+    setIsProcessing(true);
+    setUploadStatus('processing');
+    setStatusMessage('AI กำลังวิเคราะห์เมนูอาหาร...');
+    setUploadProgress(60);
+    setErrorMessage('');
+
+    try {
+      const r = await recognizeFoodWithAi(imageUrl, hint);
+      if (!r.isFood) {
+        setUploadStatus('error');
+        setErrorMessage('ไม่พบอาหารในรูปภาพนี้ กรุณาลองใหม่ / No food detected in this image.');
+        return;
+      }
+      setAiResult(r);
+      setPredictions([
+        { className: r.dishLocal || r.dish, probability: Math.round(r.confidence * 100) },
+      ]);
+      setNutritionData({
+        calories: Math.round(r.nutrition.calories),
+        carbs: Math.round(r.nutrition.carbs),
+        protein: Math.round(r.nutrition.protein),
+        fat: Math.round(r.nutrition.fat),
+        healthScore: Math.min(100, Math.max(0, Math.round(r.healthScore))),
+        sugar: 0,
+        sodium: Math.round(r.nutrition.sodium),
+        fiber: Math.round(r.nutrition.fiber),
+      });
+      setSelectedPredictionIndex(0);
+      setIsEditingPrediction(false);
+      setUploadStatus('success');
+      setStatusMessage('วิเคราะห์โดย AI สำเร็จ');
+    } catch (err) {
+      setUploadStatus('error');
+      setErrorMessage((err as Error).message || 'AI ไม่สามารถวิเคราะห์รูปภาพได้');
+    } finally {
+      setIsProcessing(false);
+      setUploadProgress(100);
+    }
+  };
+
+  // Route a freshly-loaded image to whichever engine is selected.
+  const analyzeImage = (imageUrl: string) => {
+    if (engine === 'ai') {
+      void runAiRecognition(imageUrl);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      predictFood(img);
+    };
+    img.onerror = () => {
+      setUploadStatus('error');
+      setErrorMessage('ไม่สามารถโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+    };
+    img.src = imageUrl;
+  };
+
   const processFile = (file: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
@@ -440,6 +525,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
+    setAiResult(null);
     setSelectedPredictionIndex(0);
     setIsEditingPrediction(false);
 
@@ -464,18 +550,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
         setUploadStatus('processing');
         setStatusMessage('AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...');
         setUploadProgress(0);
-
-        const img = new Image();
-        img.onload = () => {
-          console.log('Image loaded, starting prediction...');
-          predictFood(img);
-        };
-        img.onerror = (err) => {
-          console.error('Error loading image:', err);
-          setUploadStatus('error');
-          setErrorMessage('ไม่สามารถโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
-        };
-        img.src = imageUrl;
+        analyzeImage(imageUrl);
       }, 350);
     };
     reader.onerror = () => {
@@ -561,6 +636,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
+    setAiResult(null);
     setSelectedPredictionIndex(0);
     setIsEditingPrediction(false);
 
@@ -571,17 +647,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
         setUploadStatus('processing');
         setStatusMessage('AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...');
         setUploadProgress(0);
-
-        const img = new Image();
-        img.onload = () => {
-          console.log('Image captured, starting prediction...');
-          predictFood(img);
-        };
-        img.onerror = () => {
-          setUploadStatus('error');
-          setErrorMessage('ไม่สามารถโหลดภาพจากกล้องได้ กรุณาลองใหม่');
-        };
-        img.src = imageUrl;
+        analyzeImage(imageUrl);
       }, 300);
     }, 250);
   };
@@ -594,6 +660,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
+    setAiResult(null);
   };
 
   return (
@@ -721,6 +788,28 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       </div>
                       <p className="subtitle-refined">
                         {t('food.aiAnalyze') || 'AI จะช่วยวิเคราะห์เมนูและคำนวณสารอาหารอย่างแม่นยำ'}
+                      </p>
+
+                      <div className="engine-toggle" role="group" aria-label="Recognition engine">
+                        <button
+                          type="button"
+                          className={`engine-opt ${engine === 'local' ? 'engine-opt--active' : ''}`}
+                          onClick={() => chooseEngine('local')}
+                        >
+                          <LuShieldCheck /> <span>ในเครื่อง</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={`engine-opt ${engine === 'ai' ? 'engine-opt--active' : ''}`}
+                          onClick={() => chooseEngine('ai')}
+                        >
+                          <LuSparkles /> <span>AI</span>
+                        </button>
+                      </div>
+                      <p className="engine-hint">
+                        {engine === 'ai'
+                          ? 'AI รู้จักอาหารทุกชนิด • ต้องเชื่อมต่ออินเทอร์เน็ต'
+                          : 'โมเดลในเครื่อง • เร็ว ใช้งานออฟไลน์ได้ • เมนูไทย 10 อย่าง'}
                       </p>
 
                       <div className="centerpiece-refined">
@@ -898,13 +987,25 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             <h3 className="food-title-clean">
                               {getTranslatedFoodName(predictions[selectedPredictionIndex].className)}
                             </h3>
-                            <button 
-                              className="edit-prediction-btn-clean" 
-                              onClick={() => setIsEditingPrediction(true)}
-                              aria-label="Correct prediction"
-                            >
-                              <LuPencil /> <span>ไม่ใช่เมนูนี้?</span>
-                            </button>
+                            {engine === 'local' && (
+                              <button
+                                className="edit-prediction-btn-clean"
+                                onClick={() => setIsEditingPrediction(true)}
+                                aria-label="Correct prediction"
+                              >
+                                <LuPencil /> <span>ไม่ใช่เมนูนี้?</span>
+                              </button>
+                            )}
+                            {engine === 'local' && (
+                              <button
+                                className="edit-prediction-btn-clean edit-prediction-btn-clean--ai"
+                                onClick={() => imagePreview && runAiRecognition(imagePreview)}
+                                disabled={uploadStatus === 'processing'}
+                                aria-label="Re-identify with AI"
+                              >
+                                <LuSparkles /> <span>ระบุด้วย AI</span>
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <div className="correction-container-clean">
@@ -935,6 +1036,18 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           </div>
                         )}
                       </div>
+
+                      {aiResult && (
+                        <div className="ai-result-note">
+                          <LuSparkles className="ai-result-note-icon" />
+                          <div>
+                            {aiResult.servingEstimate && (
+                              <span className="ai-result-serving">{aiResult.servingEstimate}</span>
+                            )}
+                            {aiResult.healthNotes && <p className="ai-result-advice">{aiResult.healthNotes}</p>}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Calories Card */}
                       <div className="calories-display-clean">
