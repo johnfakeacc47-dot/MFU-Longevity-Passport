@@ -24,13 +24,18 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 type AdminClient = ReturnType<typeof createClient>
 
 // ---------- CORS (origin allowlist) ----------
-const DEV_ORIGIN_FALLBACK = 'http://localhost:5173'
+// Set the ALLOWED_ORIGINS secret (comma-separated) to override / extend this,
+// e.g. to add preview/staging domains: `supabase secrets set ALLOWED_ORIGINS=...`
+const DEFAULT_ORIGINS = [
+  'https://mfu-longevity-passport.vercel.app',
+  'http://localhost:5173',
+]
 
 function getAllowedOrigins(): string[] {
   const raw = Deno.env.get('ALLOWED_ORIGINS')
-  if (!raw) return [DEV_ORIGIN_FALLBACK]
+  if (!raw) return DEFAULT_ORIGINS
   const list = raw.split(',').map((o) => o.trim()).filter(Boolean)
-  return list.length > 0 ? list : [DEV_ORIGIN_FALLBACK]
+  return list.length > 0 ? list : DEFAULT_ORIGINS
 }
 
 function buildCorsHeaders(req: Request): Record<string, string> {
