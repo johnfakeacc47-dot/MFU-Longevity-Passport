@@ -6,9 +6,10 @@ import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
+import { TeamInvite } from '../components/team/TeamInvite';
 import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
-  inviteTeamMemberByEmail, getMyTeamLeaderboard, getCurrentUserProfile,
+  getMyTeamLeaderboard, getCurrentUserProfile,
 } from '../services/supabaseClient';
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile';
@@ -25,7 +26,8 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const [activeTab, setActiveTab] = useState<'myTeam' | 'allTeams'>('myTeam');
   const [isScorePublic, setIsScorePublic] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [isInviting, setIsInviting] = useState(false);
+  const [myHandle, setMyHandle] = useState<string | null>(null);
+  const [showInvite, setShowInvite] = useState(false);
   const { t } = useLanguage();
   useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
 
@@ -45,7 +47,10 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
     if (!isSupabaseConfigured()) { setIsLoading(false); return; }
     try {
       const profile = await getCurrentUserProfile();
-      if (profile) setIsScorePublic(profile.is_score_public ?? false);
+      if (profile) {
+        setIsScorePublic(profile.is_score_public ?? false);
+        setMyHandle(profile.handle ?? null);
+      }
 
       const mapMember = (m: any) => ({
         id: m.id, name: m.name || 'Unknown',
@@ -77,15 +82,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleInvite = async () => {
-    const email = prompt('Enter member email to invite:');
-    if (!email) return;
-    setIsInviting(true);
-    const res = await inviteTeamMemberByEmail(email.trim());
-    setIsInviting(false);
-    if (res.success) { alert('Invitation successful!'); fetchData(); }
-    else alert(`Error: ${res.error}`);
-  };
+  const handleInvite = () => setShowInvite(true);
 
   const displayData = activeTab === 'myTeam' ? myTeamData : allTeamsData;
 
@@ -94,7 +91,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       <header className="team-header-v2">
         <BackButton onClick={() => onNavigate('home')} ariaLabel="Go back" />
         <h1 className="team-header-title">{t('team.title')}</h1>
-        <button className="team-invite-icon-btn" onClick={handleInvite} aria-label="Invite member" disabled={isInviting}>
+        <button className="team-invite-icon-btn" onClick={handleInvite} aria-label="Invite member">
           <FaUserPlus />
         </button>
       </header>
@@ -111,10 +108,18 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                 <div className="team-score-total">{teamPoints.toLocaleString()}</div>
                 <div className="team-score-label">{t('team.teamScore')}</div>
               </div>
-              <button className="team-invite-btn" onClick={handleInvite} disabled={isInviting}>
-                <FaUserPlus /> {isInviting ? 'Inviting...' : 'Invite'}
+              <button className="team-invite-btn" onClick={handleInvite}>
+                <FaUserPlus /> {t('team.addTeammate')}
               </button>
             </div>
+
+            {/* ── Invite by QR / code ── */}
+            <TeamInvite
+              myHandle={myHandle}
+              open={showInvite}
+              onOpenChange={setShowInvite}
+              onMemberAdded={fetchData}
+            />
 
             {/* ── Challenge Card ── */}
             <div className={`team-challenge-card ${challengeDone ? 'team-challenge-card--done' : ''}`}>

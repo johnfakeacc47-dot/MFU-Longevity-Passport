@@ -203,7 +203,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               if (!supabase) { setError('Supabase not configured'); return; }
               const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
-                options: { redirectTo: window.location.origin },
+                // Keep the path + query (e.g. `/?add=<handle>` invite links) across the round-trip.
+                options: { redirectTo: window.location.origin + window.location.pathname + window.location.search },
               });
               if (error) setError(error.message);
             } catch (err: any) {
