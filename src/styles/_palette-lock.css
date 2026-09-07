@@ -1,0 +1,937 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PALETTE LOCK — Design System Core
+   Single source of truth for all CSS variables, tokens, and system-wide styles.
+   Imported by every page CSS file.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. LIGHT MODE TOKENS ──────────────────────────────────────────────────── */
+:root {
+  /* Background */
+  --bg:              #F4F9FF;
+  --bg-subtle:       #EDF5FF;
+  --surface:         rgba(255,255,255,0.88);
+  --surface-solid:   #FFFFFF;
+  --surface-soft:    #EAF6FF;
+  --surface-hover:   #F0F8FF;
+
+  /* Accent */
+  --accent:          #38BDF8;
+  --accent-dark:     #0284C7;
+  --accent-soft:     rgba(56,189,248,0.08);
+
+  /* Borders */
+  --border-glass:    rgba(255,255,255,0.65);
+  --border-glow:     rgba(125,220,255,0.20);
+  --border-soft:     rgba(125,220,255,0.12);
+  --border-hover:    rgba(56,189,248,0.35);
+
+  /* Shadows */
+  --shadow-card:
+    0 4px 24px rgba(15,23,42,0.04),
+    0 0 0 1px rgba(125,220,255,0.10);
+  --shadow-card-hover:
+    0 12px 36px rgba(56,189,248,0.10),
+    0 0 0 1px rgba(56,189,248,0.22);
+  --shadow-btn:
+    0 2px 12px rgba(56,189,248,0.08),
+    0 0 0 1px rgba(125,220,255,0.20);
+  --shadow-btn-hover:
+    0 8px 24px rgba(56,189,248,0.18),
+    0 0 0 1px rgba(56,189,248,0.30);
+  --shadow-nav:
+    0 8px 32px rgba(15,23,42,0.10),
+    0 0 0 1px rgba(125,220,255,0.18);
+
+  /* Typography */
+  --text-primary:   #0F172A;
+  --text-secondary: #64748B;
+  --text-tertiary:  #94A3B8;
+  --text-accent:    #0284C7;
+
+  /* Border Radius */
+  --radius-card:    24px;
+  --radius-btn:     16px;
+  --radius-input:   14px;
+
+  /* Transition */
+  --transition:     all 0.25s cubic-bezier(0.4,0,0.2,1);
+
+  /* ── Coach / Card system bridge tokens (Light Mode defaults) ── */
+  --bg-card:         #FFFFFF;
+  --bg-primary:      #F1F5F9;
+  --bg-main:         #F9FAFB;
+  --bg-hover:        #F3F4F6;
+  --text-main:       #111827;
+  --text-muted:      #6B7280;
+  --border-color:    rgba(0, 0, 0, 0.06);
+
+  /* ── Semantic Color Tokens ── */
+  --color-success:      #10B981;
+  --color-success-soft: rgba(16,185,129,0.12);
+  --color-success-text: #059669;
+  --color-warning:      #F59E0B;
+  --color-warning-soft: rgba(245,158,11,0.12);
+  --color-warning-text: #D97706;
+  --color-danger:       #EF4444;
+  --color-danger-soft:  rgba(239,68,68,0.12);
+  --color-danger-text:  #DC2626;
+  --color-info:         #3B82F6;
+  --color-info-soft:    rgba(59,130,246,0.12);
+  --color-info-text:    #2563EB;
+  --color-cyan:         #06B6D4;
+  --color-cyan-soft:    rgba(6,182,212,0.12);
+  --color-cyan-text:    #0891B2;
+
+  /* ── Input/Form tokens ── */
+  --input-bg:        #F8FCFF;
+  --input-bg-focus:  #FFFFFF;
+  --input-border:    rgba(191,233,255,0.80);
+
+  /* ── Header tokens ── */
+  --header-bg:       rgba(244,249,255,0.92);
+  --header-border:   rgba(125,220,255,0.08);
+
+  /* ── Card tokens ── */
+  --surface-card:    var(--surface-solid, #FFFFFF);
+  --card-bg:         var(--bg-card, #FFFFFF);
+}
+
+/* ── 2. DARK MODE TOKENS ───────────────────────────────────────────────────── */
+:root[data-theme="dark"],
+html[data-theme="dark"] {
+  /* Background */
+  --bg:              #0F172A;
+  --bg-subtle:       #1F2937;
+  --surface:         rgba(31,41,55,0.92);
+  --surface-solid:   #1F2937;
+  --surface-soft:    #2A3447;
+  --surface-hover:   #374151;
+
+  /* Accent */
+  --accent:          #38BDF8;
+  --accent-dark:     #7DD3FC;
+  --accent-soft:     rgba(56,189,248,0.15);
+
+  /* Borders */
+  --border-glass:    rgba(255,255,255,0.10);
+  --border-glow:     rgba(56,189,248,0.25);
+  --border-soft:     rgba(255,255,255,0.07);
+  --border-hover:    rgba(56,189,248,0.40);
+
+  /* Shadows */
+  --shadow-card:
+    0 4px 24px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(255,255,255,0.07);
+  --shadow-card-hover:
+    0 12px 36px rgba(56,189,248,0.18),
+    0 0 0 1px rgba(56,189,248,0.32);
+  --shadow-btn:
+    0 2px 12px rgba(0,0,0,0.30),
+    0 0 0 1px rgba(255,255,255,0.10);
+  --shadow-btn-hover:
+    0 8px 24px rgba(56,189,248,0.22),
+    0 0 0 1px rgba(56,189,248,0.38);
+  --shadow-nav:
+    0 8px 32px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(255,255,255,0.10);
+
+  /* Typography */
+  --text-primary:   #FFFFFF;
+  --text-secondary: #B7C0CF;
+  --text-tertiary:  #7C8798;
+  --text-accent:    #7DD3FC;
+
+  /* Border Radius (same) */
+  --radius-card:    24px;
+  --radius-btn:     16px;
+  --radius-input:   14px;
+
+  /* ── Coach / Card system bridge tokens (Dark Mode) ── */
+  --bg-card:         #1F2937;
+  --bg-primary:      #0F172A;
+  --bg-main:         #0F172A;
+  --bg-hover:        #2A3447;
+  --text-main:       #FFFFFF;
+  --text-muted:      #7C8798;
+  --border-color:    #394455;
+
+  /* ── Input/Form / Header / Card tokens (Dark) ── */
+  --input-bg:        #1F2937;
+  --input-bg-focus:  #0F172A;
+  --input-border:    #394455;
+  --header-bg:       rgba(15,23,42,0.92);
+  --header-border:   #394455;
+  --surface-card:    var(--surface-solid, #1F2937);
+  --card-bg:         var(--bg-card, #1F2937);
+
+  /* ── Semantic Color Tokens (Dark) ── */
+  --color-success:      #34D399;
+  --color-success-soft: rgba(52,211,153,0.15);
+  --color-success-text: #34D399;
+  --color-warning:      #FCD34D;
+  --color-warning-soft: rgba(252,211,77,0.15);
+  --color-warning-text: #FBBF24;
+  --color-danger:       #F87171;
+  --color-danger-soft:  rgba(248,113,113,0.15);
+  --color-danger-text:  #F87171;
+  --color-info:         #60A5FA;
+  --color-info-soft:    rgba(96,165,250,0.15);
+  --color-info-text:    #60A5FA;
+  --color-cyan:         #22D3EE;
+  --color-cyan-soft:    rgba(34,211,238,0.15);
+  --color-cyan-text:    #22D3EE;
+
+  /* ── Input/Form tokens (Dark) ── */
+  --input-bg:        rgba(30,41,59,0.95);
+  --input-bg-focus:  #1E293B;
+  --input-border:    rgba(255,255,255,0.12);
+
+  /* ── Header tokens (Dark) ── */
+  --header-bg:       rgba(15,23,42,0.92);
+  --header-border:   rgba(56,189,248,0.10);
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   3. GLOBAL RESETS & BASE STYLES
+   ════════════════════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+:root[data-theme="dark"],
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background: var(--bg);
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   4. BOTTOM NAVIGATION
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 8px 16px max(env(safe-area-inset-bottom, 0px), 8px) !important;
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+.bottom-nav-pill {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  width: 100% !important;
+  gap: 8px !important;
+  background: var(--surface-solid) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--border-glass) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 12px 36px rgba(13, 71, 161, 0.14) !important;
+  padding: 8px 16px !important;
+  pointer-events: all !important;
+}
+
+.nav-item-v2 {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  padding: 8px 4px !important;
+  border-radius: 14px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.nav-item-v2--active,
+.nav-item-v2.active {
+  background: transparent !important;
+  color: var(--color-primary, #3b82f6) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.nav-item-v2:hover:not(.nav-item-v2--active):not(.active) {
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+}
+
+.nav-icon-v2 {
+  position: relative !important;
+  width: 38px !important;
+  height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+}
+
+@keyframes popCircle {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.nav-active-bg {
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, var(--color-primary, #3b82f6), #2563eb) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  animation: popCircle 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+.nav-icon-svg {
+  position: relative !important;
+  z-index: 1 !important;
+  font-size: 18px !important;
+  color: var(--text-secondary) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+}
+
+.nav-item-v2--active .nav-icon-svg,
+.nav-item-v2.active .nav-icon-svg {
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+}
+
+.nav-label-v2 {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  transition: color 0.2s ease !important;
+}
+
+.nav-item-v2--active .nav-label-v2,
+.nav-item-v2.active .nav-label-v2 {
+  color: var(--color-primary, #3b82f6) !important;
+  font-weight: 700 !important;
+}
+
+/* Dark mode nav */
+[data-theme="dark"] .bottom-nav-pill {
+  background: rgba(15,23,42,0.92) !important;
+  backdrop-filter: blur(24px) !important;
+  -webkit-backdrop-filter: blur(24px) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.65) !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active,
+[data-theme="dark"] .nav-item-v2.active {
+  background: transparent !important;
+  color: #60a5fa !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .nav-active-bg {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.45) !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active .nav-icon-svg,
+[data-theme="dark"] .nav-item-v2.active .nav-icon-svg {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active .nav-label-v2,
+[data-theme="dark"] .nav-item-v2.active .nav-label-v2 {
+  color: #60a5fa !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   5. APP BACK BUTTON (universal)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.app-back-btn,
+.back-btn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: var(--surface-solid) !important;
+  color: var(--text-primary) !important;
+  font-size: 20px !important;
+  border: 1px solid var(--border-glow) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: var(--shadow-btn) !important;
+  transition: var(--transition) !important;
+  flex-shrink: 0 !important;
+}
+
+.app-back-btn:hover,
+.back-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-btn-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+[data-theme="dark"] .app-back-btn,
+[data-theme="dark"] .back-btn {
+  background: rgba(30,41,59,0.95) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: var(--text-primary) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   6. ICON BUTTON (header icons)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.icon-btn,
+.menu-btn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: var(--surface-solid) !important;
+  color: var(--text-primary) !important;
+  font-size: 20px !important;
+  border: 1px solid var(--border-glow) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: var(--shadow-btn) !important;
+  transition: var(--transition) !important;
+  flex-shrink: 0 !important;
+}
+
+.icon-btn:hover,
+.menu-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-btn-hover) !important;
+  border-color: var(--border-hover) !important;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.16) !important;
+}
+
+[data-theme="dark"] .icon-btn,
+[data-theme="dark"] .menu-btn {
+  background: rgba(30,41,59,0.95) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   7. GLOBAL BUTTON SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.btn,
+.login-btn,
+.hero-btn,
+.log-btn,
+.camera-btn,
+.modal-btn--primary {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 14px 24px !important;
+  border-radius: var(--radius-btn) !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+  transition: var(--transition) !important;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.28) !important;
+}
+
+.btn:hover,
+.login-btn:hover,
+.hero-btn:hover,
+.log-btn:hover,
+.camera-btn:hover,
+.modal-btn--primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 28px rgba(56,189,248,0.38) !important;
+}
+
+/* Secondary / Danger button */
+.fasting-stop-btn,
+.cancel-btn,
+.modal-btn--cancel,
+.btn-secondary {
+  background: var(--surface-solid) !important;
+  border: 1px solid rgba(239,68,68,0.25) !important;
+  color: var(--color-danger) !important;
+  box-shadow: 0 2px 10px rgba(239,68,68,0.05) !important;
+}
+
+.fasting-stop-btn:hover,
+.cancel-btn:hover,
+.modal-btn--cancel:hover,
+.btn-secondary:hover {
+  background: var(--color-danger-soft) !important;
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 6px 20px rgba(239,68,68,0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-theme="dark"] .btn,
+[data-theme="dark"] .hero-btn,
+[data-theme="dark"] .log-btn,
+[data-theme="dark"] .camera-btn {
+  background: var(--surface-solid) !important;
+  border-color: var(--border-glass) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   8. INPUT SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+input,
+select,
+textarea,
+.modal-input,
+.login-input,
+.form-input,
+.custom-input-wrapper {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: var(--radius-input) !important;
+  color: var(--text-primary) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  transition: var(--transition) !important;
+  outline: none !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.modal-input:focus,
+.login-input:focus,
+.form-input:focus,
+.custom-input-wrapper:focus-within {
+  border-color: var(--accent) !important;
+  background: var(--input-bg-focus) !important;
+  box-shadow: 0 0 0 4px rgba(56,189,248,0.12) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary) !important;
+  font-weight: 400 !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   9. SETTINGS PAGE SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.settings-header,
+.settings-content {
+  background: var(--bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-section-title {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  color: var(--text-secondary) !important;
+  padding: 0 4px !important;
+}
+
+.settings-list { display: flex !important; flex-direction: column !important; gap: 12px !important; }
+
+.setting-item {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 16px !important;
+  padding: 14px 18px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+/* Dark mode protocol / fasting active */
+[data-theme="dark"] .fasting-protocol-btn--active,
+[data-theme="dark"] .fasting-protocol-btn.active,
+[data-theme="dark"] .protocol-btn.active,
+[data-theme="dark"] .protocol-card.active,
+[data-theme="dark"] .preset-btn.active {
+  background: rgba(56,189,248,0.18) !important;
+  border: 1.5px solid rgba(56,189,248,0.50) !important;
+  color: var(--accent-dark) !important;
+}
+
+[data-theme="dark"] .team-header-title {
+  color: var(--text-primary) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   10. COACH CARD THEME SYSTEM
+   Forces all coach/health card sub-elements to use CSS variables
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.coach-card,
+.longevity-index-card,
+.daily-goals-card,
+.ai-coach-card,
+.timeline-card,
+.challenges-card,
+.ai-report-card,
+.water-card,
+.mood-history-card,
+.calendar-card,
+.pv2-card,
+.pv2-achievements-section {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Coach card typography */
+.coach-card-title      { color: var(--text-main) !important; }
+.coach-card-subtitle   { color: var(--text-muted) !important; }
+.metric-val            { color: var(--text-main) !important; }
+.metric-label          { color: var(--text-muted) !important; }
+.metric-unit           { color: var(--text-muted) !important; }
+.goal-title            { color: var(--text-main) !important; }
+.goal-target           { color: var(--text-muted) !important; }
+.timeline-item-title   { color: var(--text-main) !important; }
+.timeline-time         { color: var(--text-muted) !important; }
+.timeline-detail       { color: var(--text-muted) !important; }
+.challenge-title       { color: var(--text-main) !important; }
+.challenge-desc        { color: var(--text-muted) !important; }
+.ai-report-summary     { color: var(--text-main) !important; }
+.ai-stat-val           { color: var(--text-main) !important; }
+.ai-stat-label         { color: var(--text-muted) !important; }
+.coach-summary-text    { color: var(--text-main) !important; }
+.rec-text              { color: var(--text-main) !important; }
+.day-num               { color: var(--text-main) !important; }
+.mood-item-label       { color: var(--text-main) !important; }
+.mood-item-score       { color: var(--text-main) !important; }
+.mood-item-note        { color: var(--text-muted) !important; }
+.modal-score-status    { color: var(--text-main) !important; }
+.modal-pillar-val { color: var(--text-main) !important; }
+.modal-pillar-label { color: var(--text-muted) !important; }
+.water-target          { color: var(--text-muted) !important; }
+.calendar-legend       { color: var(--text-muted) !important; }
+
+/* Sub-surface backgrounds */
+.goal-item,
+.timeline-empty-box,
+.coach-rec-item,
+.water-glass-dot,
+.water-btn,
+.mood-history-item,
+.mood-empty-box,
+.challenge-icon-wrap,
+.mood-item-icon {
+  background: var(--bg-main) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.index-metric-box,
+.challenge-item,
+.ai-stat-box,
+.modal-pillar-item,
+.calendar-modal-box {
+  background: var(--surface-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Goal item hover */
+.goal-item:hover { background: var(--bg-hover) !important; }
+
+/* Calendar modal */
+.calendar-modal-box { background: var(--bg-card) !important; }
+.calendar-modal-header { border-color: var(--border-color) !important; }
+.calendar-modal-header h4 { color: var(--text-main) !important; }
+.calendar-modal-close { color: var(--text-muted) !important; }
+
+/* Water tracker */
+.water-btn {
+  background: var(--bg-main) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.water-progress-track { background: rgba(0, 0, 0, 0.08); }
+[data-theme="dark"] .water-progress-track {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Progress bars */
+[data-theme="dark"] .goals-progress-bar {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="dark"] .challenge-bar-bg {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* AI coach card dark gradient */
+[data-theme="dark"] .ai-coach-card {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(30, 58, 138, 0.4) 100%) !important;
+}
+
+/* Achievement cards */
+.pv2-badge-title { color: var(--text-main) !important; }
+.pv2-badge-desc { color: var(--text-muted) !important; }
+.pv2-card-title     { color: var(--text-main) !important; }
+.pv2-achieve-sub    { color: var(--text-muted) !important; }
+
+/* Longevity index card dark */
+[data-theme="dark"] .longevity-index-card {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.08) 0%, rgba(29, 78, 216, 0.08) 100%) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   11. PAGE-LEVEL WRAPPERS — uniform full-width
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.hd-header, .hd-content,
+.dashboard-top-header, .dashboard-content,
+.pv2-header, .pv2-content,
+.activity-header, .activity-content,
+.eating-header, .eating-main,
+.sleep-header, .sleep-content,
+.fasting-header, .fasting-content,
+.team-header, .team-content,
+.user-header, .user-management-page, .um-container,
+.mh-header, .mh-content,
+.settings-header, .settings-content,
+.page-header, .page-content, .page-content-v2,
+.home-v2, .dashboard-container, .profile-page-v2,
+.activity-page, .sleep-page, .fasting-page, .team-page {
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Standard page top headers — 56px notch clearance on all sizes */
+.team-header-v2,
+.eating-header,
+.pv2-header {
+  padding-top: 56px !important;
+}
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 767.98px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 56px 16px 14px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 16px 110px !important;
+    gap: 16px !important;
+  }
+}
+
+/* ── Tablet (768px – 1199.98px) ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header,
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 960px !important;
+  }
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    padding: 56px 32px 14px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    padding: 20px 32px 120px !important;
+    gap: 20px !important;
+  }
+}
+
+/* ── Desktop (≥ 1200px) ── */
+@media (min-width: 1200px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header,
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 1360px !important;
+  }
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    padding: 56px 48px 16px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    padding: 24px 48px 130px !important;
+    gap: 24px !important;
+  }
+}
+
+/* ── 8. MASTER DARK MODE CARD, DIALOG & COMPONENT BRIDGE ─────────────────────── */
+:root[data-theme="dark"] body,
+html[data-theme="dark"] body,
+body[data-theme="dark"] {
+  background: var(--bg, #0F172A) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* All Containers & Page Backgrounds in Dark Mode */
+[data-theme="dark"] .team-container,
+[data-theme="dark"] .um-container,
+[data-theme="dark"] .sleep-container,
+[data-theme="dark"] .dashboard-container,
+[data-theme="dark"] .hd-container,
+[data-theme="dark"] .profile-container,
+[data-theme="dark"] .mh-container,
+[data-theme="dark"] .eating-container,
+[data-theme="dark"] .fasting-container,
+[data-theme="dark"] .settings-container,
+[data-theme="dark"] .app-container,
+[data-theme="dark"] .page-container,
+[data-theme="dark"] .page-content,
+[data-theme="dark"] .page-content-v2 {
+  background: var(--bg, #0F172A) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* All Cards & Surfaces in Dark Mode */
+[data-theme="dark"] .glass-card,
+[data-theme="dark"] .ev-premium-card,
+[data-theme="dark"] .ev-card,
+[data-theme="dark"] .team-score-card,
+[data-theme="dark"] .challenge-card,
+[data-theme="dark"] .leaderboard-section,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .longevity-index-card,
+[data-theme="dark"] .ai-coach-card,
+[data-theme="dark"] .coach-card,
+[data-theme="dark"] .sleep-card,
+[data-theme="dark"] .sleep-chart-card,
+[data-theme="dark"] .sleep-stats-card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .um-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .preset-item,
+[data-theme="dark"] .mh-card,
+[data-theme="dark"] .meal-card,
+[data-theme="dark"] .fasting-card,
+[data-theme="dark"] .food-card,
+[data-theme="dark"] .card,
+[data-theme="dark"] .item-card,
+[data-theme="dark"] .expansion-tile,
+[data-theme="dark"] .bg-white {
+  background: var(--surface-card, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+}
+
+/* All Modals, Dialogs, Bottom Sheets & Drawers in Dark Mode */
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .dialog,
+[data-theme="dark"] .dialog-box,
+[data-theme="dark"] .bottom-sheet,
+[data-theme="dark"] .sheet-content,
+[data-theme="dark"] .drawer,
+[data-theme="dark"] .popup-card {
+  background: var(--surface-solid, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+}
+
+/* Bottom Nav Bars & Status Bars in Dark Mode */
+[data-theme="dark"] .bottom-nav,
+[data-theme="dark"] .nav-bar,
+[data-theme="dark"] .status-bar {
+  background: var(--surface-solid, #1E293B) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* Hardcoded text colors inside Dark Mode */
+[data-theme="dark"] .text-black,
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .team-header-title,
+[data-theme="dark"] .score-value,
+[data-theme="dark"] .challenge-title,
+[data-theme="dark"] .leaderboard-title,
+[data-theme="dark"] .member-name {
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .score-label,
+[data-theme="dark"] .challenge-description,
+[data-theme="dark"] .day-label,
+[data-theme="dark"] .member-tag,
+[data-theme="dark"] .member-points {
+  color: var(--text-secondary, #CBD5E1) !important;
+}
