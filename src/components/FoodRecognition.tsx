@@ -67,12 +67,13 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     try { localStorage.setItem(ENGINE_KEY, next); } catch { /* storage unavailable */ }
   };
 
-  // Cycling professional status messages during AI processing
+  // Cycling status messages while the on-device model runs. The AI path sets its
+  // own single message and shouldn't be overwritten by these.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (uploadStatus === 'processing') {
+    if (uploadStatus === 'processing' && engine === 'local') {
       const messages = [
-        'AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...',
+        'กำลังวิเคราะห์โครงสร้างและสีของอาหาร...',
         'กำลังคำนวณพลังงาน (Calories) และสัดส่วนสารอาหาร...',
         'กำลังประมวลผลคะแนนสุขภาพ Longevity Score...',
         'กำลังตรวจสอบความแม่นยำกับฐานข้อมูลอาหาร...'
@@ -84,7 +85,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       }, 1800);
     }
     return () => clearInterval(interval);
-  }, [uploadStatus]);
+  }, [uploadStatus, engine]);
 
   type ModelSource = {
     url: string;
@@ -956,8 +957,21 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           )}
                         </div>
                         <h4 className="analyzing-title">
-                          {uploadStatus === 'uploading' ? 'กำลังอัปโหลดรูปภาพ...' : 'AI กำลังวิเคราะห์เมนูอาหาร...'}
+                          {uploadStatus === 'uploading'
+                            ? 'กำลังอัปโหลดรูปภาพ...'
+                            : engine === 'ai'
+                              ? 'AI กำลังวิเคราะห์เมนูอาหาร...'
+                              : 'โมเดลในเครื่องกำลังวิเคราะห์...'}
                         </h4>
+                        {uploadStatus === 'processing' && (
+                          <div className={`analyzing-engine analyzing-engine--${engine}`}>
+                            {engine === 'ai' ? (
+                              <><LuSparkles /> <span>Claude AI · รู้จักอาหารทั่วโลก</span></>
+                            ) : (
+                              <><LuShieldCheck /> <span>TensorFlow.js · ในเครื่อง · เมนูไทย 10 อย่าง</span></>
+                            )}
+                          </div>
+                        )}
                         <p className="analyzing-subtitle">{statusMessage}</p>
 
                         <div className="overlay-progress-bar-wrapper">
