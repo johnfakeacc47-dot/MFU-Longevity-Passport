@@ -6,6 +6,28 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// ── TF.js model: cache-first, populated on first use ─────────────────
+// The model shards (~17 MB) are deliberately NOT in the precache manifest so
+// the SW installs fast. They're fetched on demand the first time the food
+// camera runs in on-device mode, then served from cache offline.
+const MODEL_CACHE = 'tfjs-model-v1';
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (!/\/model\//.test(url.pathname)) return;
+
+  event.respondWith(
+    caches.open(MODEL_CACHE).then(async (cache) => {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+      const res = await fetch(event.request);
+      if (res.ok) cache.put(event.request, res.clone());
+      return res;
+    }),
+  );
+});
+
 // ── Fasting alarm state ──────────────────────────────────────────────
 let fastingAlarmInterval: ReturnType<typeof setInterval> | null = null;
 let fastingEndTimestamp: number | null = null;

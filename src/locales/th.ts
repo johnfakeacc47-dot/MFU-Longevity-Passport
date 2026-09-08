@@ -13,6 +13,7 @@ export const th: Record<string, string> = {
   'common.save': 'บันทึก',
   'common.delete': 'ลบ',
   'common.cancel': 'ยกเลิก',
+  'common.close': 'ปิด',
   'common.change': 'เปลี่ยน',
   'common.loading': 'กำลังโหลด...',
   'common.recorded': 'บันทึกแล้ว',
@@ -336,6 +337,21 @@ export const th: Record<string, string> = {
   'team.errGeneric': 'ไม่สามารถเพิ่มสมาชิกได้ กรุณาลองใหม่',
   'team.cancel': 'ยกเลิก',
 
+  // AI health-coach chat
+  'chat.open': 'ถามโค้ชสุขภาพ',
+  'chat.title': 'โค้ชสุขภาพ AI',
+  'chat.subtitle': 'AI · อ้างอิงจากข้อมูลที่คุณบันทึก',
+  'chat.clear': 'ล้างแชท',
+  'chat.emptyTitle': 'ถามอะไรก็ได้เกี่ยวกับพฤติกรรมสุขภาพของคุณ',
+  'chat.emptyHint': 'เช่น "ทำไมคะแนนการนอนของฉันลดลง?" หรือ "ควรกินอะไรเพิ่ม?"',
+  'chat.disclaimer': 'โค้ช AI — ไม่ใช่คำแนะนำทางการแพทย์ หากมีอาการผิดปกติควรพบแพทย์',
+  'chat.placeholder': 'พิมพ์ข้อความ…',
+  'chat.send': 'ส่ง',
+  'chat.errAuth': 'กรุณาเข้าสู่ระบบใหม่เพื่อใช้งานโค้ช',
+  'chat.errConfig': 'ยังไม่สามารถใช้งานแชทในสภาพแวดล้อมนี้',
+  'chat.errNetwork': 'มีปัญหาการเชื่อมต่อ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่',
+  'chat.errGeneric': 'ไม่สามารถรับคำตอบได้ กรุณาลองใหม่',
+
   // Food Recognition
   'food.title': 'วิเคราะห์อาหารด้วยกล้อง AI',
   'food.takePhoto': 'ถ่ายรูปอาหาร',
@@ -426,7 +442,7 @@ export const th: Record<string, string> = {
   'food.stSavingToPassport': 'กำลังบันทึกข้อมูลเข้าสู่ Longevity Passport...',
   'food.stMealSaved': 'บันทึกมื้ออาหารเรียบร้อยแล้ว!',
   'food.stMealSavedOffline': 'บันทึกข้อมูลเรียบร้อยแล้ว (ออฟไลน์โหมด)',
-  'food.alertModelUnavailable': 'โมเดลไม่พร้อมใช้งาน กรุณาตรวจสอบไฟล์โมเดลใน public/model หรือ public/model_backup',
+  'food.alertModelUnavailable': 'โหลดโมเดลในเครื่องไม่สำเร็จ ลองใช้โหมด AI แทน หรือตรวจสอบการเชื่อมต่ออินเทอร์เน็ต',
   'food.alertCameraDenied': 'ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง',
 
   // Sleep quality indicator

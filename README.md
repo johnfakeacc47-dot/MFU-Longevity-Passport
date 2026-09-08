@@ -5,28 +5,46 @@ The MFU Longevity Passport is a comprehensive health and longevity tracking appl
 ## Features
 
 - **Activity Tracking**: Monitor daily physical activities.
-- **Eating & Diet**: Log dietary habits (includes Food Recognition powered by TensorFlow).
+- **Eating & Diet**: Log dietary habits. Food Recognition runs a local TensorFlow.js
+  model for 10 Thai dishes, or a cloud AI engine (Claude vision) for any dish —
+  toggle per user.
 - **Mental Health**: Track mental well-being and stress levels.
 - **Sleep Tracking**: Keep logs of sleep quality and duration.
-- **Dashboard**: A comprehensive overview of health metrics.
+- **Longevity score**: 4-pillar daily score that resets at 00:00 Asia/Bangkok; each
+  day is frozen into Supabase for history and analytics.
+- **Dashboard**: A comprehensive overview of health metrics, historical trends, and
+  an AI-written period report.
+- **AI Health Coach**: A chat assistant grounded in the user's own logged data,
+  longevity points, the weekly wellness challenge, and their team.
+- **Team & Wellness Challenges**: Compare progress with a team; add teammates by a
+  short handle or QR code.
 - **Goal Setting**: Set and monitor personal health goals.
 - **PWA Support**: Installable as a Progressive Web App.
 
 ## Tech Stack
 
-- **Frontend**: React, TypeScript, Vite
-- **Styling**: Tailwind CSS, Mantine UI components
-- **Backend & Database**: NestJS backend with PostgreSQL; Supabase (auth, `profiles` + health tables, Edge Functions)
-- **Machine Learning**: TensorFlow.js (for food recognition capabilities)
+- **Frontend**: React 19, TypeScript, Vite 7
+- **Styling**: Tailwind CSS v4, Mantine UI components
+- **Backend & Database**: NestJS backend with PostgreSQL; Supabase (auth, `profiles` +
+  health tables, Edge Functions, Row Level Security)
+- **Machine Learning**: TensorFlow.js for on-device food recognition (lazy-loaded —
+  the ~1 MB model bundle and weights load only when the camera opens, and the
+  weights are cached by the service worker on first use rather than precached).
+- **AI**: Anthropic Claude API, called only from Edge Functions (the API key never
+  reaches the browser). Provider is isolated to one function per feature and is
+  swappable to Gemini without touching the frontend contract.
 
 ### Where each concern lives
 
 | Concern | Runs in |
 | --- | --- |
-| Sign-in, session, user data (`profiles`, `health_scores`, `challenges`, `team_members`) | Supabase, protected by Row Level Security |
+| Sign-in, session, user data (`profiles`, `health_scores`, `challenges`, `team_members`, `chat_messages`, `ai_reports`) | Supabase, protected by Row Level Security |
 | Privileged user management (list / create / update / delete users) | `admin-users` Supabase Edge Function (verifies caller is `role = 'admin'`) |
 | Self-service account deletion | `delete-user` Supabase Edge Function |
 | Adding a teammate by handle / QR code | `find_profile_by_handle` + `add_team_member_by_handle` SECURITY DEFINER RPCs (`authenticated` only) |
+| Cloud food recognition (vision LLM) | `recognize-food` Edge Function — `recognizeFood()` is the only provider-specific piece |
+| AI weekly / period report | `health-insights` Edge Function — reads `health_scores`, caches in `ai_reports` |
+| AI health-coach chat (streamed) | `health-chat` Edge Function — grounds the reply in the caller's profile, health data, wellness challenge and team; appends each turn to `chat_messages`. `verify_jwt` is off (the function verifies the JWT itself) so the browser CORS preflight is not gated. |
 | Meal / activity / sleep / fasting logging + scoring API | NestJS backend + its own PostgreSQL |
 
 The frontend only ever holds the Supabase **anon** key. A `service_role` key must never be
@@ -73,15 +91,25 @@ placed in a `VITE_`-prefixed variable — it would be inlined into the browser b
 5. **Supabase** (first-time setup, or when `supabase/migrations/` changes):
    ```bash
    supabase link --project-ref <your-project-ref>
-   supabase db push                       # applies supabase/migrations/0001_enable_rls.sql
+   supabase db push                       # applies every file in supabase/migrations/
+                                          #   0001_enable_rls, 0002_user_handles, 0003_chat_messages
+
    supabase functions deploy admin-users
    supabase functions deploy delete-user
+   supabase functions deploy recognize-food
+   supabase functions deploy health-insights
+   supabase functions deploy health-chat --no-verify-jwt   # verifies the JWT in code; keeps CORS preflight working
+
    supabase secrets set ALLOWED_ORIGINS="http://localhost:5173"   # + every deployed origin
+   supabase secrets set ANTHROPIC_API_KEY="sk-ant-..."            # required by recognize-food / health-insights / health-chat
+   # optional model overrides: RECOGNIZE_FOOD_MODEL, HEALTH_INSIGHTS_MODEL, HEALTH_CHAT_MODEL
    ```
 
-   Read [supabase/RLS_ROLLOUT.md](supabase/RLS_ROLLOUT.md) before applying the migration —
-   it enables Row Level Security and changes which rows the anon key can see, and must ship
+   Read [supabase/RLS_ROLLOUT.md](supabase/RLS_ROLLOUT.md) before applying `0001` — it
+   enables Row Level Security and changes which rows the anon key can see, and must ship
    together with the frontend build that routes admin operations through `admin-users`.
+   `ANTHROPIC_API_KEY` is a paid credential — the AI features return a graceful
+   "unavailable" message if the account has no credit.
 
 ### Running the Application
 
