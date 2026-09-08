@@ -18,6 +18,7 @@ import { LanguageProvider } from './contexts/LanguageContext'
 import { Settings } from './pages/Settings'
 import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
+import { pullDailyLogs, schedulePushDailyLogs } from './services/dailyLogsSync'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { useDailyReset } from './hooks/useDailyReset'
 
@@ -179,7 +180,8 @@ function App() {
       subscription = data.subscription
     }
 
-    // Auto-sync calculated longevity score to Supabase when offline logs change
+    // Auto-sync the score rollup + push the raw daily logs (debounced) whenever
+    // the local logs change, so other devices on the same account catch up.
     const handleHealthUpdate = async () => {
       try {
         const currentScore = calculateLongevityScore()
@@ -187,9 +189,17 @@ function App() {
       } catch (error) {
         console.error('Failed to auto-sync score to Supabase:', error)
       }
+      schedulePushDailyLogs()
     }
 
     window.addEventListener('healthDataUpdated', handleHealthUpdate)
+
+    // Pull raw logs from other devices once the session is confirmed.
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) void pullDailyLogs()
+      })
+    }
 
     return () => {
       window.removeEventListener('healthDataUpdated', handleHealthUpdate)
@@ -207,6 +217,7 @@ function App() {
     setCurrentPage(landing)
     setShowPwaPrompt(false)
     setTimeout(() => setShowPwaPrompt(true), 50)
+    void pullDailyLogs() // catch up on logs from this account's other devices
   }
 
   function handleLogout() {

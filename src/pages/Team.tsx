@@ -34,26 +34,21 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const currentDayIndex = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
   const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  const [allTeamsData, setAllTeamsData] = useState<any[]>([]);
-  const [myTeamData, setMyTeamData] = useState<any[]>([]);
+  // null = not loaded yet (show skeleton); [] = loaded and genuinely empty.
+  const [allTeamsData, setAllTeamsData] = useState<any[] | null>(null);
+  const [myTeamData, setMyTeamData] = useState<any[] | null>(null);
   const [weekDays, setWeekDays] = useState(DAYS.map(d => ({ day: d, completed: false })));
 
   const CHALLENGE_GOAL = 500;
-  const teamPoints = myTeamData.reduce((s, m) => s + (m.rawPoints || 0), 0);
+  const teamPoints = (myTeamData ?? []).reduce((s, m) => s + (m.rawPoints || 0), 0);
   const progressPct = Math.min((teamPoints / CHALLENGE_GOAL) * 100, 100);
   const challengeDone = teamPoints >= CHALLENGE_GOAL;
 
   const fetchData = async () => {
     if (!isSupabaseConfigured()) { setIsLoading(false); return; }
     try {
-      const profile = await getCurrentUserProfile();
-      if (profile) {
-        setIsScorePublic(profile.is_score_public ?? false);
-        setMyHandle(profile.handle ?? null);
-      }
-
       const mapMember = (m: any) => ({
-        id: m.id, name: m.name || 'Unknown',
+        id: m.id, name: m.name || t('team.unknownMember'),
         points: m.is_score_public ? (m.total_points || 0) : null,
         rawPoints: m.total_points || 0,
         avatar: m.avatar_url,
@@ -61,12 +56,21 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
         isPublic: m.is_score_public ?? false,
       });
 
-      const lb = await getLeaderboard();
-      const myT = await getMyTeamLeaderboard();
-      setAllTeamsData(lb.map(mapMember));
-      setMyTeamData(myT.map(mapMember));
+      // One parallel round instead of five sequential awaits.
+      const [profile, lb, myT, challenges] = await Promise.all([
+        getCurrentUserProfile(),
+        getLeaderboard(),
+        getMyTeamLeaderboard(),
+        getChallengeStatus(),
+      ]);
 
-      const challenges = await getChallengeStatus();
+      if (profile) {
+        setIsScorePublic(profile.is_score_public ?? false);
+        setMyHandle(profile.handle ?? null);
+      }
+      setAllTeamsData((lb ?? []).map(mapMember));
+      setMyTeamData((myT ?? []).map(mapMember));
+
       if (challenges?.length > 0) {
         setWeekDays(DAYS.map(d => {
           const found = challenges.find((c: any) => c.day_name === d);
@@ -75,11 +79,14 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       }
     } catch (err) {
       console.error('Team fetch error:', err);
+      setAllTeamsData((prev) => prev ?? []);
+      setMyTeamData((prev) => prev ?? []);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, []);
 
   const handleInvite = () => setShowInvite(true);
@@ -104,7 +111,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
             {/* ── Team Score Hero ── */}
             <div className="team-score-hero">
               <div className="team-score-left">
-                <div className="team-score-members">{myTeamData.length} members · {todayDate}</div>
+                <div className="team-score-members">{(myTeamData ?? []).length} {t('team.members')} · {todayDate}</div>
                 <div className="team-score-total">{teamPoints.toLocaleString()}</div>
                 <div className="team-score-label">{t('team.teamScore')}</div>
               </div>
@@ -125,14 +132,12 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
             <div className={`team-challenge-card ${challengeDone ? 'team-challenge-card--done' : ''}`}>
               <div className="team-challenge-header">
                 <h3 className="team-challenge-title">
-                  {challengeDone ? '🎉 Challenge Completed!' : t('team.challengeTitle')}
+                  {challengeDone ? `🎉 ${t('team.challengeDone')}` : t('team.challengeTitle')}
                 </h3>
-                <span className="team-challenge-points">{teamPoints} / {CHALLENGE_GOAL} pts</span>
+                <span className="team-challenge-points">{teamPoints} / {CHALLENGE_GOAL} {t('common.pts')}</span>
               </div>
               <p className="team-challenge-desc">
-                {challengeDone
-                  ? 'Amazing! Your team reached the 500 point goal. Keep the momentum!'
-                  : t('team.joinChallenge')}
+                {challengeDone ? t('team.challengeDoneDesc') : t('team.joinChallenge')}
               </p>
               <div className="team-progress-bar">
                 <div className="team-progress-fill" style={{ width: `${progressPct}%` }} />
@@ -156,7 +161,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
               <div className="team-lb-header">
                 <h3 className="team-lb-title">{t('team.leaderboard')}</h3>
                 {!isScorePublic && (
-                  <span className="team-private-note"><FaLock /> Your score is private</span>
+                  <span className="team-private-note"><FaLock /> {t('team.scorePrivate')}</span>
                 )}
               </div>
 
@@ -175,12 +180,14 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                 </button>
               </div>
 
-              {displayData.length === 0 ? (
+              {displayData === null ? (
+                <LoadingSkeleton type="list" />
+              ) : displayData.length === 0 ? (
                 <EmptyState
                   icon="👥"
-                  title="No members yet"
-                  description="Invite friends to your team to start competing!"
-                  action="Invite Members"
+                  title={t('team.noMembers')}
+                  description={t('team.noMembersDesc')}
+                  action={t('team.inviteMembers')}
                   onAction={handleInvite}
                 />
               ) : (
@@ -211,7 +218,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                             <span className="team-lb-pts-label">pts</span>
                           </>
                         ) : (
-                          <span className="team-lb-private"><FaLock /> Private</span>
+                          <span className="team-lb-private"><FaLock /> {t('team.private')}</span>
                         )}
                         {i === 0 && <FaCrown className="team-lb-crown" />}
                       </div>
