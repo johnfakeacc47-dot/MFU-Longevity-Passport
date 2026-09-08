@@ -73,10 +73,10 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     let interval: ReturnType<typeof setInterval>;
     if (uploadStatus === 'processing' && engine === 'local') {
       const messages = [
-        'กำลังวิเคราะห์โครงสร้างและสีของอาหาร...',
-        'กำลังคำนวณพลังงาน (Calories) และสัดส่วนสารอาหาร...',
-        'กำลังประมวลผลคะแนนสุขภาพ Longevity Score...',
-        'กำลังตรวจสอบความแม่นยำกับฐานข้อมูลอาหาร...'
+        t('food.cycle1'),
+        t('food.cycle2'),
+        t('food.cycle3'),
+        t('food.cycle4'),
       ];
       let idx = 0;
       interval = setInterval(() => {
@@ -85,7 +85,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       }, 1800);
     }
     return () => clearInterval(interval);
-  }, [uploadStatus, engine]);
+  }, [uploadStatus, engine, t]);
 
   type ModelSource = {
     url: string;
@@ -221,7 +221,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       }
     } catch (error) {
       console.error('Error initializing model:', error);
-      alert('โมเดลไม่พร้อมใช้งาน กรุณาตรวจสอบไฟล์โมเดลใน public/model หรือ public/model_backup');
+      alert(t('food.alertModelUnavailable'));
     } finally {
       setIsLoading(false);
     }
@@ -317,7 +317,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
   const predictFood = async (imageElement: HTMLImageElement) => {
     if (!model) {
       setUploadStatus('error');
-      setErrorMessage('ระบบ AI ยังไม่พร้อมทำงาน กรุณารอสักครู่แล้วลองใหม่ครับ');
+      setErrorMessage(t('food.stModelNotReady'));
       return;
     }
 
@@ -327,7 +327,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     try {
       setIsProcessing(true);
       setUploadStatus('processing');
-      setStatusMessage('AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...');
+      setStatusMessage(t('food.stAnalyzingStructure'));
       setUploadProgress(100);
       setErrorMessage('');
       
@@ -414,13 +414,13 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       }
 
       setUploadStatus('success');
-      setStatusMessage('วิเคราะห์เสร็จสมบูรณ์โดย AI Longevity Passport!');
+      setStatusMessage(t('food.stCompleteBang'));
 
     } catch (error) {
       console.error('Error during prediction:', error);
       const errorMsg = (error as Error).message || 'Unknown error';
       setUploadStatus('error');
-      setErrorMessage(`ไม่สามารถวิเคราะห์เมนูอาหารได้: ${errorMsg}`);
+      setErrorMessage(`${t('food.stCannotAnalyze')}${errorMsg}`);
     } finally {
       // Cleanup tensors safely
       if (tensor) {
@@ -441,7 +441,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     }
   };
 
-  // ── Cloud AI recognition (engine === 'ai', or the "ระบุด้วย AI" escalation button) ──
+  // ── Cloud AI recognition (engine === 'ai', or the "Identify with AI" escalation button) ──
   const runAiRecognition = async (imageUrl: string) => {
     const hint =
       predictions.length > 0
@@ -450,7 +450,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
 
     setIsProcessing(true);
     setUploadStatus('processing');
-    setStatusMessage('AI กำลังวิเคราะห์เมนูอาหาร...');
+    setStatusMessage(t('food.stAiAnalyzingMenu'));
     setUploadProgress(60);
     setErrorMessage('');
 
@@ -458,7 +458,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       const r = await recognizeFoodWithAi(imageUrl, hint);
       if (!r.isFood) {
         setUploadStatus('error');
-        setErrorMessage('ไม่พบอาหารในรูปภาพนี้ กรุณาลองใหม่ / No food detected in this image.');
+        setErrorMessage(t('food.stNoFood'));
         return;
       }
       setAiResult(r);
@@ -478,10 +478,10 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setSelectedPredictionIndex(0);
       setIsEditingPrediction(false);
       setUploadStatus('success');
-      setStatusMessage('วิเคราะห์โดย AI สำเร็จ');
+      setStatusMessage(t('food.stAiDone'));
     } catch (err) {
       setUploadStatus('error');
-      setErrorMessage((err as Error).message || 'AI ไม่สามารถวิเคราะห์รูปภาพได้');
+      setErrorMessage((err as Error).message || t('food.stAiCannot'));
     } finally {
       setIsProcessing(false);
       setUploadProgress(100);
@@ -500,7 +500,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     };
     img.onerror = () => {
       setUploadStatus('error');
-      setErrorMessage('ไม่สามารถโหลดรูปภาพได้ กรุณาลองใหม่อีกครั้ง');
+      setErrorMessage(t('food.stCannotLoadImage'));
     };
     img.src = imageUrl;
   };
@@ -509,18 +509,18 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setUploadStatus('error');
-      setErrorMessage('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, HEIC) เท่านั้นครับ');
+      setErrorMessage(t('food.stOnlyImages'));
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
       setUploadStatus('error');
-      setErrorMessage('ขนาดไฟล์เกิน 10MB กรุณาเลือกรูปภาพที่มีขนาดเล็กลง');
+      setErrorMessage(t('food.stTooLarge'));
       return;
     }
 
     // Start uploading state
     setUploadStatus('uploading');
-    setStatusMessage('กำลังอัปโหลดและเตรียมรูปภาพ...');
+    setStatusMessage(t('food.stUploadingPrep'));
     setUploadProgress(20);
     setErrorMessage('');
     setImagePreview(null);
@@ -549,7 +549,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setTimeout(() => {
         setImagePreview(imageUrl);
         setUploadStatus('processing');
-        setStatusMessage('AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...');
+        setStatusMessage(t('food.stAnalyzingStructure'));
         setUploadProgress(0);
         analyzeImage(imageUrl);
       }, 350);
@@ -557,7 +557,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     reader.onerror = () => {
       clearInterval(progressInterval);
       setUploadStatus('error');
-      setErrorMessage('เกิดข้อผิดพลาดในการอ่านไฟล์รูปภาพ กรุณาลองใหม่');
+      setErrorMessage(t('food.stReadError'));
     };
     reader.readAsDataURL(file);
   };
@@ -584,7 +584,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setIsCameraActive(true);
     } catch (error) {
       console.error('Error accessing camera:', error);
-      alert('ไม่สามารถเข้าถึงกล้องได้ กรุณาอนุญาตการเข้าถึงกล้อง / Could not access the camera. Please check permissions.');
+      alert(t('food.alertCameraDenied'));
     }
   };
 
@@ -631,7 +631,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     
     stopCamera();
     setUploadStatus('uploading');
-    setStatusMessage('กำลังบันทึกภาพจากกล้อง...');
+    setStatusMessage(t('food.stCapturing'));
     setUploadProgress(50);
     setErrorMessage('');
     setImagePreview(null);
@@ -646,7 +646,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setTimeout(() => {
         setImagePreview(imageUrl);
         setUploadStatus('processing');
-        setStatusMessage('AI กำลังวิเคราะห์โครงสร้างและสีของอาหาร...');
+        setStatusMessage(t('food.stAnalyzingStructure'));
         setUploadProgress(0);
         analyzeImage(imageUrl);
       }, 300);
@@ -684,14 +684,14 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
               <div className="header-icon-box">
                 <LuCamera className="header-camera-icon" />
               </div>
-              <h2 className="header-title">ถ่ายรูปอาหาร</h2>
+              <h2 className="header-title">{t('food.headerTitle')}</h2>
             </div>
             {uploadStatus !== 'idle' && uploadStatus !== 'error' && (
               <div className={`status-badge-header status-${uploadStatus}`}>
                 {uploadStatus === 'uploading' && <LuLoader className="animate-spin text-blue-500" />}
                 {uploadStatus === 'processing' && <LuSparkles className="animate-pulse text-indigo-500" />}
                 {uploadStatus === 'success' && <LuBadgeCheck className="text-emerald-500" />}
-                <span>{uploadStatus === 'uploading' ? 'กำลังอัปโหลด...' : uploadStatus === 'processing' ? 'AI กำลังคิด...' : 'สำเร็จ'}</span>
+                <span>{uploadStatus === 'uploading' ? t('food.badgeUploading') : uploadStatus === 'processing' ? t('food.badgeThinking') : t('food.badgeDone')}</span>
               </div>
             )}
           </div>
@@ -703,7 +703,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
               <div className="spinner-ring">
                 <LuLoader className="spinner-lu" />
               </div>
-              <p className="loading-text">{t('food.loading') || 'กำลังเตรียมระบบวิเคราะห์...'}</p>
+              <p className="loading-text">{t('food.loading')}</p>
             </div>
           )}
 
@@ -715,17 +715,17 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                   <div className="error-icon-ring">
                     <LuBadgeAlert className="error-icon-lu" />
                   </div>
-                  <h3 className="error-title">เกิดข้อผิดพลาดในการวิเคราะห์</h3>
-                  <p className="error-message-text">{errorMessage || 'ไม่สามารถดำเนินการได้ กรุณาลองใหม่อีกครั้ง'}</p>
+                  <h3 className="error-title">{t('food.errTitle')}</h3>
+                  <p className="error-message-text">{errorMessage || t('food.errGeneric')}</p>
                   
                   <div className="error-actions">
                     <button className="health-btn-primary retry-btn" onClick={handleRetry}>
                       <LuRefreshCw className="btn-icon" />
-                      <span>ลองใหม่อีกครั้ง</span>
+                      <span>{t('food.retryAgain')}</span>
                     </button>
                     <button className="health-btn-secondary" onClick={() => fileInputRef.current?.click()}>
                       <LuImage className="btn-icon" />
-                      <span>เลือกรูปภาพอื่น</span>
+                      <span>{t('food.chooseAnother')}</span>
                     </button>
                   </div>
                 </div>
@@ -738,8 +738,8 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                     <div className="loading-icon-ring">
                       <LuLoader className="loading-spinner-lu text-blue-500 animate-spin" />
                     </div>
-                    <h3 className="loading-title-text">กำลังอัปโหลดและเตรียมรูปภาพ...</h3>
-                    <p className="loading-sub-text">{statusMessage || 'กรุณารอสักครู่ ระบบกำลังทำงานอย่างรวดเร็ว'}</p>
+                    <h3 className="loading-title-text">{t('food.uploadingTitle')}</h3>
+                    <p className="loading-sub-text">{statusMessage || t('food.uploadingSub')}</p>
 
                     {/* Smooth Progress Bar */}
                     <div className="upload-progress-wrapper">
@@ -749,14 +749,14 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       />
                     </div>
                     <span className="upload-progress-percentage">
-                      {uploadProgress > 0 ? `${uploadProgress}%` : 'กำลังเตรียมข้อมูล...'}
+                      {uploadProgress > 0 ? `${uploadProgress}%` : t('food.preparingData')}
                     </span>
 
                     {/* Shimmer Skeleton Preview Placeholder */}
                     <div className="skeleton-image-placeholder">
                       <div className="skeleton-shimmer-wave" />
                       <LuImage className="skeleton-icon" />
-                      <span>กำลังสร้างตัวอย่างภาพ...</span>
+                      <span>{t('food.buildingPreview')}</span>
                     </div>
                   </div>
                 </div>
@@ -785,10 +785,10 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                         <div className="header-icon-refined">
                           <LuCamera />
                         </div>
-                        <h2 className="title-refined">ถ่ายรูปอาหาร</h2>
+                        <h2 className="title-refined">{t('food.headerTitle')}</h2>
                       </div>
                       <p className="subtitle-refined">
-                        {t('food.aiAnalyze') || 'AI จะช่วยวิเคราะห์เมนูและคำนวณสารอาหารอย่างแม่นยำ'}
+                        {t('food.aiAnalyze')}
                       </p>
 
                       <div className="engine-toggle" role="group" aria-label="Recognition engine">
@@ -797,7 +797,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           className={`engine-opt ${engine === 'local' ? 'engine-opt--active' : ''}`}
                           onClick={() => chooseEngine('local')}
                         >
-                          <LuShieldCheck /> <span>ในเครื่อง</span>
+                          <LuShieldCheck /> <span>{t('food.engineLocal')}</span>
                         </button>
                         <button
                           type="button"
@@ -809,8 +809,8 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       </div>
                       <p className="engine-hint">
                         {engine === 'ai'
-                          ? 'AI รู้จักอาหารทุกชนิด • ต้องเชื่อมต่ออินเทอร์เน็ต'
-                          : 'โมเดลในเครื่อง • เร็ว ใช้งานออฟไลน์ได้ • เมนูไทย 10 อย่าง'}
+                          ? t('food.engineHintAi')
+                          : t('food.engineHintLocal')}
                       </p>
 
                       <div className="centerpiece-refined">
@@ -849,8 +849,8 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               <LuCamera />
                             </div>
                             <div className="action-text-group">
-                              <div className="action-title-primary">ถ่ายรูป / เปิดกล้อง</div>
-                              <div className="action-sub-primary">ถ่ายรูปอาหารทันที</div>
+                              <div className="action-title-primary">{t('food.actionCameraTitle')}</div>
+                              <div className="action-sub-primary">{t('food.actionCameraSub')}</div>
                             </div>
                           </div>
                           <LuChevronRight className="action-arrow-primary" />
@@ -868,8 +868,8 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               <LuImage />
                             </div>
                             <div className="action-text-group">
-                              <div className="action-title-secondary">{t('food.selectImage') || 'เลือกรูปภาพ'}</div>
-                              <div className="action-sub-secondary">จากแกลเลอรี</div>
+                              <div className="action-title-secondary">{t('food.selectImage')}</div>
+                              <div className="action-sub-secondary">{t('food.actionGallerySub')}</div>
                             </div>
                           </div>
                           <LuChevronRight className="action-arrow-secondary" />
@@ -878,7 +878,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
 
                       <div className="file-format-note">
                         <LuFileText className="format-icon" />
-                        <span>รองรับไฟล์: JPG, PNG, HEIC (สูงสุด 10MB)</span>
+                        <span>{t('food.formatNote')}</span>
                       </div>
                     </div>
                   </div>
@@ -886,7 +886,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                   {/* BOTTOM SECURITY BANNER */}
                   <div className="security-footer-refined">
                     <LuShieldCheck className="security-icon" />
-                    <span>ข้อมูลของคุณจะถูกเก็บเป็นความลับและปลอดภัย</span>
+                    <span>{t('food.privacyNote')}</span>
                   </div>
 
                   <input
@@ -921,12 +921,12 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                   <div className="camera-controls-clean">
                     <button className="cancel-btn-clean" onClick={stopCamera}>
                       <LuX />
-                      <span>{t('food.cancel') || 'ยกเลิก'}</span>
+                      <span>{t('food.cancel')}</span>
                     </button>
                     
                     <button className="capture-btn-clean" onClick={capturePhoto}>
                       <LuCamera className="text-xl mr-1.5" />
-                      <span>ถ่ายรูป</span>
+                      <span>{t('food.captureBtn')}</span>
                     </button>
 
                     <button className="flip-btn-clean" onClick={flipCamera} aria-label="Flip Camera">
@@ -958,17 +958,17 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                         </div>
                         <h4 className="analyzing-title">
                           {uploadStatus === 'uploading'
-                            ? 'กำลังอัปโหลดรูปภาพ...'
+                            ? t('food.analyzingUploading')
                             : engine === 'ai'
-                              ? 'AI กำลังวิเคราะห์เมนูอาหาร...'
-                              : 'โมเดลในเครื่องกำลังวิเคราะห์...'}
+                              ? t('food.analyzingAi')
+                              : t('food.analyzingLocal')}
                         </h4>
                         {uploadStatus === 'processing' && (
                           <div className={`analyzing-engine analyzing-engine--${engine}`}>
                             {engine === 'ai' ? (
-                              <><LuSparkles /> <span>Claude AI · รู้จักอาหารทั่วโลก</span></>
+                              <><LuSparkles /> <span>{t('food.engineChipAi')}</span></>
                             ) : (
-                              <><LuShieldCheck /> <span>TensorFlow.js · ในเครื่อง · เมนูไทย 10 อย่าง</span></>
+                              <><LuShieldCheck /> <span>{t('food.engineChipLocal')}</span></>
                             )}
                           </div>
                         )}
@@ -987,7 +987,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                     {uploadStatus === 'success' && (
                       <div className="success-banner-overlay animate-slide-down">
                         <LuBadgeCheck className="success-banner-icon" />
-                        <span>{statusMessage || 'วิเคราะห์เสร็จสมบูรณ์โดย AI Longevity Passport'}</span>
+                        <span>{statusMessage || t('food.successBanner')}</span>
                       </div>
                     )}
                   </div>
@@ -1007,7 +1007,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 onClick={() => setIsEditingPrediction(true)}
                                 aria-label="Correct prediction"
                               >
-                                <LuPencil /> <span>ไม่ใช่เมนูนี้?</span>
+                                <LuPencil /> <span>{t('food.notThisDish')}</span>
                               </button>
                             )}
                             {engine === 'local' && (
@@ -1017,14 +1017,14 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 disabled={uploadStatus === 'processing'}
                                 aria-label="Re-identify with AI"
                               >
-                                <LuSparkles /> <span>ระบุด้วย AI</span>
+                                <LuSparkles /> <span>{t('food.identifyWithAi')}</span>
                               </button>
                             )}
                           </div>
                         ) : (
                           <div className="correction-container-clean">
                             <label htmlFor="food-correction-select" className="correction-label">
-                              เลือกเมนูที่ถูกต้อง:
+                              {t('food.pickCorrect')}
                             </label>
                             <select 
                               id="food-correction-select"
@@ -1043,7 +1043,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             >
                               {predictions.map((p, idx) => (
                                 <option key={idx} value={idx}>
-                                  {getTranslatedFoodName(p.className)} - ตรงกับภาพ {(p.probability).toFixed(1)}%
+                                  {`${getTranslatedFoodName(p.className)} · ${(p.probability).toFixed(1)}% ${t('food.matchLabel')}`}
                                 </option>
                               ))}
                             </select>
@@ -1077,17 +1077,17 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       {/* Macros Row */}
                       <div className="macros-row-clean">
                         <div className="macro-item-clean">
-                          <span className="macro-label-clean">คาร์โบไฮเดรต</span>
+                          <span className="macro-label-clean">{t('food.macroCarbs')}</span>
                           <span className="macro-value-clean">{nutritionData.carbs}g</span>
                         </div>
                         <div className="macro-divider"></div>
                         <div className="macro-item-clean">
-                          <span className="macro-label-clean">โปรตีน</span>
+                          <span className="macro-label-clean">{t('food.macroProtein')}</span>
                           <span className="macro-value-clean">{nutritionData.protein}g</span>
                         </div>
                         <div className="macro-divider"></div>
                         <div className="macro-item-clean">
-                          <span className="macro-label-clean">ไขมัน</span>
+                          <span className="macro-label-clean">{t('food.macroFat')}</span>
                           <span className="macro-value-clean">{nutritionData.fat}g</span>
                         </div>
                       </div>
@@ -1098,7 +1098,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           <div className="health-icon-box">
                             <LuHeart className="health-icon-lu" />
                           </div>
-                          <span className="health-label-clean">คะแนนสุขภาพ (Health Score)</span>
+                          <span className="health-label-clean">{t('food.healthScoreLabel')}</span>
                           <span className="health-score-val">{nutritionData.healthScore}/100</span>
                         </div>
                         <div className="health-bar-container-clean">
@@ -1116,23 +1116,23 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       <div className="nutrition-facts-clean">
                         <div className="nutrition-header-clean">
                           <LuApple className="nutrition-icon-lu" />
-                          <span className="nutrition-title-clean">ข้อมูลสารอาหาร (ต่อจาน)</span>
+                          <span className="nutrition-title-clean">{t('food.nutritionFactsTitle')}</span>
                         </div>
                         <div className="nutrition-list-clean">
                           <div className="nutrition-row-clean">
-                            <span className="nutrition-label-clean">พลังงานรวม (Total Calories)</span>
+                            <span className="nutrition-label-clean">{t('food.nutTotalCalories')}</span>
                             <span className="nutrition-value-clean">{nutritionData.calories} kcal</span>
                           </div>
                           <div className="nutrition-row-clean">
-                            <span className="nutrition-label-clean">คาร์โบไฮเดรต (Carbohydrates)</span>
+                            <span className="nutrition-label-clean">{t('food.nutCarbs')}</span>
                             <span className="nutrition-value-clean">{nutritionData.carbs} g</span>
                           </div>
                           <div className="nutrition-row-clean">
-                            <span className="nutrition-label-clean">โปรตีน (Protein)</span>
+                            <span className="nutrition-label-clean">{t('food.nutProtein')}</span>
                             <span className="nutrition-value-clean">{nutritionData.protein} g</span>
                           </div>
                           <div className="nutrition-row-clean">
-                            <span className="nutrition-label-clean">ไขมัน (Fat)</span>
+                            <span className="nutrition-label-clean">{t('food.nutFat')}</span>
                             <span className="nutrition-value-clean">{nutritionData.fat} g</span>
                           </div>
                         </div>
@@ -1148,7 +1148,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             if (uploadStatus === 'uploading' || uploadStatus === 'processing') return; // Prevent double click
                             
                             setUploadStatus('uploading');
-                            setStatusMessage('กำลังบันทึกข้อมูลเข้าสู่ Longevity Passport...');
+                            setStatusMessage(t('food.stSavingToPassport'));
                             setUploadProgress(40);
 
                             const mealName = getTranslatedFoodName(predictions[selectedPredictionIndex].className);
@@ -1201,7 +1201,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               
                               setUploadProgress(100);
                               setUploadStatus('success');
-                              setStatusMessage('บันทึกมื้ออาหารเรียบร้อยแล้ว!');
+                              setStatusMessage(t('food.stMealSaved'));
                               
                               setTimeout(() => {
                                 if (onSuccess) onSuccess();
@@ -1212,7 +1212,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               window.dispatchEvent(new Event('healthDataUpdated'));
                               setUploadProgress(100);
                               setUploadStatus('success');
-                              setStatusMessage('บันทึกข้อมูลเรียบร้อยแล้ว (ออฟไลน์โหมด)');
+                              setStatusMessage(t('food.stMealSavedOffline'));
                               setTimeout(() => {
                                 if (onSuccess) onSuccess();
                                 else onClose();
@@ -1224,12 +1224,12 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           {uploadStatus === 'uploading' ? (
                             <>
                               <LuLoader className="btn-icon animate-spin" />
-                              <span>กำลังบันทึกข้อมูล...</span>
+                              <span>{t('food.savingBtn')}</span>
                             </>
                           ) : (
                             <>
                               <LuCheck className="btn-icon" />
-                              <span>{t('food.logMeal') || 'บันทึกมื้ออาหาร'}</span>
+                              <span>{t('food.logMeal')}</span>
                             </>
                           )}
                         </button>
@@ -1240,7 +1240,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                           onClick={handleRetry}
                         >
                           <LuRefreshCw className="btn-icon" />
-                          <span>{t('food.retake') || 'ถ่ายรูปใหม่ / เลือกใหม่'}</span>
+                          <span>{t('food.retakeOrChoose')}</span>
                         </button>
                       </div>
                     </div>
