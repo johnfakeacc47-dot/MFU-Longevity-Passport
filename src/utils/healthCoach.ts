@@ -7,6 +7,7 @@ import type {
 } from './longevityScore';
 import { calculateLongevityScore } from './longevityScore';
 import { safeGetItem } from './safeStorage';
+import { bangkokDateStr } from './bangkokTime';
 
 // ── 1. DAILY GOALS ─────────────────────────────────────────────────────────────
 
@@ -122,7 +123,7 @@ export const getHealthStreak = (): HealthStreakResult => {
 
   const storedStreak = parseInt(localStorage.getItem('healthStreakDays') || '1', 10);
   const lastLogged = localStorage.getItem('lastStreakDate') || null;
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = bangkokDateStr(); // QA-004
 
   // If today is completed and not yet logged as streak update
   if (isTodayCompleted && lastLogged !== todayStr) {
@@ -561,7 +562,7 @@ export interface WaterLog {
 }
 
 export const getTodayWater = (): WaterLog => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = bangkokDateStr(); // 00:00 Asia/Bangkok, not UTC (QA-004)
   const logs = safeGetItem<Record<string, WaterLog>>('waterLogs', {});
   if (logs[todayStr]) {
     return logs[todayStr];
@@ -570,7 +571,7 @@ export const getTodayWater = (): WaterLog => {
 };
 
 export const saveTodayWater = (glassesToAdd: number): WaterLog => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = bangkokDateStr(); // QA-004
   const logs = safeGetItem<Record<string, WaterLog>>('waterLogs', {});
   const current = logs[todayStr] || { date: todayStr, glasses: 0, ml: 0, targetMl: 2000 };
 

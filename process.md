@@ -89,10 +89,18 @@ This document outlines the standard development workflow and guidelines for the 
   explicit refresh (not every page load). Provider isolated to `generateReport()`.
 - **Daily score / analytics.** `health_scores` is the authoritative per-user-per-day rollup
   (4-pillar score + daily aggregates). The score resets to 0 at **00:00 Asia/Bangkok**
-  (`useDailyReset` → `bangkokTime.ts`); the ending day is frozen into Supabase before the raw
-  localStorage logs are cleared. `getAnalyticsData` is async and reads only real rows — days
-  with no row are excluded from averages and absent from the trend line (never fabricated).
-  Any new day-boundary logic must use `bangkokTime.ts`, never `new Date().toISOString()`.
+  (`useDailyReset` → `bangkokTime.ts`); the ending day is frozen into Supabase. `useDailyReset`
+  does **not** clear the raw `meals`/`activities`/`sleepLogs`/`mentalLogs` — `calculateLongevityScore`
+  and the aggregates already filter every log to "today" by timestamp, so clearing them only
+  destroyed the "This week / This month" history. `getAnalyticsData` is async and reads only
+  real rows — days with no row are excluded from averages and absent from the trend line
+  (never fabricated). Any new day-boundary logic must use `bangkokTime.ts`, never
+  `new Date().toISOString()` (the water tracker had this bug — QA-004).
+- **Cross-device sync of raw logs** (`services/dailyLogsSync.ts` + `daily_logs` table, one
+  jsonb blob per user per Bangkok day, RLS own). Pushed on a 3 s debounce off
+  `healthDataUpdated`; pulled on boot / sign-in and unioned into localStorage by item
+  timestamp. Logs are append-only so the merge is safe; the only cost is that an item deleted
+  on one device can briefly reappear from another device's stale copy until it re-syncs.
 - Edge Functions restrict CORS to the `ALLOWED_ORIGINS` secret (comma-separated) plus any
   `localhost` / `127.0.0.1` port for local dev; set the production list with
   `supabase secrets set`. Never put a model/provider API key in a `VITE_` var.

@@ -25,6 +25,8 @@ export interface MealLog {
   healthScore: number;
   timestamp:   string;
   foodName?:   string;
+  /** TF.js model class label (e.g. "pad_thai") — lets the name re-translate per language. */
+  foodKey?:    string;
   imageUrl?:   string;
   macros?:     Macros;
 }

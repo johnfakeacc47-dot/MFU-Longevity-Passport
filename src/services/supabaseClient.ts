@@ -188,24 +188,35 @@ export const updateCurrentUserProfile = async (updates: any) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // The profile row is created by the handle_new_user() trigger on signup, so
+  // this is always an UPDATE. (An upsert would try the INSERT path first, which
+  // RLS blocks for regular users → "Unable to save data" — QA-007.)
+  // Only send fields the caller actually provided, so a partial save doesn't
+  // wipe fields it didn't touch.
+  const map: Array<[string, string, (v: any) => unknown]> = [
+    ['fullName', 'name', (v) => v],
+    ['birthDate', 'birth_date', (v) => v || null],
+    ['gender', 'gender', (v) => v],
+    ['heightCm', 'height_cm', (v) => (v ? Number(v) : null)],
+    ['weightKg', 'weight_kg', (v) => (v ? Number(v) : null)],
+    ['activityLevel', 'activity_level', (v) => v || null],
+    ['goal', 'goal', (v) => v || null],
+    ['address', 'address', (v) => v],
+    ['country', 'country', (v) => v],
+    ['idType', 'id_type', (v) => v],
+    ['idNumber', 'id_number', (v) => v],
+    ['phone', 'phone', (v) => v],
+  ];
+  const patch: Record<string, unknown> = {};
+  for (const [src, col, coerce] of map) {
+    if (updates[src] !== undefined) patch[col] = coerce(updates[src]);
+  }
+  if (Object.keys(patch).length === 0) return null;
+
   const { data, error } = await supabase
     .from('profiles')
-    .upsert({
-      id: user.id,
-      email: user.email,
-      name: updates.fullName,
-      birth_date: updates.birthDate || null,
-      gender: updates.gender,
-      height_cm: updates.heightCm ? Number(updates.heightCm) : null,
-      weight_kg: updates.weightKg ? Number(updates.weightKg) : null,
-      activity_level: updates.activityLevel || null,
-      goal: updates.goal || null,
-      address: updates.address,
-      country: updates.country,
-      id_type: updates.idType,
-      id_number: updates.idNumber,
-      phone: updates.phone,
-    }, { onConflict: 'id' })
+    .update(patch)
+    .eq('id', user.id)
     .select()
     .single();
 

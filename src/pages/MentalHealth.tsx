@@ -86,6 +86,7 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
   const [energy, setEnergy] = useState(6);
   const [note,   setNote]   = useState('');
   const [saved,  setSaved]  = useState(false);
+  const [justSaved, setJustSaved] = useState(false); // transient confirmation by the button
   const [todayLog, setTodayLog] = useState<MentalLog | null>(null);
 
   useEffect(() => {
@@ -119,6 +120,8 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
     localStorage.setItem('mentalLogs', JSON.stringify([log, ...filtered]));
     setTodayLog(log);
     setSaved(true);
+    setJustSaved(true);
+    window.setTimeout(() => setJustSaved(false), 2200);
     window.dispatchEvent(new Event('healthDataUpdated'));
     window.dispatchEvent(new Event('storage'));
   };
@@ -298,12 +301,13 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
         {/* ── Actions ── */}
         <div className="mh-actions">
           <button
-            className="mh-save-btn"
+            className={`mh-save-btn ${justSaved ? 'mh-save-btn--done' : ''}`}
             onClick={handleSave}
-            style={{ background: selectedMood.color }}
+            style={justSaved ? { background: '#10B981' } : { background: selectedMood.color }}
           >
-            <selectedMood.icon className="mh-save-btn-icon" />
-            {saved ? t('mental.update') : t('mental.save')}
+            {justSaved
+              ? <><FaCheckCircle className="mh-save-btn-icon" /> {t('mental.savedFlash')}</>
+              : <><selectedMood.icon className="mh-save-btn-icon" /> {saved ? t('mental.update') : t('mental.save')}</>}
           </button>
           {saved && (
             <button className="mh-delete-btn" onClick={handleDelete} aria-label={t('common.delete')}>
