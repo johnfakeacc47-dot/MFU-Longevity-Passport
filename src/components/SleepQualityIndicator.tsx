@@ -1,5 +1,6 @@
 import React from 'react';
 import { LuClock3, LuActivity, LuInfo, LuCircleCheck, LuCircleAlert } from 'react-icons/lu';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export interface QualityResult {
   score: number;       // 1 - 10
@@ -7,7 +8,7 @@ export interface QualityResult {
   labelTh: string;     // แย่มาก, แย่, พอใช้, ดี, มากเกินไป
   color: string;       // Hex color for badge / indicator
   bgLight: string;     // Soft background color
-  insight: string;     // Smart health insight
+  insightKey: string;  // i18n key for the smart health insight
   levelIndex: number;  // 0: Very Poor, 1: Poor, 2: Fair, 3: Good, 4: Excessive
 }
 
@@ -23,7 +24,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
       labelTh: 'แย่มาก',
       color: '#ef4444', // red-500
       bgLight: '#fef2f2',
-      insight: 'พักผ่อนน้อยเกินไป ส่งผลกระทบโดยตรงต่อระบบภูมิคุ้มกันและการฟื้นฟูเซลล์',
+      insightKey: 'sq.insightVeryPoor',
       levelIndex: 0,
     };
   } else if (duration < 6) {
@@ -33,9 +34,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
       labelTh: 'แย่',
       color: '#f97316', // orange-500
       bgLight: '#fff7ed',
-      insight: isLateBedtime
-        ? 'นอนดึกและเวลานอนน้อย ควรเข้านอนก่อน 23:00 เพื่อ Growth Hormone ที่ดี'
-        : 'ชั่วโมงการนอนยังต่ำกว่าเกณฑ์เป้าหมาย ควรเพิ่มเวลาพักผ่อนอีก 1-2 ชั่วโมง',
+      insightKey: isLateBedtime ? 'sq.insightPoorLate' : 'sq.insightPoor',
       levelIndex: 1,
     };
   } else if (duration < 7) {
@@ -45,9 +44,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
       labelTh: 'พอใช้',
       color: '#eab308', // yellow-500
       bgLight: '#fefce8',
-      insight: isLateBedtime
-        ? 'ระยะเวลาพอใช้ แต่เข้านอนดึกเกินไป อาจรบกวนวงจรนาฬิกาชีวภาพ (Circadian Rhythm)'
-        : 'ระดับการฟื้นฟูร่างกายปานกลาง สามารถพัฒนาให้ดีขึ้นโดยเข้านอนเร็วขึ้นเล็กน้อย',
+      insightKey: isLateBedtime ? 'sq.insightFairLate' : 'sq.insightFair',
       levelIndex: 2,
     };
   } else if (duration <= 9) {
@@ -59,9 +56,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
       labelTh: 'ดี',
       color: '#10b981', // emerald-500
       bgLight: '#ecfdf5',
-      insight: isLateBedtime
-        ? 'ชั่วโมงการนอนเพียงพอ แนะนำปรับเวลาเข้านอนให้เร็วขึ้นเพื่อคุณภาพการหลับลึก'
-        : 'ช่วงเวลานอนและระยะเวลาเหมาะสมที่สุด ดีมากสำหรับการฟื้นฟูระบบประสาทและกล้ามเนื้อ',
+      insightKey: isLateBedtime ? 'sq.insightGoodLate' : 'sq.insightGood',
       levelIndex: 3,
     };
   } else {
@@ -72,7 +67,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
       labelTh: 'มากเกินไป',
       color: '#06b6d4', // cyan-500
       bgLight: '#ecfeff',
-      insight: 'นอนมากกว่า 9 ชั่วโมง อาจทำให้รู้สึกอ่อนเพลียหรือเซื่องซึมระหว่างวัน',
+      insightKey: 'sq.insightExcessive',
       levelIndex: 4,
     };
   }
@@ -83,16 +78,12 @@ interface SleepQualityIndicatorProps {
   bedtime: string;
 }
 
-const SEGMENTS = [
-  { label: 'Very Poor', th: 'แย่มาก' },
-  { label: 'Poor',      th: 'แย่' },
-  { label: 'Fair',      th: 'พอใช้' },
-  { label: 'Good',      th: 'ดี' },
-  { label: 'Excessive', th: 'มากไป' },
-];
+const SEGMENT_KEYS = ['sq.veryPoor', 'sq.poor', 'sq.fair', 'sq.good', 'sq.excessive'];
 
 export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ duration, bedtime }) => {
+  const { t, language } = useLanguage();
   const quality = calculateSleepQuality(duration, bedtime);
+  const qualityLabel = language === 'th' ? quality.labelTh : quality.labelEn;
 
   return (
     <div className="sleep-quality-card">
@@ -101,17 +92,17 @@ export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ du
         <div className="sq-info-item">
           <div className="sq-label">
             <LuClock3 className="sq-icon" />
-            <span>Sleep Duration</span>
+            <span>{t('sq.duration')}</span>
           </div>
           <div className="sq-value">
-            <strong>{duration}</strong> <span className="sq-unit">hours</span>
+            <strong>{duration}</strong> <span className="sq-unit">{t('sq.hours')}</span>
           </div>
         </div>
 
         <div className="sq-info-item">
           <div className="sq-label">
             <LuActivity className="sq-icon" style={{ color: quality.color }} />
-            <span>Auto Quality</span>
+            <span>{t('sq.autoQuality')}</span>
           </div>
           <div className="sq-value-badge-wrap">
             <span
@@ -122,7 +113,7 @@ export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ du
                 borderColor: `${quality.color}40`,
               }}
             >
-              ★ {quality.labelEn.toUpperCase()} ({quality.score}/10)
+              ★ {qualityLabel} ({quality.score}/10)
             </span>
           </div>
         </div>
@@ -131,11 +122,11 @@ export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ du
       {/* Readonly Segmented Progress / Indicator */}
       <div className="sq-segmented-wrap">
         <div className="sq-bars">
-          {SEGMENTS.map((seg, idx) => {
+          {SEGMENT_KEYS.map((key, idx) => {
             const isActive = idx === quality.levelIndex;
             return (
               <div
-                key={seg.label}
+                key={key}
                 className={`sq-bar-segment ${isActive ? 'sq-bar--active' : ''}`}
                 style={{
                   backgroundColor: isActive ? quality.color : '#e2e8f0',
@@ -147,15 +138,15 @@ export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ du
         </div>
 
         <div className="sq-labels">
-          {SEGMENTS.map((seg, idx) => {
+          {SEGMENT_KEYS.map((key, idx) => {
             const isActive = idx === quality.levelIndex;
             return (
               <span
-                key={seg.label}
+                key={key}
                 className={`sq-label-item ${isActive ? 'sq-label--active' : ''}`}
                 style={{ color: isActive ? quality.color : '#94a3b8' }}
               >
-                {seg.label}
+                {t(key)}
               </span>
             );
           })}
@@ -169,9 +160,9 @@ export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ du
         </div>
         <div className="sq-insight-text">
           <span className="sq-insight-title" style={{ color: quality.color }}>
-            ● Quality Indicator
+            ● {t('sq.qualityIndicator')}
           </span>
-          <p className="sq-insight-desc">{quality.insight}</p>
+          <p className="sq-insight-desc">{t(quality.insightKey)}</p>
         </div>
       </div>
     </div>
