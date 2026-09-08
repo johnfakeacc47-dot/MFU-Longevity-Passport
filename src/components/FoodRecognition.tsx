@@ -101,12 +101,6 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       classNamesUrl: '/model/class_names.json',
       label: 'primary graph model',
     },
-    {
-      url: `${window.location.origin}/model_backup/model.json`,
-      kind: 'layers',
-      classNamesUrl: '/model_backup/class_names.json',
-      label: 'backup layers model',
-    },
   ];
 
   // Food name translation mapping (model label → translation key)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import './App.css'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
@@ -19,8 +19,18 @@ import { Settings } from './pages/Settings'
 import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
-import { FoodRecognition } from './components/FoodRecognition'
 import { useDailyReset } from './hooks/useDailyReset'
+
+// FoodRecognition pulls in TensorFlow.js (~1 MB gzip). Load it only when the
+// camera is actually opened, so it stays out of every page's critical path.
+const FoodRecognition = lazy(() =>
+  import('./components/FoodRecognition').then((m) => ({ default: m.FoodRecognition })),
+)
+
+// Chat widget is lazy too — it's a secondary surface, not needed for first paint.
+const HealthChatWidget = lazy(() =>
+  import('./components/chat/HealthChatWidget').then((m) => ({ default: m.HealthChatWidget })),
+)
 
 class FoodRecognitionErrorBoundary extends React.Component<
   { onClose: () => void; children: React.ReactNode },
@@ -290,17 +300,22 @@ function App() {
         {renderPage()}
         {showFoodRecognition && (
           <FoodRecognitionErrorBoundary onClose={() => setShowFoodRecognition(false)}>
-            <FoodRecognition 
-              onClose={() => setShowFoodRecognition(false)} 
-              onSuccess={() => {
-                setShowFoodRecognition(false);
-                handleNavigate('eating');
-                window.dispatchEvent(new CustomEvent('eatingResetView'));
-              }}
-            />
+            <Suspense fallback={<div className="loading-overlay" />}>
+              <FoodRecognition
+                onClose={() => setShowFoodRecognition(false)}
+                onSuccess={() => {
+                  setShowFoodRecognition(false);
+                  handleNavigate('eating');
+                  window.dispatchEvent(new CustomEvent('eatingResetView'));
+                }}
+              />
+            </Suspense>
           </FoodRecognitionErrorBoundary>
         )}
         <PWAInstallPrompt triggerOnLogin={showPwaPrompt} />
+        <Suspense fallback={null}>
+          <HealthChatWidget hidden={currentPage === 'login' || showFoodRecognition} />
+        </Suspense>
       </div>
     </LanguageProvider>
   )
