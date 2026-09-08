@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { FaChartBar, FaHome, FaUser, FaUsers, FaUtensils } from 'react-icons/fa';
 
 type NavPage = 'home' | 'eating' | 'dashboard' | 'team' | 'profile';
@@ -30,7 +31,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     onNavigate(item.nav);
   };
 
-  return (
+  // Rendered into <body> so no page container's transform/filter/overflow can
+  // break its `position: fixed` and float it into the middle of the screen (QA-010).
+  return createPortal(
     <nav className={className ?? 'bottom-nav-v2'} aria-label="Main navigation">
       <div className="bottom-nav-pill">
         {NAV_ITEMS.map((item) => {
@@ -53,6 +56,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           );
         })}
       </div>
-    </nav>
+    </nav>,
+    document.body,
   );
 };

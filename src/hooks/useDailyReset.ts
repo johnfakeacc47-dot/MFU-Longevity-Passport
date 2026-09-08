@@ -3,11 +3,12 @@ import { bangkokDateStr, msUntilNextBangkokMidnight } from '../utils/bangkokTime
 import { calculateLongevityScore } from '../utils/longevityScore';
 import { syncDailyScoreToSupabase } from '../services/supabaseClient';
 
-// The score resets to 0 at 00:00 Asia/Bangkok. When the local day rolls over,
-// the day that just ended is finalised into Supabase (health_scores) BEFORE the
-// raw localStorage logs are cleared — so the analytics history and the AI report
-// keep a permanent record while today starts fresh.
-const DAILY_KEYS = ['meals', 'activities', 'sleepLogs', 'mentalLogs'];
+// The score resets to 0 at 00:00 Asia/Bangkok. When the day rolls over we freeze
+// the ending day's score into Supabase (health_scores) and stash "yesterday's"
+// total — but we DON'T touch the raw localStorage logs. `calculateLongevityScore`
+// and the daily aggregates already filter every log to "today" by timestamp, so
+// keeping the full history is both harmless to the score and required for the
+// "This week / This month" views (QA-005).
 
 export const useDailyReset = () => {
   useEffect(() => {
@@ -36,17 +37,13 @@ export const useDailyReset = () => {
       }
       localStorage.setItem('yesterdayScore', String(endingScore.total));
 
-      // 2. Clear the raw daily logs (keep a running fasting timer alone).
-      for (const key of DAILY_KEYS) {
-        if (localStorage.getItem(key)) localStorage.setItem(key, '[]');
-      }
-      // Water is keyed by date, so old entries fall away on their own; drop any
-      // stale non-dated key if present.
+      // 2. Drop only the legacy non-dated water key if present (dated waterLogs
+      //    roll over on their own). Raw logs are kept — see the note above.
       if (localStorage.getItem('waterIntake')) localStorage.removeItem('waterIntake');
 
       localStorage.setItem('lastActiveDate', today);
 
-      // 3. Recompute the UI to a fresh zero.
+      // 3. Recompute the UI — today's logs are empty, so it drops to a fresh zero.
       window.dispatchEvent(new Event('healthDataUpdated'));
     };
 

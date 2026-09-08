@@ -38,7 +38,8 @@ The MFU Longevity Passport is a comprehensive health and longevity tracking appl
 
 | Concern | Runs in |
 | --- | --- |
-| Sign-in, session, user data (`profiles`, `health_scores`, `challenges`, `team_members`, `chat_messages`, `ai_reports`) | Supabase, protected by Row Level Security |
+| Sign-in, session, user data (`profiles`, `health_scores`, `challenges`, `team_members`, `chat_messages`, `ai_reports`, `daily_logs`) | Supabase, protected by Row Level Security |
+| Cross-device sync of raw meal / activity / sleep / water logs | `daily_logs` jsonb table + `services/dailyLogsSync.ts` (debounced push, union-on-pull) |
 | Privileged user management (list / create / update / delete users) | `admin-users` Supabase Edge Function (verifies caller is `role = 'admin'`) |
 | Self-service account deletion | `delete-user` Supabase Edge Function |
 | Adding a teammate by handle / QR code | `find_profile_by_handle` + `add_team_member_by_handle` SECURITY DEFINER RPCs (`authenticated` only) |
@@ -92,7 +93,8 @@ placed in a `VITE_`-prefixed variable — it would be inlined into the browser b
    ```bash
    supabase link --project-ref <your-project-ref>
    supabase db push                       # applies every file in supabase/migrations/
-                                          #   0001_enable_rls, 0002_user_handles, 0003_chat_messages
+                                          #   0001_enable_rls, 0002_user_handles, 0003_chat_messages,
+                                          #   0004_profile_goal_activity, 0005_daily_logs
 
    supabase functions deploy admin-users
    supabase functions deploy delete-user

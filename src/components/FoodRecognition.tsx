@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi } from '../services/healthApi';
 import { recognizeFoodWithAi, type AiFoodResult } from '../services/foodAiApi';
 import { safeGetItem } from '../utils/safeStorage';
+import { translateFoodLabel, FOOD_NAME_KEYS } from '../utils/foodNames';
 import '../styles/FoodRecognition.css';
 
 type RecognitionEngine = 'local' | 'ai';
@@ -103,25 +104,9 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     },
   ];
 
-  // Food name translation mapping (model label → translation key)
-  const foodTranslationMap: Record<string, string> = {
-    pad_thai: 'food.padthai',
-    khao_man_gai: 'food.khaoManGai',
-    green_curry: 'food.greenCurry',
-    fried_rice: 'food.friedRice',
-    papaya_salad: 'food.papayaSalad',
-    basil_stir_fry: 'food.basilFry',
-    khao_soi: 'food.khaoSoi',
-    larb_moo: 'food.larbMoo',
-    tom_yum_goong: 'food.tomYum',
-    omelet_rice: 'food.omelletRice',
-  };
-
-  // Function to get translated food name based on current language
-  const getTranslatedFoodName = (label: string): string => {
-    const translationKey = foodTranslationMap[label];
-    return translationKey ? t(translationKey) : label;
-  };
+  // Model class label → localized dish name (shared with the eating history so a
+  // saved meal re-translates per language — see src/utils/foodNames.ts).
+  const getTranslatedFoodName = (label: string): string => translateFoodLabel(label, t);
 
   const normalizeModelLabel = (label: string): string => {
     if (label === 'kao_man_gai') {
@@ -1145,11 +1130,16 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             setStatusMessage(t('food.stSavingToPassport'));
                             setUploadProgress(40);
 
-                            const mealName = getTranslatedFoodName(predictions[selectedPredictionIndex].className);
+                            const chosenLabel = predictions[selectedPredictionIndex].className;
+                            const mealName = getTranslatedFoodName(chosenLabel);
+                            // Known Thai dish → store the model key so history can
+                            // re-translate it; AI / free-form names have no key.
+                            const foodKey = FOOD_NAME_KEYS[chosenLabel] ? chosenLabel : undefined;
                             const meal = {
                               id: Date.now(),
                               timestamp: new Date().toISOString(),
                               foodName: mealName,
+                              foodKey,
                               calories: nutritionData.calories,
                               healthScore: nutritionData.healthScore,
                               imageUrl: imagePreview,
