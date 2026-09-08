@@ -4,6 +4,7 @@ import { useSEO } from '../hooks/useSEO';
 import { safeGetItem } from '../utils/safeStorage';
 import type { MealLog, Macros } from '../utils/longevityScore';
 import { getTodayWater, saveTodayWater } from '../utils/healthCoach';
+import { mealDisplayName } from '../utils/foodNames';
 import {
   FaUtensils, FaChartPie,
   FaClock, FaChevronRight, FaCamera, FaDroplet,
@@ -458,7 +459,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                 )}
                 <div className="ev-hist-body">
                   <div className="ev-hist-header">
-                    <h4>{meal.foodName || (isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
+                    <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
                     <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
                   </div>
                   <div className="ev-hist-cals">{meal.calories} kcal</div>
@@ -742,7 +743,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                   )}
                   <div className="ev-hist-body">
                     <div className="ev-hist-header">
-                      <h4>{meal.foodName || (isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
+                      <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
                       <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
                     </div>
                     <div className="ev-hist-cals">{meal.calories} kcal</div>
@@ -899,6 +900,7 @@ const FastRing: React.FC<any> = ({ pct, elapsed, target, running, isTh, protocol
 
 // MealDetailModal (Reused)
 const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDelete, onEdit }) => {
+  const { t } = useLanguage();
   const rows = [
     { label: isTh ? 'แคลอรี่' : 'Calories', val: `${meal.calories} kcal` },
     { label: isTh ? 'โปรตีน' : 'Protein', val: `${meal.macros?.protein ?? 0} g` },
@@ -913,7 +915,7 @@ const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDele
       <div className="ev-modal" onClick={e => e.stopPropagation()}>
         <div className="ev-modal-header">
           <button className="ev-modal-close" onClick={onClose}><FaXmark /></button>
-          <h2>{meal.foodName || (isTh ? 'มื้ออาหาร' : 'Meal')}</h2>
+          <h2>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h2>
           <span className="ev-meal-time-badge">{fmtTime(meal.timestamp)}</span>
         </div>
         {meal.imageUrl && <img src={meal.imageUrl} alt={meal.foodName} className="ev-modal-img" />}

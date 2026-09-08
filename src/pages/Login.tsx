@@ -33,12 +33,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setMessage('');
     setIsLoading(true);
 
-    if (!username.trim()) { setError('Email is required'); setIsLoading(false); return; }
-    if (!password)        { setError('Password is required'); setIsLoading(false); return; }
+    if (!username.trim()) { setError(t('login.errEmailRequired')); setIsLoading(false); return; }
+    if (!password)        { setError(t('login.errPasswordRequired')); setIsLoading(false); return; }
 
     try {
       if (!isSupabaseConfigured()) {
-        setError('System is offline or Supabase is not configured.');
+        setError(t('login.errOffline'));
         return;
       }
 
@@ -50,7 +50,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         if (supaError) { setError(supaError.message); return; }
         if (data?.user) {
           if (data.user?.identities?.length === 0) {
-            setError('An account with this email already exists.');
+            setError(t('login.errEmailExists'));
             return;
           }
           try {
@@ -62,7 +62,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           } catch (profileErr) {
             console.warn('Profile auto-create fallback failed:', profileErr);
           }
-          setMessage('Account created! Check your email, or log in if auto-confirmed.');
+          setMessage(t('login.accountCreated'));
           setIsSignUp(false);
           setPassword('');
         }
@@ -85,6 +85,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           setError(supaError.message);
         }
       }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setError('');
+    setMessage('');
+    if (!username.trim()) { setError(t('login.resetNeedEmail')); return; }
+    if (!isSupabaseConfigured()) { setError(t('login.errOffline')); return; }
+    setIsLoading(true);
+    try {
+      await supabase!.auth.resetPasswordForEmail(username.trim(), {
+        redirectTo: window.location.origin,
+      });
+      // Always show the same message — don't leak whether the email exists.
+      setMessage(t('login.resetSent'));
+    } catch {
+      setMessage(t('login.resetSent'));
     } finally {
       setIsLoading(false);
     }
@@ -114,12 +133,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         {/* Headline */}
         <div className="login-headline">
           <h1 className="login-title-v2">
-            {isSignUp ? 'Create Account' : t('login.welcomeText1')}
+            {isSignUp ? t('login.createTitle') : t('login.welcomeText1')}
           </h1>
           <p className="login-subtitle-v2">
-            {isSignUp
-              ? 'Start your longevity journey'
-              : t('login.subtitle')}
+            {isSignUp ? t('login.createSubtitle') : t('login.subtitle')}
           </p>
         </div>
 
@@ -138,11 +155,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         {/* Form */}
         <form onSubmit={handleAuth} autoComplete="off" className="login-form-v2">
           <div className="login-field">
-            <label htmlFor="email" className="login-label">Email Address</label>
+            <label htmlFor="email" className="login-label">{t('login.email')}</label>
             <input
               id="email"
               type="email"
-              placeholder="you@example.com"
+              placeholder={t('login.emailPlaceholder')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               autoComplete="new-email"
@@ -152,12 +169,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="login-field">
-            <label htmlFor="password" className="login-label">Password</label>
+            <label htmlFor="password" className="login-label">{t('login.password')}</label>
             <div className="login-password-wrap">
               <input
                 id="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Your password"
+                placeholder={t('login.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="new-password"
@@ -182,15 +199,15 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             disabled={isLoading}
           >
             {isLoading
-              ? 'Please wait...'
-              : isSignUp ? 'Create Account' : t('login.loginButton')}
+              ? t('login.pleaseWait')
+              : isSignUp ? t('login.createButton') : t('login.loginButton')}
           </button>
         </form>
 
         {/* Divider */}
         <div className="login-divider">
           <span className="login-divider-line" />
-          <span className="login-divider-text">or</span>
+          <span className="login-divider-text">{t('login.or')}</span>
           <span className="login-divider-line" />
         </div>
 
@@ -200,7 +217,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           className="login-google-btn"
           onClick={async () => {
             try {
-              if (!supabase) { setError('Supabase not configured'); return; }
+              if (!supabase) { setError(t('login.errOffline')); return; }
               const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 // Keep the path + query (e.g. `/?add=<handle>` invite links) across the round-trip.
@@ -217,20 +234,25 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             alt="Google"
             className="login-google-icon"
           />
-          Continue with Google
+          {t('login.google')}
         </button>
 
         {/* Footer */}
         <div className="login-footer-v2">
-          <button
-            type="button"
-            className="login-forgot-btn"
-          >
-            {t('login.forgotPassword')}
-          </button>
+          {/* Forgot-password only makes sense when signing in */}
+          {!isSignUp && (
+            <button
+              type="button"
+              className="login-forgot-btn"
+              onClick={handleForgotPassword}
+              disabled={isLoading}
+            >
+              {t('login.forgotPassword')}
+            </button>
+          )}
 
           <p className="login-switch-text">
-            {isSignUp ? "Already have an account? " : "Don't have an account? "}
+            {isSignUp ? t('login.haveAccount') : t('login.noAccount')}{' '}
             <button
               type="button"
               className="login-switch-btn"
@@ -241,7 +263,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 setPassword('');
               }}
             >
-              {isSignUp ? 'Log in' : 'Sign up'}
+              {isSignUp ? t('login.switchToLogin') : t('login.switchToSignup')}
             </button>
           </p>
         </div>
@@ -261,7 +283,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               aria-label="Developer Quick Access"
             >
               <FaRocket className="login-dev-icon" />
-              <span>เข้าใช้งานสำหรับ Developer</span>
+              <span>Developer access</span>
             </button>
           </div>
         )}
@@ -279,4 +301,3 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     </div>
   );
 };
-
