@@ -50,8 +50,9 @@ This document outlines the standard development workflow and guidelines for the 
 ## Supabase
 
 - **Row Level Security is the source of truth** for who can read/write `profiles`,
-  `health_scores`, `challenges`, and `team_members`. The frontend holds only the anon key;
-  RLS — not application code — is what stops one user reading another's data.
+  `health_scores`, `challenges`, `team_members`, `chat_messages`, and `ai_reports`. The
+  frontend holds only the anon key; RLS — not application code — is what stops one user
+  reading another's data.
 - Schema/policy changes go in `supabase/migrations/` as numbered `.sql` files. Apply with
   `supabase db push`. Read [supabase/RLS_ROLLOUT.md](supabase/RLS_ROLLOUT.md) first — enabling
   RLS changes which rows the anon key sees and must ship together with the matching frontend
@@ -65,6 +66,18 @@ This document outlines the standard development workflow and guidelines for the 
   (`recognizeFood()`) — currently Claude (`ANTHROPIC_API_KEY`), swappable to Gemini without
   touching the frontend or the response contract. The local TensorFlow.js model still handles
   the 10 Thai dishes; a per-user toggle (`localStorage.foodRecognitionEngine`) picks the engine.
+  `FoodRecognition` is `React.lazy`-loaded so TF.js (~1 MB gzip) stays out of every page's
+  critical path; the model weights in `public/model/` are cached by `src/sw.ts` on first use,
+  not in the precache manifest (keeps the SW install small). Don't reintroduce a
+  `manualChunks` entry that forces `@tensorflow/tfjs` eager.
+- **AI health-coach chat** (`supabase/functions/health-chat/`) streams a Claude reply
+  (`HEALTH_CHAT_MODEL`, default `claude-haiku-4-5`) grounded in the caller's profile, name,
+  last 14 days of `health_scores`, the weekly `challenges`, and their `team_members` roster
+  (public scores via `leaderboard_profiles`). Each turn is appended to `chat_messages` (RLS:
+  own rows + admin read). The frontend uses a raw streaming `fetch` (not
+  `functions.invoke`, which buffers); the function is deployed `--no-verify-jwt` and checks
+  the JWT itself so the browser CORS preflight is not gated. Provider isolated to
+  `streamReply()`.
 - **Team invites** use a short per-user handle (`profiles.handle`, e.g. `swift-lotus-73`,
   server-assigned in `handle_new_user()`) shown as a QR code / copyable code on the Team
   page. Adding a teammate goes through the `find_profile_by_handle` / `add_team_member_by_handle`
@@ -80,8 +93,12 @@ This document outlines the standard development workflow and guidelines for the 
   localStorage logs are cleared. `getAnalyticsData` is async and reads only real rows — days
   with no row are excluded from averages and absent from the trend line (never fabricated).
   Any new day-boundary logic must use `bangkokTime.ts`, never `new Date().toISOString()`.
-- Edge Functions restrict CORS to the `ALLOWED_ORIGINS` secret (comma-separated); set it per
-  environment with `supabase secrets set`. Never put a model/provider API key in a `VITE_` var.
+- Edge Functions restrict CORS to the `ALLOWED_ORIGINS` secret (comma-separated) plus any
+  `localhost` / `127.0.0.1` port for local dev; set the production list with
+  `supabase secrets set`. Never put a model/provider API key in a `VITE_` var.
+- The AI features (`recognize-food`, `health-insights`, `health-chat`) all need
+  `ANTHROPIC_API_KEY` set as a Supabase secret. It is a **paid** credential — with no account
+  credit the functions return a graceful "unavailable" message rather than erroring.
 
 ## Frontend Stability Conventions
 

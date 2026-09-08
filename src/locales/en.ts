@@ -13,6 +13,7 @@ export const en: Record<string, string> = {
   'common.save': 'Save',
   'common.delete': 'Delete',
   'common.cancel': 'Cancel',
+  'common.close': 'Close',
   'common.change': 'Change',
   'common.loading': 'Loading...',
   'common.recorded': 'Recorded',
@@ -336,6 +337,21 @@ export const en: Record<string, string> = {
   'team.errGeneric': 'Could not add member. Please try again.',
   'team.cancel': 'Cancel',
 
+  // AI health-coach chat
+  'chat.open': 'Ask the health coach',
+  'chat.title': 'Health Coach',
+  'chat.subtitle': 'AI · grounded in your logged data',
+  'chat.clear': 'Clear chat',
+  'chat.emptyTitle': 'Ask me anything about your health habits.',
+  'chat.emptyHint': 'e.g. "Why did my sleep score drop?" or "What should I eat more of?"',
+  'chat.disclaimer': 'AI coach — not medical advice. See a professional for anything clinical.',
+  'chat.placeholder': 'Type a message…',
+  'chat.send': 'Send',
+  'chat.errAuth': 'Please sign in again to use the coach.',
+  'chat.errConfig': 'Chat is not available in this environment.',
+  'chat.errNetwork': 'Network problem — check your connection and try again.',
+  'chat.errGeneric': "Couldn't get a reply. Please try again.",
+
   // Food Recognition
   'food.title': 'Food Recognition & Analysis',
   'food.takePhoto': 'Take Food Photo',
@@ -426,7 +442,7 @@ export const en: Record<string, string> = {
   'food.stSavingToPassport': 'Saving to your Longevity Passport…',
   'food.stMealSaved': 'Meal saved!',
   'food.stMealSavedOffline': 'Saved (offline mode)',
-  'food.alertModelUnavailable': 'The model is unavailable. Check the model files in public/model or public/model_backup.',
+  'food.alertModelUnavailable': 'The on-device model could not load. Try the AI engine instead, or check your connection.',
   'food.alertCameraDenied': 'Could not access the camera. Please allow camera access.',
 
   // Sleep quality indicator

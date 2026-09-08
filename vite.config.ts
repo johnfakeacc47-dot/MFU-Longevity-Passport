@@ -13,10 +13,14 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,json,keras,bin}'],
-        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024, // 100MB for the models
+        // Precache the app shell only. The TF.js model shards (~40 MB) are cached
+        // on first use by a runtime handler in src/sw.ts, not shipped in the
+        // install manifest.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globIgnores: ['**/model/**', '**/model_backup/**', '**/*.bin', '**/*.keras'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'model/**/*'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'MFU Longevity Passport',
         short_name: 'Passport',
@@ -48,9 +52,13 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'tensorflow': ['@tensorflow/tfjs'],
-          'react-vendor': ['react', 'react-dom'],
+        // Per-module form: keep React in its own vendor chunk, but let TF.js
+        // fall into the async chunk of its only importer (the lazy
+        // FoodRecognition). The previous array form forced a shared CJS-interop
+        // helper into the tensorflow chunk and made index.js import it back
+        // eagerly, pulling the whole 260 KB chunk into every page load.
+        manualChunks(id) {
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
         },
       },
     },
