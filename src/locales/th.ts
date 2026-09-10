@@ -776,4 +776,22 @@ export const th: Record<string, string> = {
   'aboutGarden.whereHome': 'หน้าหลัก — ต้นไม้ของคุณแบบสด ตอนนี้เลย',
   'aboutGarden.whereDashboard': 'สถิติ — สลับปฏิทินไปที่มุมมอง "สวน" เพื่อดูย้อนหลังได้ถึง 30 วัน',
   'aboutGarden.whereTeam': 'ทีม — ต้นไม้ของทุกคน ขนาดตามการเติบโตที่แต่ละคนสร้างขึ้นเอง',
+
+  // Notifications
+  'notifications.title': 'การแจ้งเตือน',
+  'notifications.markAllRead': 'อ่านทั้งหมดแล้ว',
+  'notifications.empty': 'ยังไม่มีการแจ้งเตือนในตอนนี้',
+  'settings.waterAlert': 'แจ้งเตือนดื่มน้ำ',
+  'settings.waterAlertDesc': 'เตือนให้ดื่มน้ำระหว่างวัน',
+  'settings.sleepAlert': 'แจ้งเตือนก่อนนอน',
+  'settings.sleepAlertDesc': 'เตือนให้เริ่มพักผ่อนก่อนเข้านอน',
+  'settings.teamAlert': 'กิจกรรมทีม',
+  'settings.teamAlertDesc': 'เมื่อมีคนเพิ่มคุณเป็นเพื่อนร่วมทีม',
+  'settings.challengeAlert': 'อัปเดตชาเลนจ์',
+  'settings.challengeAlertDesc': 'เมื่อทีมของคุณทำเป้าหมายประจำสัปดาห์สำเร็จ',
+  'settings.pushEnable': 'การแจ้งเตือนแบบพุช',
+  'settings.pushEnableDesc': 'รับเป็นการแจ้งเตือนจริงบนอุปกรณ์นี้ แม้ปิดแอปอยู่',
+  'settings.pushEnableBtn': 'เปิดใช้งานบนอุปกรณ์นี้',
+  'settings.pushEnabled': 'เปิดใช้งานบนอุปกรณ์นี้แล้ว',
+  'settings.pushUnsupported': 'เบราว์เซอร์นี้ไม่รองรับ',
 };

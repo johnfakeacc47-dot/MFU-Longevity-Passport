@@ -3,46 +3,31 @@
 // Cloud food recognition. The local TensorFlow.js model in the app only knows
 // 10 Thai dishes; this identifies arbitrary food and estimates nutrition for the
 // visible portion, using a vision LLM. The API key lives ONLY in this function's
-// environment - the browser never sees it (same pattern as admin-users).
+// environment — the browser never sees it (same pattern as admin-users).
 //
-// Request  (POST, JWT required):
-//   { imageB64: string, mimeType: "image/jpeg"|"image/png"|"image/webp", hint?: { dish: string, confidence: number } }
-// Response (200):
-//   { isFood, dish, dishLocal, cuisine, confidence, ingredients[],
-//     nutrition: { calories, protein, carbs, fat, fiber, sodium },
-//     servingEstimate, healthScore, healthNotes }
-// Errors: { error: string } with a non-2xx status.
-//
-// --- Provider swap (Claude -> Gemini) ---
-// Only `recognizeFood()` below is provider-specific. To move to Gemini: rewrite
-// that one function to POST generativelanguage.googleapis.com with a
-// responseSchema, swap ANTHROPIC_API_KEY -> GEMINI_API_KEY, redeploy. Nothing
-// else in this file, the frontend, or the response contract changes.
-//
-// Operator env:
-//   ANTHROPIC_API_KEY   (supabase secrets set)   - required
-//   RECOGNIZE_FOOD_MODEL (optional)              - defaults to claude-sonnet-5
-//   ALLOWED_ORIGINS      (shared with the other functions)
+// Structured output is prompt-driven + hand-parsed rather than via the SDK's
+// zod helper — `zodOutputFormat` over esm.sh/Deno broke twice on zod version
+// drift ("Cannot read properties of undefined (reading 'def')").
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.124.0?deps=zod@3.25.76'
-import { z } from 'https://esm.sh/zod@3.25.76'
-import { zodOutputFormat } from 'https://esm.sh/@anthropic-ai/sdk@0.124.0/helpers/zod?deps=zod@3.25.76'
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.124.0'
 
-// ---------- CORS (origin allowlist) - identical to admin-users/delete-user ----------
+// ---------- CORS (origin allowlist) ----------
 const DEFAULT_ORIGINS = [
   'https://mfu-longevity-passport.vercel.app',
   'http://localhost:5173',
 ]
-
 function getAllowedOrigins(): string[] {
   const raw = Deno.env.get('ALLOWED_ORIGINS')
   if (!raw) return DEFAULT_ORIGINS
   const list = raw.split(',').map((o) => o.trim()).filter(Boolean)
   return list.length > 0 ? list : DEFAULT_ORIGINS
 }
-
+function isAllowedOrigin(origin: string): boolean {
+  if (getAllowedOrigins().includes(origin)) return true
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+}
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin')
   const headers: Record<string, string> = {
@@ -50,12 +35,9 @@ function buildCorsHeaders(req: Request): Record<string, string> {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   }
-  if (origin && getAllowedOrigins().includes(origin)) {
-    headers['Access-Control-Allow-Origin'] = origin
-  }
+  if (origin && isAllowedOrigin(origin)) headers['Access-Control-Allow-Origin'] = origin
   return headers
 }
-
 function json(body: unknown, status: number, req: Request): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -63,33 +45,71 @@ function json(body: unknown, status: number, req: Request): Response {
   })
 }
 
-// ---------- Provider-agnostic result schema ----------
-const NutritionSchema = z.object({
-  calories: z.number().describe('kcal for the visible portion'),
-  protein: z.number().describe('grams'),
-  carbs: z.number().describe('grams'),
-  fat: z.number().describe('grams'),
-  fiber: z.number().describe('grams'),
-  sodium: z.number().describe('milligrams'),
-})
-
-const FoodSchema = z.object({
-  isFood: z.boolean().describe('false if the image is not food/drink'),
-  dish: z.string().describe('best-guess dish name in English, e.g. "Pad Thai with shrimp"'),
-  dishLocal: z.string().describe('local-language name if applicable (Thai script), else ""'),
-  cuisine: z.string().describe('e.g. "Thai", "Japanese", "unknown"'),
-  confidence: z.number().describe('0-1'),
-  ingredients: z.array(z.string()).describe('visible main ingredients'),
-  nutrition: NutritionSchema,
-  servingEstimate: z.string().describe('e.g. "1 plate, ~350 g"'),
-  healthScore: z.number().describe('0-100, higher = healthier, for a general-population diet'),
-  healthNotes: z.string().describe('one short sentence of practical advice'),
-})
-
-type FoodResult = z.infer<typeof FoodSchema>
+// ---------- result shape ----------
+interface Nutrition { calories: number; protein: number; carbs: number; fat: number; fiber: number; sodium: number }
+interface FoodResult {
+  isFood: boolean
+  dish: string
+  dishLocal: string
+  cuisine: string
+  confidence: number
+  ingredients: string[]
+  nutrition: Nutrition
+  servingEstimate: string
+  healthScore: number
+  healthNotes: string
+}
 
 const MIME_ALLOW = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_B64_LEN = 5 * 1024 * 1024 // ~3.7 MB decoded - the frontend downscales to ~768px well under this
+const MAX_B64_LEN = 5 * 1024 * 1024
+
+const num = (v: unknown, d = 0): number => (typeof v === 'number' && isFinite(v) ? v : Number(v) || d)
+const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d)
+
+function coerce(raw: any): FoodResult {
+  const n = raw?.nutrition ?? {}
+  return {
+    isFood: raw?.isFood !== false,
+    dish: str(raw?.dish),
+    dishLocal: str(raw?.dishLocal),
+    cuisine: str(raw?.cuisine, 'unknown'),
+    confidence: Math.max(0, Math.min(1, num(raw?.confidence, 0.5))),
+    ingredients: Array.isArray(raw?.ingredients) ? raw.ingredients.map(String).slice(0, 20) : [],
+    nutrition: {
+      calories: Math.max(0, Math.round(num(n.calories))),
+      protein: Math.max(0, Math.round(num(n.protein))),
+      carbs: Math.max(0, Math.round(num(n.carbs))),
+      fat: Math.max(0, Math.round(num(n.fat))),
+      fiber: Math.max(0, Math.round(num(n.fiber))),
+      sodium: Math.max(0, Math.round(num(n.sodium))),
+    },
+    servingEstimate: str(raw?.servingEstimate),
+    healthScore: Math.max(0, Math.min(100, Math.round(num(raw?.healthScore, 50)))),
+    healthNotes: str(raw?.healthNotes),
+  }
+}
+
+/** Pull the first balanced JSON object out of a model reply (handles ```json fences and stray prose). */
+function extractJsonObject(text: string): any {
+  const cleaned = text.replace(/```(?:json)?/gi, '').trim()
+  const start = cleaned.indexOf('{')
+  if (start === -1) throw new Error('no_json')
+  let depth = 0, inStr = false, esc = false
+  for (let i = start; i < cleaned.length; i++) {
+    const c = cleaned[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (c === '\\') esc = true
+      else if (c === '"') inStr = false
+    } else if (c === '"') inStr = true
+    else if (c === '{') depth++
+    else if (c === '}') {
+      depth--
+      if (depth === 0) return JSON.parse(cleaned.slice(start, i + 1))
+    }
+  }
+  throw new Error('unbalanced_json')
+}
 
 const PROMPT = `You are a nutrition assistant for a health-tracking app. Identify the food or drink in the photo and estimate nutrition for the portion that is actually visible (not a generic serving).
 
@@ -99,9 +119,22 @@ Rules:
 - dishLocal: Thai script name when the dish is Thai, otherwise "".
 - healthScore: 0-100 for a general healthy-eating context (fried/high-sodium/high-sugar lower it; vegetables/lean protein/whole grains raise it).
 - Be realistic about portion size from visual cues (plate size, utensils).
-- Output ONLY the structured object.`
 
-// ---------- PROVIDER-SPECIFIC (the only part that changes for Gemini) ----------
+Respond with ONLY a JSON object (no markdown fences, no prose) of exactly this shape:
+{
+  "isFood": boolean,
+  "dish": string,                 // English, e.g. "Pad Thai with shrimp"
+  "dishLocal": string,            // Thai script if applicable, else ""
+  "cuisine": string,              // e.g. "Thai", "Japanese", "unknown"
+  "confidence": number,           // 0-1
+  "ingredients": string[],        // visible main ingredients
+  "nutrition": { "calories": number, "protein": number, "carbs": number, "fat": number, "fiber": number, "sodium": number },  // g except calories(kcal) and sodium(mg)
+  "servingEstimate": string,      // e.g. "1 plate, ~350 g"
+  "healthScore": number,          // 0-100
+  "healthNotes": string           // one short sentence of practical advice
+}`
+
+// ---------- PROVIDER-SPECIFIC ----------
 async function recognizeFood(
   imageB64: string,
   mimeType: string,
@@ -117,7 +150,7 @@ async function recognizeFood(
     ? `\n\nA fast on-device model guessed "${hint.dish}" (confidence ${hint.confidence.toFixed(2)}). Treat that as a weak hint, not ground truth.`
     : ''
 
-  const response = await client.messages.parse({
+  const response = await client.messages.create({
     model,
     max_tokens: 2048,
     messages: [
@@ -129,16 +162,20 @@ async function recognizeFood(
         ],
       },
     ],
-    output_config: {
-      format: zodOutputFormat(FoodSchema),
-      effort: 'low',
-    },
   })
 
-  if (!response.parsed_output) {
+  const text = (response.content ?? [])
+    .filter((b: any) => b.type === 'text')
+    .map((b: any) => b.text)
+    .join('')
+    .trim()
+  if (!text) throw new Error('model_returned_unparseable_output')
+
+  try {
+    return coerce(extractJsonObject(text))
+  } catch {
     throw new Error('model_returned_unparseable_output')
   }
-  return response.parsed_output
 }
 // ---------- /PROVIDER-SPECIFIC ----------
 
@@ -152,7 +189,6 @@ serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405, req)
 
   try {
-    // 1. AuthN
     const authHeader = req.headers.get('Authorization')
     if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
       return json({ error: 'Missing or malformed Authorization header' }, 401, req)
@@ -170,7 +206,6 @@ serve(async (req: Request) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser()
     if (userError || !user) return json({ error: 'Invalid or expired token' }, 401, req)
 
-    // 2. Input validation
     let body: any
     try { body = await req.json() } catch { return json({ error: 'Invalid JSON body' }, 400, req) }
 
@@ -180,7 +215,7 @@ serve(async (req: Request) => {
       return json({ error: 'imageB64 is required' }, 400, req)
     }
     if (imageB64.length > MAX_B64_LEN) {
-      return json({ error: 'Image too large - downscale before sending' }, 413, req)
+      return json({ error: 'Image too large — downscale before sending' }, 413, req)
     }
     if (typeof mimeType !== 'string' || !MIME_ALLOW.includes(mimeType)) {
       return json({ error: `mimeType must be one of ${MIME_ALLOW.join(', ')}` }, 400, req)
@@ -190,7 +225,6 @@ serve(async (req: Request) => {
         ? { dish: body.hint.dish, confidence: body.hint.confidence }
         : undefined
 
-    // 3. Recognize
     const result = await recognizeFood(imageB64, mimeType, hint)
     return json(result, 200, req)
   } catch (err) {
@@ -200,13 +234,16 @@ serve(async (req: Request) => {
       return json({ error: 'AI recognition is not configured' }, 503, req)
     }
     if (msg === 'model_returned_unparseable_output') {
-      return json({ error: 'Could not read the image - try another photo' }, 422, req)
+      return json({ error: 'Could not read the image — try another photo' }, 422, req)
     }
-    // Anthropic SDK errors carry a status
     const status = (err as any)?.status
-    if (status === 429) return json({ error: 'AI is busy - try again in a moment' }, 429, req)
+    if (status === 429) return json({ error: 'AI is busy — try again in a moment' }, 429, req)
+    if (status === 400 && /credit balance/i.test(msg)) {
+      console.error('Anthropic credit exhausted')
+      return json({ error: 'AI recognition is temporarily unavailable' }, 503, req)
+    }
     if (status === 401) {
-      console.error('Anthropic auth failed - check ANTHROPIC_API_KEY')
+      console.error('Anthropic auth failed — check ANTHROPIC_API_KEY')
       return json({ error: 'AI recognition is misconfigured' }, 502, req)
     }
     console.error('recognize-food error:', msg)
