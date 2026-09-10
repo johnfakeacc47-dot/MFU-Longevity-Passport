@@ -31,6 +31,7 @@ import { LongevityIndexCard } from '../components/coach/LongevityIndexCard';
 import { DailyGoalsCard } from '../components/coach/DailyGoalsCard';
 import { AICoachCard } from '../components/coach/AICoachCard';
 import { TimelineCard } from '../components/coach/TimelineCard';
+import { TodayPlant } from '../components/garden/TodayPlant';
 import { NotificationBell } from '../components/notifications/NotificationBell';
 
 type PageType =
@@ -222,6 +223,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
       </header>
 
       <div className="hd-content page-content">
+
+        {/* ══ 0. LONGEVITY GARDEN ═════════════════════════════ */}
+        <TodayPlant breakdown={score} isLoading={isLoading} />
 
         {/* ══ 1. SCORE HERO ════════════════════════════════════ */}
         <section className="hd-card hd-score-hero">
