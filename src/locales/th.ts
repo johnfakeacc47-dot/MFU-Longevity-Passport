@@ -731,4 +731,15 @@ export const th: Record<string, string> = {
   'calendar.bad': 'ควรปรับปรุง (<50)',
   'calendar.tapHint': 'แตะที่วันที่ใดก็ได้เพื่อดูสัดส่วนคะแนนย้อนหลัง',
   'calendar.modalTitle': 'รายละเอียดคะแนนของวันที่',
+
+  // Longevity Garden
+  'garden.title': 'สวนสุขภาพของคุณ',
+  'garden.subtitle': 'ต้นลำดวนที่เติบโตขึ้นทุกครั้งที่คุณบันทึกสุขภาพ — 4 ด้านของวันนี้จะกำหนดหน้าตาของต้นไม้ตอนนี้',
+  'garden.stageSeed': 'เมล็ดพันธุ์',
+  'garden.stageSprout': 'ต้นกล้า',
+  'garden.stageSapling': 'ไม้เล็ก',
+  'garden.stageYoungTree': 'ไม้รุ่น',
+  'garden.stageMatureTree': 'ไม้ใหญ่เต็มวัย',
+  'garden.nextStageIn': 'แต้ม ถึงจะเป็น',
+  'garden.fullyGrown': 'เติบโตเต็มที่แล้ว — ขอบคุณที่ดูแลอย่างสม่ำเสมอ',
 };

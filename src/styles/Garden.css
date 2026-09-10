@@ -1,0 +1,69 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Longevity Garden — palette tokens, wind/firefly animation, hero card.
+   Follows the same :root / :root[data-theme="dark"] pattern as
+   _palette-lock.css rather than a prefers-color-scheme media query, since
+   that's how theming actually works in this app (explicit toggle, not OS).
+   ════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --nutrition: #0E9E71;
+  --mental: #8A4FE0;
+  --bark: #8B5A34;
+  --leaf-0: #ABAF8E; --leaf-1: #8FAE68; --leaf-2: #5FA24F; --leaf-3: #3C8C43;
+  --bloom-0: #B7AD92; --bloom-1: #D9CBA0; --bloom-2: #F0E3B8; --bloom-3: #FFF6DE; --bloom-gold: #E0A518;
+}
+
+:root[data-theme="dark"],
+html[data-theme="dark"] {
+  --nutrition: #3FC48F;
+  --mental: #B491F0;
+  --bark: #B07C4C;
+  --leaf-0: #8A9270; --leaf-1: #7FB05C; --leaf-2: #63C158; --leaf-3: #4FD65C;
+  --bloom-0: #9C9176; --bloom-1: #CBB983; --bloom-2: #EBDA9E; --bloom-3: #FFF3D2; --bloom-gold: #F0B93A;
+}
+
+/* ---- ambience: wind + fireflies ---- */
+.firefly { animation: gardenFlicker 2.6s ease-in-out infinite; }
+.firefly:nth-child(odd) { animation-delay: .7s; }
+@keyframes gardenFlicker { 0%, 100% { opacity: .15; } 50% { opacity: .9; } }
+
+.firefly-fly { animation-duration: 7s; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+@keyframes fireflyFloatA { 0%,100%{transform:translate(0,0);} 25%{transform:translate(10px,-14px);} 50%{transform:translate(-6px,-22px);} 75%{transform:translate(-14px,-6px);} }
+@keyframes fireflyFloatB { 0%,100%{transform:translate(0,0);} 30%{transform:translate(-12px,-10px);} 60%{transform:translate(8px,-20px);} 85%{transform:translate(14px,-4px);} }
+@keyframes fireflyFloatC { 0%,100%{transform:translate(0,0);} 20%{transform:translate(8px,10px);} 55%{transform:translate(-10px,16px);} 80%{transform:translate(-4px,-8px);} }
+
+/* the trunk sways a little; each limb (and whatever's on it) swings a
+   little more, staggered by animation-delay — one gust moving through the
+   tree rather than everything rocking in lockstep. */
+.tree-sway { transform-origin: 100px 228px; animation: gardenWindTrunk 5s ease-in-out infinite; }
+.limb-sway { transform-origin: 100px 228px; animation: gardenWindLimb 3.4s ease-in-out infinite; }
+@keyframes gardenWindTrunk { 0%,100%{transform:rotate(-1deg);} 50%{transform:rotate(1.3deg);} }
+@keyframes gardenWindLimb { 0%,100%{transform:rotate(-2.6deg);} 50%{transform:rotate(3.2deg);} }
+
+@media (prefers-reduced-motion: reduce) {
+  .firefly { animation: none; opacity: .55; }
+  .firefly-fly, .tree-sway, .limb-sway { animation: none; }
+}
+
+/* ---- Home hero card ---- */
+.garden-hero-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px;
+  border-radius: var(--radius-card, 24px);
+  background: linear-gradient(180deg, var(--surface-soft) 0%, var(--surface) 100%);
+  border: 1px solid var(--border-soft);
+}
+.garden-hero-readout {
+  align-self: stretch;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.garden-hero-stage { font-weight: 700; color: var(--text-primary); }
+.garden-hero-caption { font-size: 12.5px; color: var(--text-secondary); text-align: center; max-width: 34ch; line-height: 1.5; }
