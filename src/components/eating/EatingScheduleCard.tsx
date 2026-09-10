@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { FaPlay, FaStop, FaClockRotateLeft } from 'react-icons/fa6';
+import { startFastingTimer, stopFastingTimer } from '../../services/supabaseClient';
+import { scheduleFastingAlarm, cancelFastingAlarm } from '../../services/notifications';
 
 const SCHEDULES = [
   { id: '12:12', label: '12:12', fast: 12 },
@@ -40,6 +42,9 @@ export const EatingScheduleCard: React.FC = () => {
           setIsRunning(true);
           const sched = SCHEDULES.find(s => s.fast === hours);
           setSelectedSchedule(sched ? sched.id : 'custom');
+          // Re-arm the local alarm — the service worker may have been
+          // restarted (losing its in-memory interval) since the fast began.
+          void scheduleFastingAlarm(start.getTime() + hours * 3600_000, hours);
         } else {
           // Session expired — clear it
           localStorage.removeItem('fastingActive');
@@ -82,6 +87,14 @@ export const EatingScheduleCard: React.FC = () => {
     localStorage.setItem('fastingStartTime', now.toISOString());
     localStorage.setItem('fastingTargetHours', String(hrs));
     window.dispatchEvent(new Event('healthDataUpdated'));
+
+    // Local alarm — fires the instant this device's fast completes, no
+    // server round trip needed while the app/browser process is alive.
+    void scheduleFastingAlarm(now.getTime() + hrs * 3600_000, hrs);
+    // Server copy (profiles.fasting_start_time/fasting_target_hours) — lets
+    // run_scheduled_reminders() catch the completion even if this device's
+    // browser was closed before the local alarm could fire.
+    startFastingTimer(hrs).catch((err) => console.error('startFastingTimer failed:', err));
   };
 
   const handleStop = () => {
@@ -92,6 +105,9 @@ export const EatingScheduleCard: React.FC = () => {
     localStorage.removeItem('fastingStartTime');
     localStorage.removeItem('fastingTargetHours');
     window.dispatchEvent(new Event('healthDataUpdated'));
+
+    void cancelFastingAlarm();
+    stopFastingTimer().catch((err) => console.error('stopFastingTimer failed:', err));
   };
 
   const formatTime = (secs: number) => {

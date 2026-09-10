@@ -85,6 +85,21 @@ function consumeAddParam(): boolean {
   }
 }
 
+// A notification click looks like `/?notifPage=team` (set by the service
+// worker's notificationclick handler — see src/sw.ts) or, for the fasting
+// "Enter Meal" action, `/?openFoodRecognition=true`.
+function consumeNotifParams(): { page: PageType | null; openFood: boolean } {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const page = params.get('notifPage') as PageType | null
+    const openFood = params.get('openFoodRecognition') === 'true'
+    if (page || openFood) window.history.replaceState({}, '', window.location.pathname)
+    return { page, openFood }
+  } catch {
+    return { page: null, openFood: false }
+  }
+}
+
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('login')
   const [showFoodRecognition, setShowFoodRecognition] = useState(false)
@@ -101,6 +116,8 @@ function App() {
     const initAuth = async () => {
       try {
         const hasPendingAdd = consumeAddParam()
+        const { page: notifPage, openFood } = consumeNotifParams()
+        if (openFood) setShowFoodRecognition(true)
         // Local dev session (bypasses Supabase). Gated on import.meta.env.DEV so
         // this branch is removed from production builds — a hand-crafted
         // localStorage 'dev-user' / 'dev-mock-token' entry cannot grant a
@@ -114,6 +131,8 @@ function App() {
           const savedPage = localStorage.getItem('currentPage') as PageType;
           if (hasPendingAdd) {
             setCurrentPage('team');
+          } else if (notifPage) {
+            setCurrentPage(notifPage);
           } else if (savedPage && savedPage !== 'login') {
             setCurrentPage(savedPage);
           } else {
@@ -130,6 +149,8 @@ function App() {
             const savedPage = localStorage.getItem('currentPage') as PageType
             if (hasPendingAdd) {
               setCurrentPage('team')
+            } else if (notifPage) {
+              setCurrentPage(notifPage)
             } else if (savedPage && savedPage !== 'login') {
               setCurrentPage(savedPage)
             } else {
@@ -146,7 +167,7 @@ function App() {
           const token = localStorage.getItem('authToken')
           const savedPage = localStorage.getItem('currentPage') as PageType
           if (token) {
-            setCurrentPage(hasPendingAdd ? 'team' : (savedPage && savedPage !== 'login' ? savedPage : 'home'))
+            setCurrentPage(hasPendingAdd ? 'team' : notifPage ? notifPage : (savedPage && savedPage !== 'login' ? savedPage : 'home'))
           } else {
             setCurrentPage('login')
           }
@@ -194,6 +215,20 @@ function App() {
 
     window.addEventListener('healthDataUpdated', handleHealthUpdate)
 
+    // A notification click while the app is already open/focused doesn't
+    // reload the page — the service worker just postMessages the target
+    // URL to the focused client (see notificationclick in src/sw.ts).
+    const handleSwMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'SW_NAVIGATE' || typeof event.data.url !== 'string') return
+      try {
+        const url = new URL(event.data.url, window.location.origin)
+        const page = url.searchParams.get('notifPage') as PageType | null
+        if (page) setCurrentPage(page)
+        if (url.searchParams.get('openFoodRecognition') === 'true') setShowFoodRecognition(true)
+      } catch { /* ignore malformed message */ }
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSwMessage)
+
     // Pull raw logs from other devices once the session is confirmed.
     if (supabase) {
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -203,6 +238,7 @@ function App() {
 
     return () => {
       window.removeEventListener('healthDataUpdated', handleHealthUpdate)
+      navigator.serviceWorker?.removeEventListener('message', handleSwMessage)
       if (subscription) {
         subscription.unsubscribe()
       }
