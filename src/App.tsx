@@ -13,6 +13,7 @@ import UserManagement from './pages/UserManagement'
 import { PrivacySettings } from './pages/PrivacySettings'
 import { SetGoals } from './pages/SetGoals'
 import { AboutTracker } from './pages/AboutTracker'
+import { AboutGarden } from './pages/AboutGarden'
 import { MentalHealth } from './pages/MentalHealth'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { Settings } from './pages/Settings'
@@ -67,7 +68,7 @@ class FoodRecognitionErrorBoundary extends React.Component<
   }
 }
 
-type PageType = 'login' | 'home' | 'eating' | 'eating-food-log' | 'eating-macros' | 'eating-water' | 'eating-schedule' | 'eating-history' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'activity' | 'sleep' | 'mental-health' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker' | 'settings'
+type PageType = 'login' | 'home' | 'eating' | 'eating-food-log' | 'eating-macros' | 'eating-water' | 'eating-schedule' | 'eating-history' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'activity' | 'sleep' | 'mental-health' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker' | 'about-garden' | 'settings'
 
 // A shared invite link looks like `/?add=swift-lotus-73`. Capture the handle into
 // localStorage (the Team page's TeamInvite picks it up), then scrub it from the
@@ -292,6 +293,8 @@ function App() {
         return <SetGoals onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
       case 'about-tracker':
         return <AboutTracker onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'about-garden':
+        return <AboutGarden onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
       case 'user-management':
         return (
           <div style={{ minHeight: '100vh' }}>
