@@ -1,15 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { FaCalendarAlt, FaTimes, FaUtensils, FaDumbbell, FaBed, FaBrain } from 'react-icons/fa';
+import { FaCalendarAlt, FaTimes, FaUtensils, FaDumbbell, FaBed, FaBrain, FaThLarge, FaSeedling } from 'react-icons/fa';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { getHealthCalendar } from '../../utils/healthCoach';
 import type { CalendarDayItem } from '../../utils/healthCoach';
 import { getHealthCalendarData } from '../../utils/analyticsScore';
 import { bangkokDateStr } from '../../utils/bangkokTime';
+import { GardenPlant } from '../garden/GardenPlant';
+import { useGrowthStage } from '../../hooks/useGrowthStage';
 import '../../styles/Coach.css';
+import '../../styles/Garden.css';
+
+type CalendarView = 'grid' | 'garden';
 
 export const HealthCalendarSection: React.FC = () => {
   const { t } = useLanguage();
   const [selectedDay, setSelectedDay] = useState<CalendarDayItem | null>(null);
+  const [view, setView] = useState<CalendarView>('grid');
+  const { stage } = useGrowthStage();
   // Same Supabase history as the trend chart; localStorage calendar is the offline fallback.
   const [calendarDays, setCalendarDays] = useState<CalendarDayItem[]>(() => getHealthCalendar(30));
 
@@ -55,36 +62,72 @@ export const HealthCalendarSection: React.FC = () => {
           </span>
           <div>
             <h3 className="coach-card-title">{t('calendar.title')}</h3>
-            <p className="coach-card-subtitle">{t('calendar.tapHint')}</p>
+            <p className="coach-card-subtitle">{view === 'grid' ? t('calendar.tapHint') : t('calendar.gardenHint')}</p>
           </div>
+        </div>
+        <div className="calendar-view-toggle" role="group" aria-label={t('calendar.viewToggleLabel')}>
+          <button type="button" className={view === 'grid' ? 'is-active' : ''} onClick={() => setView('grid')} aria-pressed={view === 'grid'}>
+            <FaThLarge /> {t('calendar.gridView')}
+          </button>
+          <button type="button" className={view === 'garden' ? 'is-active' : ''} onClick={() => setView('garden')} aria-pressed={view === 'garden'}>
+            <FaSeedling /> {t('calendar.gardenView')}
+          </button>
         </div>
       </div>
 
-      <div className="calendar-legend">
-        <span className="legend-item"><i className="legend-dot good" /> {t('calendar.good')}</span>
-        <span className="legend-item"><i className="legend-dot medium" /> {t('calendar.medium')}</span>
-        <span className="legend-item"><i className="legend-dot bad" /> {t('calendar.bad')}</span>
-        <span className="legend-item"><i className="legend-dot empty" /> {t('score.notRecorded')}</span>
-      </div>
+      {view === 'grid' ? (
+        <>
+          <div className="calendar-legend">
+            <span className="legend-item"><i className="legend-dot good" /> {t('calendar.good')}</span>
+            <span className="legend-item"><i className="legend-dot medium" /> {t('calendar.medium')}</span>
+            <span className="legend-item"><i className="legend-dot bad" /> {t('calendar.bad')}</span>
+            <span className="legend-item"><i className="legend-dot empty" /> {t('score.notRecorded')}</span>
+          </div>
 
-      <div className="calendar-grid">
-        {calendarDays.map((day) => {
-          const color = getStatusColor(day.status);
-          const isToday = day.dateStr === bangkokDateStr();
-          return (
-            <button
-              key={day.dateStr}
-              type="button"
-              className={`calendar-day-cell ${day.status} ${isToday ? 'is-today' : ''}`}
-              onClick={() => setSelectedDay(day)}
-              title={`${day.dateStr}: ${day.score > 0 ? `${day.score}/100` : t('score.notRecorded')}`}
-            >
-              <span className="day-num">{day.dayNum}</span>
-              <span className="day-status-dot" style={{ backgroundColor: color }} />
-            </button>
-          );
-        })}
-      </div>
+          <div className="calendar-grid">
+            {calendarDays.map((day) => {
+              const color = getStatusColor(day.status);
+              const isToday = day.dateStr === bangkokDateStr();
+              return (
+                <button
+                  key={day.dateStr}
+                  type="button"
+                  className={`calendar-day-cell ${day.status} ${isToday ? 'is-today' : ''}`}
+                  onClick={() => setSelectedDay(day)}
+                  title={`${day.dateStr}: ${day.score > 0 ? `${day.score}/100` : t('score.notRecorded')}`}
+                >
+                  <span className="day-num">{day.dayNum}</span>
+                  <span className="day-status-dot" style={{ backgroundColor: color }} />
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        // Same 30 days, same growth stage throughout — only each day's own
+        // 4 pillars change how that day's tree looks.
+        <div className="calendar-garden-row">
+          {calendarDays.map((day) => {
+            const isToday = day.dateStr === bangkokDateStr();
+            return (
+              <button
+                key={day.dateStr}
+                type="button"
+                className={`calendar-garden-cell ${isToday ? 'is-today' : ''}`}
+                onClick={() => setSelectedDay(day)}
+                title={`${day.dateStr}: ${day.score > 0 ? `${day.score}/100` : t('score.notRecorded')}`}
+              >
+                <GardenPlant
+                  breakdown={{ nutrition: day.nutrition, exercise: day.exercise, sleep: day.sleep, mental: day.mental }}
+                  stage={stage}
+                  size={52}
+                />
+                <span className="calendar-garden-daynum">{day.dayNum}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Detail Modal */}
       {selectedDay && (

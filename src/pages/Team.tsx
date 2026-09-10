@@ -7,10 +7,21 @@ import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { TeamInvite } from '../components/team/TeamInvite';
+import { GardenPlant } from '../components/garden/GardenPlant';
+import { stageFromPoints } from '../utils/growthStage';
+import '../styles/Garden.css';
 import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
-  getMyTeamLeaderboard, getCurrentUserProfile,
+  getMyTeamLeaderboard, getCurrentUserProfile, getTodayHealthScore,
 } from '../services/supabaseClient';
+
+// health_scores RLS is "own rows only" (supabase/migrations/0001_enable_rls.sql),
+// so a teammate's real *daily* pillar breakdown isn't visible to us — only
+// their all-time total_points is, and only when they've opted into
+// is_score_public. So the Team Garden shows each member's real growth
+// *stage* (their honestly-earned tree size) against one steady, non-
+// personal reference day, rather than guessing at data we can't see.
+const TEAM_GARDEN_REFERENCE = { nutrition: 15, exercise: 15, sleep: 15, mental: 15 };
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile';
 
@@ -27,6 +38,12 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const [isScorePublic, setIsScorePublic] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [myHandle, setMyHandle] = useState<string | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+  // Real today breakdown for *my own* row only — the Team Garden falls
+  // back to TEAM_GARDEN_REFERENCE for everyone else since RLS doesn't
+  // expose a teammate's real daily pillars, but there's no reason my own
+  // tree here should look different from the one on Home.
+  const [myBreakdown, setMyBreakdown] = useState<typeof TEAM_GARDEN_REFERENCE | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const { t } = useLanguage();
   useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
@@ -57,16 +74,26 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       });
 
       // One parallel round instead of five sequential awaits.
-      const [profile, lb, myT, challenges] = await Promise.all([
+      const [profile, lb, myT, challenges, todayScore] = await Promise.all([
         getCurrentUserProfile(),
         getLeaderboard(),
         getMyTeamLeaderboard(),
         getChallengeStatus(),
+        getTodayHealthScore(),
       ]);
 
       if (profile) {
         setIsScorePublic(profile.is_score_public ?? false);
         setMyHandle(profile.handle ?? null);
+        setMyId(profile.id ?? null);
+      }
+      if (todayScore) {
+        setMyBreakdown({
+          nutrition: todayScore.nutrition ?? 0,
+          exercise: todayScore.activity ?? 0,
+          sleep: todayScore.sleep ?? 0,
+          mental: todayScore.fasting ?? 0,
+        });
       }
       setAllTeamsData((lb ?? []).map(mapMember));
       setMyTeamData((myT ?? []).map(mapMember));
@@ -191,7 +218,28 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                   onAction={handleInvite}
                 />
               ) : (
-                <div className="team-lb-list">
+                <>
+                  <div className="team-garden-row">
+                    {displayData.map((member) => {
+                      // My own row always shows my real stage/today, same as
+                      // Home — privacy settings govern what *others* see
+                      // about me, not what I see about myself. Everyone
+                      // else's private row stays a generic silhouette.
+                      const isMe = member.id === myId;
+                      const visible = isMe || member.isPublic;
+                      return (
+                        <div key={member.id} className={`team-garden-cell ${!visible ? 'is-private' : ''}`}>
+                          <GardenPlant
+                            breakdown={isMe && myBreakdown ? myBreakdown : TEAM_GARDEN_REFERENCE}
+                            stage={visible ? stageFromPoints(member.rawPoints) : 1}
+                            size={48}
+                          />
+                          <span className="team-garden-name">{visible ? member.name : t('team.private')}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="team-lb-list">
                   {displayData.map((member, i) => (
                     <div key={member.id} className={`team-lb-card ${i < 3 ? 'team-lb-card--top' : ''}`}>
                       <div className="team-lb-rank">
@@ -224,7 +272,8 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           </>
