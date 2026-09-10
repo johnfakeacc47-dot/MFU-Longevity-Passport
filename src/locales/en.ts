@@ -742,5 +742,9 @@ export const en: Record<string, string> = {
   'garden.stageMatureTree': 'Mature Tree',
   'garden.nextStageIn': 'pts to',
   'garden.fullyGrown': 'Fully grown — thank you for the steady care.',
+  'calendar.gardenHint': 'Same tree, same growth stage, all 30 days — only each day’s own pillars change how it looks',
+  'calendar.viewToggleLabel': 'Calendar view',
+  'calendar.gridView': 'Grid',
+  'calendar.gardenView': 'Garden',
 };
 

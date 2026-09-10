@@ -7,10 +7,21 @@ import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { TeamInvite } from '../components/team/TeamInvite';
+import { GardenPlant } from '../components/garden/GardenPlant';
+import { stageFromPoints } from '../utils/growthStage';
+import '../styles/Garden.css';
 import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
   getMyTeamLeaderboard, getCurrentUserProfile,
 } from '../services/supabaseClient';
+
+// health_scores RLS is "own rows only" (supabase/migrations/0001_enable_rls.sql),
+// so a teammate's real *daily* pillar breakdown isn't visible to us — only
+// their all-time total_points is, and only when they've opted into
+// is_score_public. So the Team Garden shows each member's real growth
+// *stage* (their honestly-earned tree size) against one steady, non-
+// personal reference day, rather than guessing at data we can't see.
+const TEAM_GARDEN_REFERENCE = { nutrition: 15, exercise: 15, sleep: 15, mental: 15 };
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile';
 
@@ -191,7 +202,20 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                   onAction={handleInvite}
                 />
               ) : (
-                <div className="team-lb-list">
+                <>
+                  <div className="team-garden-row">
+                    {displayData.map((member) => (
+                      <div key={member.id} className={`team-garden-cell ${!member.isPublic ? 'is-private' : ''}`}>
+                        <GardenPlant
+                          breakdown={TEAM_GARDEN_REFERENCE}
+                          stage={member.isPublic ? stageFromPoints(member.rawPoints) : 1}
+                          size={48}
+                        />
+                        <span className="team-garden-name">{member.isPublic ? member.name : t('team.private')}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="team-lb-list">
                   {displayData.map((member, i) => (
                     <div key={member.id} className={`team-lb-card ${i < 3 ? 'team-lb-card--top' : ''}`}>
                       <div className="team-lb-rank">
@@ -224,7 +248,8 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                </>
               )}
             </div>
           </>
