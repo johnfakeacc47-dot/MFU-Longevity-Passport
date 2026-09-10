@@ -776,5 +776,23 @@ export const en: Record<string, string> = {
   'aboutGarden.whereHome': 'Home — your tree, live, right now.',
   'aboutGarden.whereDashboard': 'Statistics — switch the calendar to Garden view to see any of the last 30 days.',
   'aboutGarden.whereTeam': "Team — everyone's tree, sized by their own honestly-earned growth.",
+
+  // Notifications
+  'notifications.title': 'Notifications',
+  'notifications.markAllRead': 'Mark all read',
+  'notifications.empty': "You're all caught up — no notifications yet.",
+  'settings.waterAlert': 'Water Reminder',
+  'settings.waterAlertDesc': 'Nudge you to drink water through the day',
+  'settings.sleepAlert': 'Sleep Reminder',
+  'settings.sleepAlertDesc': 'A wind-down nudge before bedtime',
+  'settings.teamAlert': 'Team Activity',
+  'settings.teamAlertDesc': 'When someone adds you as a teammate',
+  'settings.challengeAlert': 'Challenge Updates',
+  'settings.challengeAlertDesc': 'When your team hits the weekly goal',
+  'settings.pushEnable': 'Push Notifications',
+  'settings.pushEnableDesc': 'Get these as real notifications on this device, even when the app is closed',
+  'settings.pushEnableBtn': 'Enable on this device',
+  'settings.pushEnabled': 'Enabled on this device',
+  'settings.pushUnsupported': 'Not supported on this browser',
 };
 
