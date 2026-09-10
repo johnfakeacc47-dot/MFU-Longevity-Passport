@@ -1,27 +1,14 @@
 // supabase/functions/health-insights/index.ts
+// Real AI period report. Reads the caller's health_scores rollup rows, asks an
+// LLM for a grounded supportive interpretation, caches it in ai_reports so it
+// regenerates ~weekly (or on force). API key stays server-side.
 //
-// Real AI period report. Reads the caller's health_scores rollup rows for the
-// period, asks a vision/text LLM for a grounded, supportive interpretation, and
-// caches the result in ai_reports so it regenerates ~weekly (or on `force`),
-// not on every page load. The API key never reaches the browser.
-//
-// Request (POST, JWT required):
-//   { periodType: "week" | "month", force?: boolean }
-// Response:
-//   { enoughData: false, loggedDays } |
-//   { enoughData: true, cached, generatedAt, model, period: {start,end},
-//     averages: { total, nutrition, exercise, sleep, mental },
-//     report: { headline, scoreTrend, whatsWorking[], whatToImprove[],
-//               suggestions: [{pillar, action, why}], focusNext } }
-//
-// Provider is isolated to `generateReport()` — swappable to Gemini.
-// Env: ANTHROPIC_API_KEY (required), HEALTH_INSIGHTS_MODEL (default claude-sonnet-5)
+// Structured output is prompt-driven + hand-parsed (no SDK zod helper — it broke
+// on zod version drift over esm.sh/Deno: "reading 'def'").
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.124.0?deps=zod@3.25.76'
-import { z } from 'https://esm.sh/zod@3.25.76'
-import { zodOutputFormat } from 'https://esm.sh/@anthropic-ai/sdk@0.124.0/helpers/zod?deps=zod@3.25.76'
+import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.124.0'
 
 const DEFAULT_ORIGINS = [
   'https://mfu-longevity-passport.vercel.app',
@@ -33,6 +20,10 @@ function getAllowedOrigins(): string[] {
   const list = raw.split(',').map((o) => o.trim()).filter(Boolean)
   return list.length > 0 ? list : DEFAULT_ORIGINS
 }
+function isAllowedOrigin(origin: string): boolean {
+  if (getAllowedOrigins().includes(origin)) return true
+  return /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
+}
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin')
   const headers: Record<string, string> = {
@@ -40,7 +31,7 @@ function buildCorsHeaders(req: Request): Record<string, string> {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Vary': 'Origin',
   }
-  if (origin && getAllowedOrigins().includes(origin)) headers['Access-Control-Allow-Origin'] = origin
+  if (origin && isAllowedOrigin(origin)) headers['Access-Control-Allow-Origin'] = origin
   return headers
 }
 function json(body: unknown, status: number, req: Request): Response {
@@ -50,7 +41,6 @@ function json(body: unknown, status: number, req: Request): Response {
   })
 }
 
-// ---------- date helpers (Asia/Bangkok) ----------
 const TZ = 'Asia/Bangkok'
 const bkkToday = () => new Date().toLocaleDateString('en-CA', { timeZone: TZ })
 function addDays(dateStr: string, delta: number): string {
@@ -67,22 +57,16 @@ const CADENCE_MS: Record<string, number> = {
 }
 const FORCE_COOLDOWN_MS = 2 * 3600 * 1000
 
-// ---------- result schema (provider-agnostic) ----------
-const ReportSchema = z.object({
-  headline: z.string().describe('one encouraging sentence summarising the period'),
-  scoreTrend: z.enum(['improving', 'declining', 'steady']),
-  whatsWorking: z.array(z.string()).describe('2-3 specific things the data shows going well'),
-  whatToImprove: z.array(z.string()).describe('2-3 specific gaps the data shows'),
-  suggestions: z.array(
-    z.object({
-      pillar: z.enum(['eating', 'exercise', 'sleep', 'mental']),
-      action: z.string().describe('one concrete, doable next step'),
-      why: z.string().describe('short reason grounded in this user\'s numbers'),
-    }),
-  ).describe('2-4 suggestions'),
-  focusNext: z.string().describe('the single most important thing to focus on next'),
-})
-type Report = z.infer<typeof ReportSchema>
+type Pillar = 'eating' | 'exercise' | 'sleep' | 'mental'
+interface Suggestion { pillar: Pillar; action: string; why: string }
+interface Report {
+  headline: string
+  scoreTrend: 'improving' | 'declining' | 'steady'
+  whatsWorking: string[]
+  whatToImprove: string[]
+  suggestions: Suggestion[]
+  focusNext: string
+}
 
 interface DayRow {
   date: string
@@ -100,6 +84,47 @@ interface DayRow {
   stress_level: number | null
 }
 
+const strArr = (v: unknown): string[] =>
+  Array.isArray(v) ? v.map((x) => String(x)).filter(Boolean).slice(0, 6) : []
+
+function extractJsonObject(text: string): any {
+  const cleaned = text.replace(/```(?:json)?/gi, '').trim()
+  const start = cleaned.indexOf('{')
+  if (start === -1) throw new Error('no_json')
+  let depth = 0, inStr = false, esc = false
+  for (let i = start; i < cleaned.length; i++) {
+    const c = cleaned[i]
+    if (inStr) {
+      if (esc) esc = false
+      else if (c === '\\') esc = true
+      else if (c === '"') inStr = false
+    } else if (c === '"') inStr = true
+    else if (c === '{') depth++
+    else if (c === '}') { depth--; if (depth === 0) return JSON.parse(cleaned.slice(start, i + 1)) }
+  }
+  throw new Error('unbalanced_json')
+}
+
+function coerceReport(raw: any): Report {
+  const PILLARS: Pillar[] = ['eating', 'exercise', 'sleep', 'mental']
+  const trend = ['improving', 'declining', 'steady'].includes(raw?.scoreTrend) ? raw.scoreTrend : 'steady'
+  const suggestions: Suggestion[] = Array.isArray(raw?.suggestions)
+    ? raw.suggestions.slice(0, 4).map((s: any) => ({
+        pillar: PILLARS.includes(s?.pillar) ? s.pillar : 'eating',
+        action: String(s?.action ?? ''),
+        why: String(s?.why ?? ''),
+      })).filter((s: Suggestion) => s.action)
+    : []
+  return {
+    headline: String(raw?.headline ?? ''),
+    scoreTrend: trend,
+    whatsWorking: strArr(raw?.whatsWorking),
+    whatToImprove: strArr(raw?.whatToImprove),
+    suggestions,
+    focusNext: String(raw?.focusNext ?? ''),
+  }
+}
+
 // ---------- PROVIDER-SPECIFIC ----------
 async function generateReport(
   periodType: 'week' | 'month',
@@ -111,7 +136,6 @@ async function generateReport(
   const client = new Anthropic({ apiKey })
   const model = Deno.env.get('HEALTH_INSIGHTS_MODEL') || 'claude-sonnet-5'
 
-  // Compact table: score breakdown maps activity->exercise, fasting->mental.
   const table = rows
     .map((r) =>
       [
@@ -142,16 +166,30 @@ Write a short report:
 - Be encouraging but honest. No medical advice, diagnoses, or calorie prescriptions — habit-level suggestions only.
 - Suggestions must be concrete and small ("add one 15-min walk", not "exercise more").
 - ${lang === 'th' ? 'Write in Thai.' : 'Write in English.'}
-Return only the structured object.`
 
-  const response = await client.messages.parse({
+Respond with ONLY a JSON object (no markdown fences, no prose) of exactly this shape:
+{
+  "headline": string,                      // one encouraging sentence summarising the period
+  "scoreTrend": "improving" | "declining" | "steady",
+  "whatsWorking": string[],                 // 2-3 specific things the data shows going well
+  "whatToImprove": string[],                // 2-3 specific gaps the data shows
+  "suggestions": [ { "pillar": "eating" | "exercise" | "sleep" | "mental", "action": string, "why": string } ],  // 2-4
+  "focusNext": string                       // the single most important thing to focus on next
+}`
+
+  const response = await client.messages.create({
     model,
     max_tokens: 2048,
     messages: [{ role: 'user', content: prompt }],
-    output_config: { format: zodOutputFormat(ReportSchema), effort: 'low' },
   })
-  if (!response.parsed_output) throw new Error('model_returned_unparseable_output')
-  return { report: response.parsed_output, model }
+  const text = (response.content ?? [])
+    .filter((b: any) => b.type === 'text').map((b: any) => b.text).join('').trim()
+  if (!text) throw new Error('model_returned_unparseable_output')
+  try {
+    return { report: coerceReport(extractJsonObject(text)), model }
+  } catch {
+    throw new Error('model_returned_unparseable_output')
+  }
 }
 // ---------- /PROVIDER-SPECIFIC ----------
 
@@ -188,7 +226,6 @@ serve(async (req: Request) => {
     const to = bkkToday()
     const from = addDays(to, periodType === 'week' ? -6 : -29)
 
-    // 1. Cache check - most recent report for this period type
     const { data: cached } = await db
       .from('ai_reports')
       .select('*')
@@ -219,11 +256,10 @@ serve(async (req: Request) => {
     if (cached && force) {
       const age = Date.now() - new Date(cached.generated_at).getTime()
       if (age < FORCE_COOLDOWN_MS) {
-        return json({ error: 'Just updated - try again later' }, 429, req)
+        return json({ error: 'Just updated — try again later' }, 429, req)
       }
     }
 
-    // 2. Load the period's rows
     const { data: rows, error: rowsErr } = await db
       .from('health_scores')
       .select('date,total,nutrition,sleep,activity,fasting,calories_in,calories_out,sleep_hours,water_glasses,protein_g,mood_score,stress_level')
@@ -238,7 +274,6 @@ serve(async (req: Request) => {
       return json({ enoughData: false, loggedDays: days.length }, 200, req)
     }
 
-    // 3. Averages (over logged days)
     const nn = (sel: (d: DayRow) => number | null) => days.map(sel).filter((v): v is number => v != null)
     const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : 0)
     const averages = {
@@ -249,7 +284,6 @@ serve(async (req: Request) => {
       mental: mean(nn((d) => d.fasting)),
     }
 
-    // 4. Generate + cache
     const { report, model } = await generateReport(periodType, days, lang)
     const payload = { report, averages }
 
@@ -282,9 +316,10 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg === 'server_not_configured') return json({ error: 'AI reports are not configured' }, 503, req)
-    if (msg === 'model_returned_unparseable_output') return json({ error: 'Could not generate a report - try again' }, 422, req)
+    if (msg === 'model_returned_unparseable_output') return json({ error: 'Could not generate a report — try again' }, 422, req)
     const status = (err as any)?.status
-    if (status === 429) return json({ error: 'AI is busy - try again in a moment' }, 429, req)
+    if (status === 429) return json({ error: 'AI is busy — try again in a moment' }, 429, req)
+    if (status === 400 && /credit balance/i.test(msg)) return json({ error: 'AI reports are temporarily unavailable' }, 503, req)
     console.error('health-insights error:', msg)
     return json({ error: 'Report generation failed' }, 500, req)
   }
