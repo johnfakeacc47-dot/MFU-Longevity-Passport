@@ -12,7 +12,7 @@ import { stageFromPoints } from '../utils/growthStage';
 import '../styles/Garden.css';
 import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
-  getMyTeamLeaderboard, getCurrentUserProfile,
+  getMyTeamLeaderboard, getCurrentUserProfile, getTodayHealthScore,
 } from '../services/supabaseClient';
 
 // health_scores RLS is "own rows only" (supabase/migrations/0001_enable_rls.sql),
@@ -38,6 +38,12 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const [isScorePublic, setIsScorePublic] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [myHandle, setMyHandle] = useState<string | null>(null);
+  const [myId, setMyId] = useState<string | null>(null);
+  // Real today breakdown for *my own* row only — the Team Garden falls
+  // back to TEAM_GARDEN_REFERENCE for everyone else since RLS doesn't
+  // expose a teammate's real daily pillars, but there's no reason my own
+  // tree here should look different from the one on Home.
+  const [myBreakdown, setMyBreakdown] = useState<typeof TEAM_GARDEN_REFERENCE | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const { t } = useLanguage();
   useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
@@ -68,16 +74,26 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       });
 
       // One parallel round instead of five sequential awaits.
-      const [profile, lb, myT, challenges] = await Promise.all([
+      const [profile, lb, myT, challenges, todayScore] = await Promise.all([
         getCurrentUserProfile(),
         getLeaderboard(),
         getMyTeamLeaderboard(),
         getChallengeStatus(),
+        getTodayHealthScore(),
       ]);
 
       if (profile) {
         setIsScorePublic(profile.is_score_public ?? false);
         setMyHandle(profile.handle ?? null);
+        setMyId(profile.id ?? null);
+      }
+      if (todayScore) {
+        setMyBreakdown({
+          nutrition: todayScore.nutrition ?? 0,
+          exercise: todayScore.activity ?? 0,
+          sleep: todayScore.sleep ?? 0,
+          mental: todayScore.fasting ?? 0,
+        });
       }
       setAllTeamsData((lb ?? []).map(mapMember));
       setMyTeamData((myT ?? []).map(mapMember));
@@ -204,16 +220,24 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
               ) : (
                 <>
                   <div className="team-garden-row">
-                    {displayData.map((member) => (
-                      <div key={member.id} className={`team-garden-cell ${!member.isPublic ? 'is-private' : ''}`}>
-                        <GardenPlant
-                          breakdown={TEAM_GARDEN_REFERENCE}
-                          stage={member.isPublic ? stageFromPoints(member.rawPoints) : 1}
-                          size={48}
-                        />
-                        <span className="team-garden-name">{member.isPublic ? member.name : t('team.private')}</span>
-                      </div>
-                    ))}
+                    {displayData.map((member) => {
+                      // My own row always shows my real stage/today, same as
+                      // Home — privacy settings govern what *others* see
+                      // about me, not what I see about myself. Everyone
+                      // else's private row stays a generic silhouette.
+                      const isMe = member.id === myId;
+                      const visible = isMe || member.isPublic;
+                      return (
+                        <div key={member.id} className={`team-garden-cell ${!visible ? 'is-private' : ''}`}>
+                          <GardenPlant
+                            breakdown={isMe && myBreakdown ? myBreakdown : TEAM_GARDEN_REFERENCE}
+                            stage={visible ? stageFromPoints(member.rawPoints) : 1}
+                            size={48}
+                          />
+                          <span className="team-garden-name">{visible ? member.name : t('team.private')}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="team-lb-list">
                   {displayData.map((member, i) => (
