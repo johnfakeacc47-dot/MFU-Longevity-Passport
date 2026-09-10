@@ -31,6 +31,7 @@ import { LongevityIndexCard } from '../components/coach/LongevityIndexCard';
 import { DailyGoalsCard } from '../components/coach/DailyGoalsCard';
 import { AICoachCard } from '../components/coach/AICoachCard';
 import { TimelineCard } from '../components/coach/TimelineCard';
+import { NotificationBell } from '../components/notifications/NotificationBell';
 
 type PageType =
   | 'login' | 'home' | 'eating' | 'dashboard' | 'team'
@@ -210,6 +211,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
               <span className="hd-live-dot" />{t('home.live')}
             </div>
           )}
+          <NotificationBell onNavigate={onNavigate} />
           <button className="hd-avatar-btn" onClick={() => onNavigate('profile')} aria-label={t('nav.profile')}>
             {avatarLetter
               ? <span className="hd-avatar-letter">{avatarLetter}</span>
