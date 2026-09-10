@@ -1,11 +1,11 @@
-// TodayPlant — Home-screen hero: fetches the all-time growth stage
-// (profiles.total_points) and pairs it with today's 4-pillar breakdown
-// (passed in — Home already fetches that for the score ring).
-import React, { useEffect, useState } from 'react';
+// TodayPlant — Home-screen hero: pairs the all-time growth stage with
+// today's 4-pillar breakdown (passed in — Home already fetches that for
+// the score ring).
+import React from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { GardenPlant, type GardenBreakdown } from './GardenPlant';
-import { stageFromPoints, STAGE_NAME_KEYS, type GrowthStage } from '../../utils/growthStage';
-import { getCurrentUserProfile, isSupabaseConfigured } from '../../services/supabaseClient';
+import { useGrowthStage } from '../../hooks/useGrowthStage';
+import { STAGE_NAME_KEYS, type GrowthStage } from '../../utils/growthStage';
 import '../../styles/Garden.css';
 
 // Mirrors the thresholds in growthStage.ts — kept alongside them for the
@@ -18,22 +18,8 @@ interface TodayPlantProps {
 
 export const TodayPlant: React.FC<TodayPlantProps> = ({ breakdown }) => {
   const { t } = useLanguage();
-  const [totalPoints, setTotalPoints] = useState<number | null>(null);
+  const { stage, totalPoints } = useGrowthStage();
 
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      if (!isSupabaseConfigured()) return;
-      getCurrentUserProfile()
-        .then((profile) => { if (!cancelled && profile) setTotalPoints(profile.total_points ?? 0); })
-        .catch(() => {});
-    };
-    load();
-    window.addEventListener('healthDataUpdated', load);
-    return () => { cancelled = true; window.removeEventListener('healthDataUpdated', load); };
-  }, []);
-
-  const stage = stageFromPoints(totalPoints ?? 0);
   const nextThreshold = NEXT_THRESHOLD[stage];
   const remaining = nextThreshold !== null && totalPoints !== null ? Math.max(0, nextThreshold - totalPoints) : null;
 

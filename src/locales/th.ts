@@ -742,4 +742,8 @@ export const th: Record<string, string> = {
   'garden.stageMatureTree': 'ไม้ใหญ่เต็มวัย',
   'garden.nextStageIn': 'แต้ม ถึงจะเป็น',
   'garden.fullyGrown': 'เติบโตเต็มที่แล้ว — ขอบคุณที่ดูแลอย่างสม่ำเสมอ',
+  'calendar.gardenHint': 'ต้นไม้เดียวกัน ระยะการเติบโตเดียวกันตลอด 30 วัน — มีแค่ 4 ด้านของแต่ละวันที่เปลี่ยนหน้าตา',
+  'calendar.viewToggleLabel': 'มุมมองปฏิทิน',
+  'calendar.gridView': 'ตาราง',
+  'calendar.gardenView': 'สวน',
 };
