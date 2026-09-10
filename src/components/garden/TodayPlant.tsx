@@ -14,14 +14,31 @@ const NEXT_THRESHOLD: Record<GrowthStage, number | null> = { 0: 20, 1: 150, 2: 5
 
 interface TodayPlantProps {
   breakdown: GardenBreakdown;
+  /** Home is still fetching today's score — show the loading shape instead
+   *  of a premature (all-zero) tree, same as the score ring beside it. */
+  isLoading?: boolean;
 }
 
-export const TodayPlant: React.FC<TodayPlantProps> = ({ breakdown }) => {
+export const TodayPlant: React.FC<TodayPlantProps> = ({ breakdown, isLoading = false }) => {
   const { t } = useLanguage();
-  const { stage, totalPoints } = useGrowthStage();
+  const { stage, totalPoints, loading: stageLoading } = useGrowthStage();
+  const loading = isLoading || stageLoading;
 
   const nextThreshold = NEXT_THRESHOLD[stage];
   const remaining = nextThreshold !== null && totalPoints !== null ? Math.max(0, nextThreshold - totalPoints) : null;
+
+  if (loading) {
+    return (
+      <section className="garden-hero-card" aria-label={t('garden.title')} aria-busy="true">
+        <div className="garden-hero-readout">
+          <span className="garden-hero-skeleton-line garden-hero-skeleton-line--stage" />
+        </div>
+        <div className="garden-hero-skeleton-shape" />
+        <span className="garden-hero-skeleton-line garden-hero-skeleton-line--caption-1" />
+        <span className="garden-hero-skeleton-line garden-hero-skeleton-line--caption-2" />
+      </section>
+    );
+  }
 
   return (
     <section className="garden-hero-card" aria-label={t('garden.title')}>
