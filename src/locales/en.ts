@@ -731,5 +731,16 @@ export const en: Record<string, string> = {
   'calendar.bad': 'Needs Work (<50)',
   'calendar.tapHint': 'Tap any date to view historical breakdown',
   'calendar.modalTitle': 'Score Details for',
+
+  // Longevity Garden
+  'garden.title': 'Your Longevity Garden',
+  'garden.subtitle': "A Lamduan tree that grows as you keep logging — today's four pillars shape how it looks right now.",
+  'garden.stageSeed': 'Seed',
+  'garden.stageSprout': 'Sprout',
+  'garden.stageSapling': 'Sapling',
+  'garden.stageYoungTree': 'Young Tree',
+  'garden.stageMatureTree': 'Mature Tree',
+  'garden.nextStageIn': 'pts to',
+  'garden.fullyGrown': 'Fully grown — thank you for the steady care.',
 };
 
