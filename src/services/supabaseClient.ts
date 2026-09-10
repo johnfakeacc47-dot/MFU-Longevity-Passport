@@ -74,9 +74,14 @@ export const getMyTeamLeaderboard = async () => {
   const memberIds = teamMembers.map(tm => tm.member_id);
   memberIds.push(user.id);
 
-  // 2. Fetch profiles for all member IDs
+  // 2. Fetch profiles for all member IDs. `profiles` (not the public-only
+  // `leaderboard_profiles` view) -- "My Team" is a mutual, opted-in
+  // relationship (see migration 0006/0007), so a teammate who hasn't made
+  // their score public should still show up here, just with points
+  // hidden -- mapMember() below already does that. leaderboard_profiles
+  // stays reserved for the actual public "All Teams" leaderboard.
   const { data: profiles, error: profilesError } = await supabase
-    .from('leaderboard_profiles')
+    .from('profiles')
     .select('id, name, total_points, avatar_url, role, is_score_public')
     .in('id', memberIds)
     .order('total_points', { ascending: false });
