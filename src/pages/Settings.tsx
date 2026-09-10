@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { useTheme } from '../contexts/ThemeContext';
@@ -19,8 +19,18 @@ import {
   FaMoon,
   FaDesktop,
   FaChevronRight,
+  FaMobileAlt,
 } from 'react-icons/fa';
+import {
+  getNotificationPreferences, updateNotificationPreference, subscribeToPush, isPushSubscribed,
+  type NotificationPrefs,
+} from '../services/notifications';
 import '../styles/Settings.css';
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  mealReminder: true, waterReminder: true, sleepReminder: true,
+  activityReminder: true, fastingReminder: true, teamNotifs: true, challengeNotifs: true,
+};
 
 interface SettingsProps {
   onNavigate: (page: any) => void;
@@ -33,9 +43,28 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
   const { theme, setTheme } = useTheme();
   useSEO(`${t('settings.title')} · MFU Longevity Passport`, 'Configure app preferences and account options.');
 
-  const [fastingAlert, setFastingAlert] = useState<boolean>(true);
-  const [activityAlert, setActivityAlert] = useState<boolean>(true);
-  const [mealAlert, setMealAlert] = useState<boolean>(true);
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
+
+  useEffect(() => {
+    getNotificationPreferences().then(setPrefs);
+    if (pushSupported) isPushSubscribed().then(setPushEnabled);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const togglePref = (key: keyof NotificationPrefs, checked: boolean) => {
+    setPrefs((prev) => ({ ...prev, [key]: checked }));
+    void updateNotificationPreference(key, checked);
+  };
+
+  const handleEnablePush = async () => {
+    setPushBusy(true);
+    const ok = await subscribeToPush();
+    setPushEnabled(ok);
+    setPushBusy(false);
+  };
 
   const handleLogout = () => {
     if (window.confirm(t('settings.logoutConfirm'))) {
@@ -179,15 +208,33 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
           <div className="toggle-list">
             <div className="toggle-item">
               <div className="toggle-info">
-                <strong>{t('settings.fastingAlert')}</strong>
-                <span>{t('settings.fastingAlertDesc')}</span>
+                <strong>{t('settings.mealAlert')}</strong>
+                <span>{t('settings.mealAlertDesc')}</span>
               </div>
               <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={fastingAlert}
-                  onChange={(e) => setFastingAlert(e.target.checked)}
-                />
+                <input type="checkbox" checked={prefs.mealReminder} onChange={(e) => togglePref('mealReminder', e.target.checked)} />
+                <span className="slider round" />
+              </label>
+            </div>
+
+            <div className="toggle-item">
+              <div className="toggle-info">
+                <strong>{t('settings.waterAlert')}</strong>
+                <span>{t('settings.waterAlertDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={prefs.waterReminder} onChange={(e) => togglePref('waterReminder', e.target.checked)} />
+                <span className="slider round" />
+              </label>
+            </div>
+
+            <div className="toggle-item">
+              <div className="toggle-info">
+                <strong>{t('settings.sleepAlert')}</strong>
+                <span>{t('settings.sleepAlertDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={prefs.sleepReminder} onChange={(e) => togglePref('sleepReminder', e.target.checked)} />
                 <span className="slider round" />
               </label>
             </div>
@@ -198,30 +245,69 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
                 <span>{t('settings.activityAlertDesc')}</span>
               </div>
               <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={activityAlert}
-                  onChange={(e) => setActivityAlert(e.target.checked)}
-                />
+                <input type="checkbox" checked={prefs.activityReminder} onChange={(e) => togglePref('activityReminder', e.target.checked)} />
                 <span className="slider round" />
               </label>
             </div>
 
             <div className="toggle-item">
               <div className="toggle-info">
-                <strong>{t('settings.mealAlert')}</strong>
-                <span>{t('settings.mealAlertDesc')}</span>
+                <strong>{t('settings.fastingAlert')}</strong>
+                <span>{t('settings.fastingAlertDesc')}</span>
               </div>
               <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={mealAlert}
-                  onChange={(e) => setMealAlert(e.target.checked)}
-                />
+                <input type="checkbox" checked={prefs.fastingReminder} onChange={(e) => togglePref('fastingReminder', e.target.checked)} />
+                <span className="slider round" />
+              </label>
+            </div>
+
+            <div className="toggle-item">
+              <div className="toggle-info">
+                <strong>{t('settings.teamAlert')}</strong>
+                <span>{t('settings.teamAlertDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={prefs.teamNotifs} onChange={(e) => togglePref('teamNotifs', e.target.checked)} />
+                <span className="slider round" />
+              </label>
+            </div>
+
+            <div className="toggle-item">
+              <div className="toggle-info">
+                <strong>{t('settings.challengeAlert')}</strong>
+                <span>{t('settings.challengeAlertDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={prefs.challengeNotifs} onChange={(e) => togglePref('challengeNotifs', e.target.checked)} />
                 <span className="slider round" />
               </label>
             </div>
           </div>
+        </section>
+
+        {/* Push Notifications */}
+        <section className="settings-section card">
+          <div className="section-header">
+            <div className="section-icon text-blue-500">
+              <FaMobileAlt />
+            </div>
+            <div>
+              <h2>{t('settings.pushEnable')}</h2>
+              <p>{t('settings.pushEnableDesc')}</p>
+            </div>
+          </div>
+          {!pushSupported ? (
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{t('settings.pushUnsupported')}</p>
+          ) : pushEnabled ? (
+            <div className="toggle-item">
+              <div className="toggle-info"><strong style={{ color: 'var(--color-success, #10B981)' }}>{t('settings.pushEnabled')}</strong></div>
+              <FaCheck style={{ color: 'var(--color-success, #10B981)' }} />
+            </div>
+          ) : (
+            <button type="button" className="btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
+              {pushBusy ? t('common.loading') : t('settings.pushEnableBtn')}
+            </button>
+          )}
         </section>
 
         {/* Additional Settings / Links */}

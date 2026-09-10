@@ -76,26 +76,45 @@ self.addEventListener('message', (event) => {
 });
 
 // ── Push notification (server-sent) ──────────────────────────────────
+// Payload shape sent by supabase/functions/send-push: { title, body, icon,
+// badge, data: { ...whatever the notification type needs for routing } }.
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? { title: 'Health Notification', body: 'Please check your passport.' };
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: '/pwa-192x192.png',
-      badge: '/pwa-192x192.png',
+      icon: data.icon || '/pwa-192x192.png',
+      badge: data.badge || '/pwa-192x192.png',
+      data: data.data || {},
+      tag: data.data?.type || undefined,
       // @ts-ignore
       vibrate: [200, 100, 200]
     })
   );
 });
 
+// Which in-app page a notification type should open to on click.
+const NOTIF_TYPE_PAGE: Record<string, string> = {
+  teammate_added: 'team',
+  challenge_complete: 'team',
+  reminder_activity: 'activity',
+  reminder_sleep: 'sleep',
+  reminder_water: 'eating',
+};
+
 // ── Notification click ───────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   const action = event.action; // '' when body clicked, 'enter-meal' when action btn clicked
+  const notifData = (event.notification as any).data || {};
   event.notification.close();
 
   // Decide which URL to open
-  const targetUrl = action === 'enter-meal' ? '/?openFoodRecognition=true' : '/';
+  let targetUrl = '/';
+  if (action === 'enter-meal' || notifData.type === 'reminder_fasting' || notifData.type === 'reminder_meal') {
+    targetUrl = '/?openFoodRecognition=true';
+  } else if (NOTIF_TYPE_PAGE[notifData.type]) {
+    targetUrl = `/?notifPage=${NOTIF_TYPE_PAGE[notifData.type]}`;
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
