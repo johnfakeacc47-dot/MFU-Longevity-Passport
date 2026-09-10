@@ -223,7 +223,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
       <div className="hd-content page-content">
 
         {/* ══ 0. LONGEVITY GARDEN ═════════════════════════════ */}
-        {!isLoading && <TodayPlant breakdown={score} />}
+        <TodayPlant breakdown={score} isLoading={isLoading} />
 
         {/* ══ 1. SCORE HERO ════════════════════════════════════ */}
         <section className="hd-card hd-score-hero">
