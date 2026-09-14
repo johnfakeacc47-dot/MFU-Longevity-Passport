@@ -288,6 +288,12 @@
 }
 .mh-journal-input:focus { border-color: var(--accent); }
 .mh-journal-input::placeholder { color: var(--text-tertiary); }
+.mh-journal-hint {
+  margin: -4px 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+}
 
 /* ── AI Card ─────────────────────────────────────────────────── */
 .mh-ai-card {
@@ -342,8 +348,15 @@
   cursor: pointer;
   transition: var(--transition);
   align-self: center;
+  /* QA-010: used to pop in with no transition right after Save, reading as
+     sudden UI clutter — ease it in instead. */
+  animation: mh-delete-btn-in 0.25s ease-out;
 }
 .mh-delete-btn:hover { background: rgba(239,68,68,0.15); transform: scale(1.05); }
+@keyframes mh-delete-btn-in {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
 /* ── Responsive Layouts (Mobile, Tablet, Desktop) ── */
 @media (max-width: 767.98px) {

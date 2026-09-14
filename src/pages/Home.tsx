@@ -16,7 +16,7 @@ import {
   getScoreLabelKey,
   getPillarStatusKey,
 } from '../utils/longevityScore';
-import { supabase, isSupabaseConfigured, getTodayHealthScore } from '../services/supabaseClient';
+import { supabase, isSupabaseConfigured, getTodayHealthScore, getCurrentUserProfile } from '../services/supabaseClient';
 import '../styles/Home.css';
 import '../styles/Coach.css';
 import {
@@ -142,9 +142,19 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
           const { data: { user } } = await supabase!.auth.getUser();
           setIsLiveDB(!!user);
           if (user) {
-            const stored = localStorage.getItem('profileData');
-            if (stored) setUserName(safeParse<any>(stored, {}).fullName || user.email?.split('@')[0] || '');
-            else        setUserName(user.email?.split('@')[0] || '');
+            // QA-004: this used to read only the localStorage 'profileData' cache,
+            // which goes stale the moment the name is edited on another device (or
+            // simply never gets written back after an edit) — Profile.tsx always
+            // reads the server row, so the two screens could show different names.
+            // Source of truth is the same `profiles` row Profile.tsx uses.
+            const dbProfile = await getCurrentUserProfile();
+            if (dbProfile?.name) {
+              setUserName(dbProfile.name);
+            } else {
+              const stored = localStorage.getItem('profileData');
+              if (stored) setUserName(safeParse<any>(stored, {}).fullName || user.email?.split('@')[0] || '');
+              else        setUserName(user.email?.split('@')[0] || '');
+            }
           }
           const dbScore = await getTodayHealthScore();
           if (dbScore) {
@@ -173,10 +183,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
     const onUpdate = () => { fetchScore(); fetchStreak(); };
     window.addEventListener('healthDataUpdated', onUpdate);
     window.addEventListener('storage', onUpdate);
+    // So the name updates immediately if the user edits it on the Profile page
+    // in the same session, rather than waiting for the next 60s poll (QA-004).
+    window.addEventListener('profileUpdated', onUpdate);
     return () => {
       clearInterval(interval);
       window.removeEventListener('healthDataUpdated', onUpdate);
       window.removeEventListener('storage', onUpdate);
+      window.removeEventListener('profileUpdated', onUpdate);
     };
   }, []);
 
@@ -200,11 +214,14 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
       {/* ══ HEADER ══════════════════════════════════════════════ */}
       <header className="hd-header">
         <div className="hd-header-left">
-          <p className="hd-greeting">
-            {t(getGreetingKey())}
-            {userName && <span className="hd-user-name">, {userName}</span>}
-          </p>
-          <p className="hd-date">{today}</p>
+          <img src="/mfu-logo.png" alt="Mae Fah Luang University" className="hd-school-logo" />
+          <div className="hd-header-text">
+            <p className="hd-greeting">
+              {t(getGreetingKey())}
+              {userName && <span className="hd-user-name">, {userName}</span>}
+            </p>
+            <p className="hd-date">{today}</p>
+          </div>
         </div>
         <div className="hd-header-right">
           {isLiveDB && (

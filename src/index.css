@@ -5599,6 +5599,11 @@ body,
   box-shadow: 0 8px 20px rgba(59,130,246,0.30);
 }
 .login-leaf-icon { color: white; font-size: 22px; }
+.login-logo-icon--crest {
+  border-radius: 16px; background: none; overflow: hidden;
+  box-shadow: 0 8px 20px rgba(185,28,28,0.30);
+}
+.login-logo-img { width: 100%; height: 100%; object-fit: cover; }
 .login-brand-name { display: block; font-size: 20px; font-weight: 800; color: #0f172a; }
 .login-brand-sub  { display: block; font-size: 12px; font-weight: 500; color: #64748b; }
 
@@ -6580,6 +6585,20 @@ section + section {
 .team-lb-points { display: flex; align-items: baseline; gap: 3px; position: relative; }
 .team-lb-points-val { font-size: 16px; font-weight: 800; color: #0f172a; }
 .team-lb-pts-label  { font-size: 10px; color: #94a3b8; font-weight: 600; }
+
+/* ── Pending team requests (QA-008) ── */
+.team-pending-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.team-pending-btn {
+  width: 34px; height: 34px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid transparent; cursor: pointer; font-size: 13px;
+  transition: var(--transition);
+}
+.team-pending-btn:disabled { opacity: 0.5; cursor: default; }
+.team-pending-btn--accept { background: rgba(16,185,129,0.10); border-color: rgba(16,185,129,0.25); color: #059669; }
+.team-pending-btn--accept:not(:disabled):hover { background: rgba(16,185,129,0.18); transform: scale(1.05); }
+.team-pending-btn--decline { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.20); color: #EF4444; }
+.team-pending-btn--decline:not(:disabled):hover { background: rgba(239,68,68,0.15); transform: scale(1.05); }
 .team-lb-private    { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
 .team-lb-crown { color: #fbbf24; font-size: 14px; position: absolute; top: -12px; right: -8px; }
 
@@ -7169,5 +7188,57 @@ section + section {
 [data-theme="dark"] .eating-item-cals {
   color: var(--text-secondary, #CBD5E1) !important;
 }
+
+/* ── About Garden: "Where to find it" rows ── */
+.where-find-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: none; border: none; text-align: left; cursor: pointer;
+  transition: var(--transition);
+}
+.where-find-row:hover { background: var(--surface-hover, rgba(56,189,248,0.08)); }
+.where-find-icon {
+  width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+}
+.where-find-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.where-find-name { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.where-find-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+.where-find-chevron { color: var(--text-tertiary); font-size: 13px; flex-shrink: 0; }
+
+/* ── Privacy & Data page ── */
+.pv-toggle-list { display: flex; flex-direction: column; gap: 14px; }
+.pv-toggle-row {
+  display: flex; align-items: center; gap: 12px;
+  padding-top: 14px; border-top: 1px solid var(--border-glass);
+}
+.pv-toggle-list .pv-toggle-row:first-child { padding-top: 0; border-top: none; }
+.pv-row-icon {
+  width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+.pv-row-text { flex: 1; min-width: 0; }
+.pv-row-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.pv-row-desc { font-size: 12px; color: var(--text-secondary); margin: 2px 0 0; line-height: 1.45; }
+
+.pv-rights-list { display: flex; flex-direction: column; gap: 10px; }
+.pv-rights-item {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 12px; border-radius: 14px;
+  background: var(--surface-soft); border: 1px solid var(--border-glass);
+}
+
+.pv-policy-link {
+  margin-top: 16px;
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 12px;
+  background: var(--surface-soft); border: 1px solid var(--border-glass);
+  color: var(--accent, #3B82F6); font-size: 12.5px; font-weight: 700;
+  cursor: pointer; transition: var(--transition);
+}
+.pv-policy-link svg { font-size: 11px; }
+.pv-policy-link:hover { background: var(--surface-hover); border-color: var(--accent, #3B82F6); }
 
 

@@ -30,6 +30,7 @@ import '../styles/Settings.css';
 const DEFAULT_PREFS: NotificationPrefs = {
   mealReminder: true, waterReminder: true, sleepReminder: true,
   activityReminder: true, fastingReminder: true, teamNotifs: true, challengeNotifs: true,
+  badgeNotifs: true,
 };
 
 interface SettingsProps {
@@ -46,6 +47,7 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const [pushError, setPushError] = useState<string | null>(null);
   const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
 
   useEffect(() => {
@@ -61,8 +63,18 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
 
   const handleEnablePush = async () => {
     setPushBusy(true);
-    const ok = await subscribeToPush();
-    setPushEnabled(ok);
+    setPushError(null);
+    const res = await subscribeToPush();
+    if (res.ok) {
+      setPushEnabled(true);
+    } else {
+      setPushEnabled(false);
+      setPushError(
+        res.reason === 'permission_denied' ? t('settings.pushErrDenied')
+        : res.reason === 'timeout' ? t('settings.pushErrTimeout')
+        : t('settings.pushErrGeneric'),
+      );
+    }
     setPushBusy(false);
   };
 
@@ -282,6 +294,17 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
                 <span className="slider round" />
               </label>
             </div>
+
+            <div className="toggle-item">
+              <div className="toggle-info">
+                <strong>{t('settings.badgeAlert')}</strong>
+                <span>{t('settings.badgeAlertDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input type="checkbox" checked={prefs.badgeNotifs} onChange={(e) => togglePref('badgeNotifs', e.target.checked)} />
+                <span className="slider round" />
+              </label>
+            </div>
           </div>
         </section>
 
@@ -304,9 +327,14 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
               <FaCheck style={{ color: 'var(--color-success, #10B981)' }} />
             </div>
           ) : (
-            <button type="button" className="btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
-              {pushBusy ? t('common.loading') : t('settings.pushEnableBtn')}
-            </button>
+            <>
+              <button type="button" className="btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
+                {pushBusy ? t('common.loading') : t('settings.pushEnableBtn')}
+              </button>
+              {pushError && (
+                <p style={{ color: 'var(--color-danger, #EF4444)', fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>{pushError}</p>
+              )}
+            </>
           )}
         </section>
 

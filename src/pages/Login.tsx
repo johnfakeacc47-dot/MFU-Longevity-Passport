@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaEye, FaEyeSlash, FaLeaf, FaRocket } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaRocket } from 'react-icons/fa';
 import { supabase, isSupabaseConfigured } from '../services/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
@@ -7,6 +7,21 @@ import { DevLoginModal } from '../components/DevLoginModal';
 
 interface LoginProps {
   onLoginSuccess: () => void;
+}
+
+// Supabase returns raw English API error text (e.g. "email rate limit
+// exceeded", "Invalid login credentials") — shown verbatim before, this
+// leaked English into the Thai UI (QA-001) and made a routine, expected
+// failure like a signup rate limit read as "email auth is broken" (QA-006).
+// Map the known cases to a translated, actionable message; anything
+// unrecognized still gets a translated generic message, never raw English.
+function friendlyAuthError(message: string, t: (key: string) => string): string {
+  const m = (message || '').toLowerCase();
+  if (m.includes('rate limit')) return t('login.errRateLimited');
+  if (m.includes('invalid login credentials')) return t('login.errInvalidCredentials');
+  if (m.includes('email not confirmed')) return t('login.errNotConfirmed');
+  if (m.includes('already registered') || m.includes('already exists')) return t('login.errEmailExists');
+  return t('login.errGeneric');
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
@@ -44,10 +59,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
       if (isSignUp) {
         const { data, error: supaError } = await supabase!.auth.signUp({
-          email: username,
+          email: username.trim(),
           password: password,
         });
-        if (supaError) { setError(supaError.message); return; }
+        if (supaError) { setError(friendlyAuthError(supaError.message, t)); return; }
         if (data?.user) {
           if (data.user?.identities?.length === 0) {
             setError(t('login.errEmailExists'));
@@ -68,7 +83,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
       } else {
         const { data, error: supaError } = await supabase!.auth.signInWithPassword({
-          email: username,
+          email: username.trim(),
           password: password,
         });
         if (data?.session && data?.user) {
@@ -82,7 +97,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           return;
         }
         if (supaError) {
-          setError(supaError.message);
+          setError(friendlyAuthError(supaError.message, t));
         }
       }
     } finally {
@@ -121,8 +136,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       <div className="login-card-v2">
         {/* Logo */}
         <div className="login-logo-v2">
-          <div className="login-logo-icon">
-            <FaLeaf className="login-leaf-icon" />
+          <div className="login-logo-icon login-logo-icon--crest">
+            <img src="/mfu-logo.png" alt="Mae Fah Luang University" className="login-logo-img" />
           </div>
           <div className="login-logo-text">
             <span className="login-brand-name">MFU</span>
@@ -223,9 +238,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 // Keep the path + query (e.g. `/?add=<handle>` invite links) across the round-trip.
                 options: { redirectTo: window.location.origin + window.location.pathname + window.location.search },
               });
-              if (error) setError(error.message);
+              if (error) setError(friendlyAuthError(error.message, t));
             } catch (err: any) {
-              setError(err.message || 'Google login failed');
+              setError(friendlyAuthError(err?.message || '', t));
             }
           }}
         >
