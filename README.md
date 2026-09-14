@@ -132,6 +132,35 @@ placed in a `VITE_`-prefixed variable — it would be inlined into the browser b
 
 The frontend will be available at `http://localhost:5173`.
 
+### Docker (production build of the PWA)
+
+`Dockerfile` builds and serves the static PWA — the thing that actually needs
+hosting. The app's backend is Supabase (hosted separately); the `backend/`
+NestJS service isn't used in production and isn't part of this image (see
+`backend/docker-compose.yml` for that service's own local-dev database
+instead — unrelated to this).
+
+```bash
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://xxxx.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=your-anon-key \
+  --build-arg VITE_VAPID_PUBLIC_KEY=your-vapid-public-key \
+  -t mfu-longevity-passport .
+
+docker run -p 8080:80 mfu-longevity-passport
+```
+
+All 3 build args are meant to be public (the Supabase *anon* key and the
+VAPID *public* key both already ship inside the browser bundle on Vercel
+today — access control is enforced by Supabase Row Level Security, not by
+keeping these secret). Vite inlines `VITE_*` variables at build time, so
+they're build args here, not container runtime environment variables.
+
+Serves via nginx (`docker/nginx.conf`) with the cache headers a PWA actually
+needs to update itself on the next deploy — hashed `/assets/*` files cached
+forever, `sw.js`/`manifest.webmanifest`/`index.html` always revalidated —
+and falls back to `index.html` for client-side routes.
+
 ## Security & deployment checklist
 
 Before (or immediately after) the first deploy that includes these changes:

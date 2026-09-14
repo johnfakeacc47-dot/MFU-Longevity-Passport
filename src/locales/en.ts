@@ -796,6 +796,19 @@ export const en: Record<string, string> = {
   'aboutGarden.whereDashboard': 'Statistics — switch the calendar to Garden view to see any of the last 30 days.',
   'aboutGarden.whereTeam': "Team — everyone's tree, sized by their own honestly-earned growth.",
 
+  // About Us
+  'aboutUs.title': 'About Us',
+  'aboutUs.heroSubtitle': 'A student project at Mae Fah Luang University.',
+  'aboutUs.missionHeading': 'Our Mission',
+  'aboutUs.missionBody': "We built MFU Longevity Passport to make the science of healthy aging practical for everyday student life — turning nutrition, exercise, sleep, and mental wellbeing into one simple daily habit, instead of four things to remember separately. Small, consistent choices compound over time; this app is here to make that progress visible.",
+  'aboutUs.teamHeading': 'Our Team',
+  'aboutUs.advisorRole': 'Advisor',
+  'aboutUs.studentRole': 'Student Developer',
+  'aboutUs.documentationHeading': 'Documentation',
+  'aboutUs.documentationDesc': 'Source code, setup guides, and technical documentation for this project are maintained publicly on GitHub.',
+  'aboutUs.viewSource': 'View Source & Documentation',
+  'aboutUs.footerLine': 'A Mae Fah Luang University student project.',
+
   // Notifications
   'notifications.title': 'Notifications',
   'notifications.markAllRead': 'Mark all read',

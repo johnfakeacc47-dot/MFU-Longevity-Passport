@@ -371,7 +371,7 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
               <FaChevronRight className="text-slate-400 text-sm" />
             </button>
 
-            <button className="settings-link-btn" onClick={() => alert(`${t('settings.about')} v3.0`)}>
+            <button className="settings-link-btn" onClick={() => onNavigate('about-us')}>
               <div className="flex items-center gap-3">
                 <span className="settings-link-icon text-sky-500 bg-sky-500/15">
                   <FaInfoCircle />

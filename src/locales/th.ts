@@ -796,6 +796,19 @@ export const th: Record<string, string> = {
   'aboutGarden.whereDashboard': 'สถิติ — สลับปฏิทินไปที่มุมมอง "สวน" เพื่อดูย้อนหลังได้ถึง 30 วัน',
   'aboutGarden.whereTeam': 'ทีม — ต้นไม้ของทุกคน ขนาดตามการเติบโตที่แต่ละคนสร้างขึ้นเอง',
 
+  // About Us
+  'aboutUs.title': 'เกี่ยวกับเรา',
+  'aboutUs.heroSubtitle': 'โครงการของนักศึกษามหาวิทยาลัยแม่ฟ้าหลวง',
+  'aboutUs.missionHeading': 'พันธกิจของเรา',
+  'aboutUs.missionBody': 'เราสร้าง MFU Longevity Passport ขึ้นเพื่อนำวิทยาศาสตร์ด้านการชะลอวัยมาใช้ได้จริงในชีวิตประจำวันของนักศึกษา โดยรวมโภชนาการ การออกกำลังกาย การนอนหลับ และสุขภาพจิต ให้เป็นนิสัยประจำวันเดียวที่ดูแลง่าย แทนที่จะต้องจดจำแยกกันถึงสี่เรื่อง การเลือกที่ดีเล็กๆ น้อยๆ อย่างสม่ำเสมอจะสะสมผลลัพธ์ไปตามกาลเวลา แอปนี้จึงถูกสร้างขึ้นเพื่อทำให้ความก้าวหน้านั้นมองเห็นได้ชัดเจน',
+  'aboutUs.teamHeading': 'ทีมของเรา',
+  'aboutUs.advisorRole': 'อาจารย์ที่ปรึกษา',
+  'aboutUs.studentRole': 'นักศึกษาผู้พัฒนา',
+  'aboutUs.documentationHeading': 'เอกสารประกอบ',
+  'aboutUs.documentationDesc': 'ซอร์สโค้ด คู่มือการติดตั้ง และเอกสารทางเทคนิคของโครงการนี้เผยแพร่แบบสาธารณะบน GitHub',
+  'aboutUs.viewSource': 'ดูซอร์สโค้ดและเอกสาร',
+  'aboutUs.footerLine': 'โครงการของนักศึกษามหาวิทยาลัยแม่ฟ้าหลวง',
+
   // Notifications
   'notifications.title': 'การแจ้งเตือน',
   'notifications.markAllRead': 'อ่านทั้งหมดแล้ว',
