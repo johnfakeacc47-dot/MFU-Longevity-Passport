@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { translations } from '../locales';
 import type { Language } from '../locales';
+import { updateUserLanguage } from '../services/supabaseClient';
 
 export type { Language };
 
@@ -38,6 +39,10 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
     setLanguageState(lang);
     localStorage.setItem('language', lang);
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: lang }));
+    // Fire-and-forget: lets server-generated notifications (teammate added,
+    // reminders, challenge complete) pick the right language. Doesn't block
+    // the UI switch, and silently no-ops if signed out / offline.
+    void updateUserLanguage(lang);
   }, []);
 
   const t = useCallback((key: string): string => {

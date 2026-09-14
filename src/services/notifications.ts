@@ -23,11 +23,13 @@ export interface NotificationPrefs {
   fastingReminder: boolean;
   teamNotifs: boolean;
   challengeNotifs: boolean;
+  badgeNotifs: boolean;
 }
 
 const DEFAULT_PREFS: NotificationPrefs = {
   mealReminder: true, waterReminder: true, sleepReminder: true,
   activityReminder: true, fastingReminder: true, teamNotifs: true, challengeNotifs: true,
+  badgeNotifs: true,
 };
 
 function mapNotification(row: any): AppNotification {
@@ -75,6 +77,17 @@ export async function markAllNotificationsRead(): Promise<void> {
   if (error) console.error('markAllNotificationsRead failed:', error);
 }
 
+// Badges (src/utils/healthCoach.ts getAchievements()) are computed entirely
+// client-side, so the unlock *detection* has to happen there too — this just
+// records the resulting notification server-side so it lands in the bell and
+// triggers push like every other type. notify_badge_unlocked is narrow by
+// design (self-only, fixed badge ids) — see 0014_badge_unlock_notifications.sql.
+export async function notifyBadgeUnlocked(badgeId: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('notify_badge_unlocked', { p_badge_id: badgeId });
+  if (error) console.error('notifyBadgeUnlocked failed:', error);
+}
+
 // ── Preferences ──────────────────────────────────────────────────────────
 
 function prefsFromRow(row: any): NotificationPrefs {
@@ -87,6 +100,7 @@ function prefsFromRow(row: any): NotificationPrefs {
     fastingReminder: row.fasting_reminder ?? true,
     teamNotifs: row.team_notifs ?? true,
     challengeNotifs: row.challenge_notifs ?? true,
+    badgeNotifs: row.badge_notifs ?? true,
   };
 }
 
@@ -98,6 +112,7 @@ const PREF_COLUMN: Record<keyof NotificationPrefs, string> = {
   fastingReminder: 'fasting_reminder',
   teamNotifs: 'team_notifs',
   challengeNotifs: 'challenge_notifs',
+  badgeNotifs: 'badge_notifs',
 };
 
 export async function getNotificationPreferences(): Promise<NotificationPrefs> {
@@ -154,21 +169,40 @@ export async function isPushSubscribed(): Promise<boolean> {
   }
 }
 
-export async function subscribeToPush(): Promise<boolean> {
-  if (!isSupabaseConfigured() || !supabase) return false;
-  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+export type PushFailReason =
+  | 'unsupported'       // no Push API in this browser (e.g. iOS Safari opened as a plain tab, not installed to the home screen)
+  | 'not_configured'    // VAPID key missing or Supabase not connected
+  | 'permission_denied' // the OS/browser notification prompt was denied (or blocked previously)
+  | 'not_signed_in'
+  | 'timeout'           // navigator.serviceWorker.ready never resolved — see note below
+  | 'error';
+
+export type PushSubscribeResult = { ok: true } | { ok: false; reason: PushFailReason };
+
+export async function subscribeToPush(): Promise<PushSubscribeResult> {
+  if (!isSupabaseConfigured() || !supabase) return { ok: false, reason: 'not_configured' };
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return { ok: false, reason: 'unsupported' };
 
   const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
-  if (!vapidKey) { console.warn('VITE_VAPID_PUBLIC_KEY is not set — push notifications are disabled.'); return false; }
+  if (!vapidKey) { console.warn('VITE_VAPID_PUBLIC_KEY is not set — push notifications are disabled.'); return { ok: false, reason: 'not_configured' }; }
 
   const permission = await requestNotificationPermission();
-  if (permission !== 'granted') return false;
+  if (permission !== 'granted') return { ok: false, reason: 'permission_denied' };
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  if (!user) return { ok: false, reason: 'not_signed_in' };
 
   try {
-    const registration = await navigator.serviceWorker.ready;
+    // navigator.serviceWorker.ready has NO built-in timeout — if the service
+    // worker never reaches "activated" (the classic cause: the page was
+    // loaded over plain http from a LAN IP during phone testing rather than
+    // https/localhost, which service workers refuse to register under at
+    // all) this used to hang the "Enable" button on "Loading…" forever, with
+    // no way out. Bounded here so a real failure surfaces instead.
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('sw_timeout')), 8000)),
+    ]);
     let sub = await registration.pushManager.getSubscription();
     if (!sub) {
       sub = await registration.pushManager.subscribe({
@@ -184,11 +218,12 @@ export async function subscribeToPush(): Promise<boolean> {
       auth: subJson.keys?.auth ?? '',
       last_seen_at: new Date().toISOString(),
     }, { onConflict: 'endpoint' });
-    if (error) { console.error('saving push subscription failed:', error); return false; }
-    return true;
+    if (error) { console.error('saving push subscription failed:', error); return { ok: false, reason: 'error' }; }
+    return { ok: true };
   } catch (err) {
     console.error('subscribeToPush failed:', err);
-    return false;
+    const reason: PushFailReason = err instanceof Error && err.message === 'sw_timeout' ? 'timeout' : 'error';
+    return { ok: false, reason };
   }
 }
 

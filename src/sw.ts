@@ -6,6 +6,16 @@ import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Without these, an updated SW sits in "waiting" until every open tab/PWA
+// instance of the OLD version closes on its own — on a phone that already
+// has this installed to the home screen, that can mean the new worker (and
+// anything that depends on it, like Push permission's navigator.serviceWorker
+// .ready) never activates during the session that's open right now.
+self.skipWaiting();
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // ── TF.js model: cache-first, populated on first use ─────────────────
 // The model shards (~17 MB) are deliberately NOT in the precache manifest so
 // the SW installs fast. They're fetched on demand the first time the food
@@ -97,6 +107,7 @@ self.addEventListener('push', (event) => {
 const NOTIF_TYPE_PAGE: Record<string, string> = {
   teammate_added: 'team',
   challenge_complete: 'team',
+  badge_unlocked: 'profile',
   reminder_activity: 'activity',
   reminder_sleep: 'sleep',
   reminder_water: 'eating',

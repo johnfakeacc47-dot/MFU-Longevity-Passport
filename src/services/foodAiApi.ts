@@ -31,13 +31,12 @@ const MAX_DIM = 768;
 const JPEG_QUALITY = 0.82;
 
 /**
- * Downscale a data-URL / object-URL image to <= MAX_DIM on its longest edge and
- * re-encode as JPEG. Keeps the upload small (faster + cheaper + within model
- * limits) without losing the detail needed to identify a dish.
+ * Downscale a data-URL / object-URL image to <= maxDim on its longest edge and
+ * re-encode as JPEG, returned as a full `data:` URL. Shared by the AI-upload
+ * path and the local-history thumbnail path below — they just use different
+ * size/quality targets.
  */
-export async function downscaleForAi(
-  src: string,
-): Promise<{ b64: string; mimeType: 'image/jpeg' }> {
+export async function downscaleImage(src: string, maxDim: number, quality: number): Promise<string> {
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const el = new Image();
     el.onload = () => resolve(el);
@@ -45,7 +44,7 @@ export async function downscaleForAi(
     el.src = src;
   });
 
-  const scale = Math.min(1, MAX_DIM / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
 
@@ -56,9 +55,32 @@ export async function downscaleForAi(
   if (!ctx) throw new Error('Canvas not available');
   ctx.drawImage(img, 0, 0, w, h);
 
-  const dataUrl = canvas.toDataURL('image/jpeg', JPEG_QUALITY);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+/**
+ * Downscale to <= MAX_DIM on its longest edge and re-encode as JPEG. Keeps the
+ * upload small (faster + cheaper + within model limits) without losing the
+ * detail needed to identify a dish.
+ */
+export async function downscaleForAi(
+  src: string,
+): Promise<{ b64: string; mimeType: 'image/jpeg' }> {
+  const dataUrl = await downscaleImage(src, MAX_DIM, JPEG_QUALITY);
   const b64 = dataUrl.split(',', 2)[1] ?? '';
   return { b64, mimeType: 'image/jpeg' };
+}
+
+// localStorage has a ~5-10MB per-origin quota SHARED across every saved meal.
+// The raw camera photo (now up to 25MB pre-downscale) must never be written
+// there directly — a couple of meals with full-res photos exhausts the quota
+// and setItem starts throwing, silently losing every meal logged after that
+// (QA-003: "saves but doesn't appear in history"). Store this tiny thumbnail
+// instead.
+const THUMB_MAX_DIM = 480;
+const THUMB_JPEG_QUALITY = 0.6;
+export async function downscaleForStorage(src: string): Promise<string> {
+  return downscaleImage(src, THUMB_MAX_DIM, THUMB_JPEG_QUALITY);
 }
 
 export interface AiRecognizeHint {

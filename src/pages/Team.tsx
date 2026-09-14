@@ -7,6 +7,7 @@ import { BackButton } from '../components/BackButton';
 import { EmptyState } from '../components/EmptyState';
 import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { TeamInvite } from '../components/team/TeamInvite';
+import { PendingRequests } from '../components/team/PendingRequests';
 import { GardenPlant } from '../components/garden/GardenPlant';
 import { stageFromPoints } from '../utils/growthStage';
 import '../styles/Garden.css';
@@ -14,6 +15,7 @@ import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
   getMyTeamLeaderboard, getCurrentUserProfile, getTodayHealthScore,
 } from '../services/supabaseClient';
+import { listPendingTeamRequests, type PendingTeamRequest } from '../services/teamInvite';
 
 // health_scores RLS is "own rows only" (supabase/migrations/0001_enable_rls.sql),
 // so a teammate's real *daily* pillar breakdown isn't visible to us — only
@@ -45,6 +47,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   // tree here should look different from the one on Home.
   const [myBreakdown, setMyBreakdown] = useState<typeof TEAM_GARDEN_REFERENCE | null>(null);
   const [showInvite, setShowInvite] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<PendingTeamRequest[]>([]);
   const { t } = useLanguage();
   useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
 
@@ -73,14 +76,16 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
         isPublic: m.is_score_public ?? false,
       });
 
-      // One parallel round instead of five sequential awaits.
-      const [profile, lb, myT, challenges, todayScore] = await Promise.all([
+      // One parallel round instead of six sequential awaits.
+      const [profile, lb, myT, challenges, todayScore, pending] = await Promise.all([
         getCurrentUserProfile(),
         getLeaderboard(),
         getMyTeamLeaderboard(),
         getChallengeStatus(),
         getTodayHealthScore(),
+        listPendingTeamRequests(),
       ]);
+      setPendingRequests(pending);
 
       if (profile) {
         setIsScorePublic(profile.is_score_public ?? false);
@@ -154,6 +159,9 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
               onOpenChange={setShowInvite}
               onMemberAdded={fetchData}
             />
+
+            {/* ── Pending requests (QA-008) ── */}
+            <PendingRequests requests={pendingRequests} onResolved={fetchData} />
 
             {/* ── Challenge Card ── */}
             <div className={`team-challenge-card ${challengeDone ? 'team-challenge-card--done' : ''}`}>

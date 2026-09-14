@@ -61,7 +61,11 @@ interface FoodResult {
 }
 
 const MIME_ALLOW = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_B64_LEN = 5 * 1024 * 1024
+// The client already downscales to <=768px/JPEG-82% before sending (see
+// src/services/foodAiApi.ts), so real payloads stay well under 1MB — this
+// is just a generous defense-in-depth ceiling, raised alongside the
+// client's own file-size cap (10MB -> 25MB).
+const MAX_B64_LEN = 8 * 1024 * 1024
 
 const num = (v: unknown, d = 0): number => (typeof v === 'number' && isFinite(v) ? v : Number(v) || d)
 const str = (v: unknown, d = ''): string => (typeof v === 'string' ? v : d)
