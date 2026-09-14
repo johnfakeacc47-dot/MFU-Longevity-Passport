@@ -5,8 +5,8 @@ import { LuCamera, LuImage, LuSparkles, LuX, LuFlame, LuHeart, LuApple, LuRefres
 import { THAI_FOOD_CLASSES } from '../config/foodClasses';
 import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi } from '../services/healthApi';
-import { recognizeFoodWithAi, type AiFoodResult } from '../services/foodAiApi';
-import { safeGetItem } from '../utils/safeStorage';
+import { recognizeFoodWithAi, downscaleForStorage, type AiFoodResult } from '../services/foodAiApi';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { translateFoodLabel, FOOD_NAME_KEYS } from '../utils/foodNames';
 import '../styles/FoodRecognition.css';
 
@@ -491,7 +491,13 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setErrorMessage(t('food.stOnlyImages'));
       return;
     }
-    if (file.size > 10 * 1024 * 1024) {
+    // 25MB — well above what a modern phone camera produces (even 48MP raw
+    // JPEGs land around 15-20MB). Safe to raise: recognizeFoodWithAi()
+    // downscales to <=768px/JPEG-82% before it ever leaves the browser (see
+    // src/services/foodAiApi.ts), so the actual upload stays under ~1MB
+    // regardless of the source file's size — this cap only exists to avoid
+    // reading a truly unreasonable file into memory.
+    if (file.size > 25 * 1024 * 1024) {
       setUploadStatus('error');
       setErrorMessage(t('food.stTooLarge'));
       return;
@@ -1135,14 +1141,35 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             // Known Thai dish → store the model key so history can
                             // re-translate it; AI / free-form names have no key.
                             const foodKey = FOOD_NAME_KEYS[chosenLabel] ? chosenLabel : undefined;
+
+                            // localStorage's shared per-origin quota (~5-10MB) can't
+                            // hold the raw camera photo (up to 25MB) for more than a
+                            // couple of meals — store a small thumbnail instead (see
+                            // downscaleForStorage). Falls back to no image rather than
+                            // the full-res original if downscaling itself fails.
+                            let thumbUrl: string | null = null;
+                            if (imagePreview) {
+                              try { thumbUrl = await downscaleForStorage(imagePreview); }
+                              catch (e) { console.warn('Thumbnail downscale failed, saving meal without image', e); }
+                            }
+
+                            // AI-engine dishes have no foodKey (free-form name), so — unlike
+                            // local-model dishes — they used to freeze in whichever language
+                            // was active at scan time (QA-005). Carry both languages when the
+                            // AI provided them so history can re-translate like foodKey does.
+                            const aiNames = aiResult
+                              ? { foodNameEn: aiResult.dish || mealName, foodNameTh: aiResult.dishLocal || aiResult.dish || mealName }
+                              : {};
+
                             const meal = {
                               id: Date.now(),
                               timestamp: new Date().toISOString(),
                               foodName: mealName,
                               foodKey,
+                              ...aiNames,
                               calories: nutritionData.calories,
                               healthScore: nutritionData.healthScore,
-                              imageUrl: imagePreview,
+                              imageUrl: thumbUrl,
                               macros: {
                                 protein: nutritionData.protein,
                                 carbs:   nutritionData.carbs,
@@ -1152,14 +1179,31 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 fiber:   (nutritionData as any).fiber   ?? 0,
                               },
                             };
-                            
+
+                            // QA-003: this used to be a bare `localStorage.setItem`
+                            // inside the try/catch below, so a QuotaExceededError
+                            // (thrown once a couple of full-res photos filled the
+                            // quota) was swallowed by the same catch that handles
+                            // "API unreachable" and reported as success anyway — the
+                            // meal silently never made it into history. Now checked
+                            // explicitly, with one retry dropping the image entirely.
+                            const existingMeals = safeGetItem<any[]>('meals', []);
+                            existingMeals.push(meal);
+                            let mealSaved = safeSetItem('meals', existingMeals);
+                            if (!mealSaved && thumbUrl) {
+                              existingMeals[existingMeals.length - 1] = { ...meal, imageUrl: null };
+                              mealSaved = safeSetItem('meals', existingMeals);
+                            }
+                            if (!mealSaved) {
+                              setUploadProgress(100);
+                              setUploadStatus('error');
+                              setErrorMessage(t('food.stStorageFull'));
+                              return;
+                            }
+
                             try {
-                              const existingMeals = safeGetItem<any[]>('meals', []);
-                              existingMeals.push(meal);
-                              localStorage.setItem('meals', JSON.stringify(existingMeals));
-                              
                               setUploadProgress(75);
-                              
+
                               const payload = {
                                 name: mealName,
                                 calories: nutritionData.calories,
@@ -1167,10 +1211,10 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 protein: nutritionData.protein,
                                 fat: nutritionData.fat,
                                 healthScore: nutritionData.healthScore,
-                                imageUrl: imagePreview,
+                                imageUrl: meal.imageUrl,
                               };
                               await healthApi.logMeal(payload);
-                              
+
                               if (selectedPredictionIndex !== 0) {
                                 const feedback = {
                                   originalPrediction: predictions[0].className,
@@ -1182,11 +1226,11 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 localStorage.setItem('aiFeedback', JSON.stringify(existingFeedback));
                               }
                               window.dispatchEvent(new Event('healthDataUpdated'));
-                              
+
                               setUploadProgress(100);
                               setUploadStatus('success');
                               setStatusMessage(t('food.stMealSaved'));
-                              
+
                               setTimeout(() => {
                                 if (onSuccess) onSuccess();
                                 else onClose();

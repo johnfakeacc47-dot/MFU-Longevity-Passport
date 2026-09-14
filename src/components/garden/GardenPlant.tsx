@@ -341,7 +341,11 @@ export const GardenPlant: React.FC<GardenPlantProps> = ({ breakdown, stage, size
         )}
       </defs>
 
-      <circle cx={100} cy={auraCenterY} r={auraR} fill="var(--mental)" opacity={auraOp} filter={`url(#${auraBlurId})`} />
+      {/* QA-011: the aura's size/opacity/firefly-count already tracked mood, but
+          its color was a single fixed purple regardless of score — tint it per
+          tier (same pattern as the leaf and bloom colors) so the glow itself
+          visibly shifts with today's mental-health score, not just how big it is. */}
+      <circle cx={100} cy={auraCenterY} r={auraR} fill={`var(--mental-${tM})`} opacity={auraOp} filter={`url(#${auraBlurId})`} />
 
       {Array.from({ length: fireflyCount }, (_, i) => {
         const [ox, oy] = FIREFLY_OFFSETS[i];

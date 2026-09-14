@@ -292,6 +292,29 @@ export const getAchievements = (): BadgeItem[] => {
   ];
 };
 
+// getAchievements() is pure/stateless — recomputed fresh on every render from
+// local logs, with nothing remembering which badges were already unlocked.
+// So nothing ever noticed the moment one crossed its threshold, and there was
+// no notification or popup for it. This is the missing piece: compare against
+// the last-known baseline and report what's newly unlocked since.
+const UNLOCKED_BADGES_KEY = 'unlockedBadges';
+
+export function checkForNewlyUnlockedBadges(): BadgeItem[] {
+  const badges = getAchievements();
+  // No stored baseline at all (not even an empty array) means this is the very
+  // first time this code has ever run on this device — badges already earned
+  // before this feature shipped aren't "new", so seed silently without
+  // notifying for any of them.
+  const isFirstRun = localStorage.getItem(UNLOCKED_BADGES_KEY) === null;
+  const previouslyUnlocked = new Set(safeGetItem<string[]>(UNLOCKED_BADGES_KEY, []));
+
+  const nowUnlocked = badges.filter((b) => b.unlocked);
+  const newlyUnlocked = isFirstRun ? [] : nowUnlocked.filter((b) => !previouslyUnlocked.has(b.id));
+
+  localStorage.setItem(UNLOCKED_BADGES_KEY, JSON.stringify(nowUnlocked.map((b) => b.id)));
+  return newlyUnlocked;
+}
+
 // ── 5. LONGEVITY INDEX & LEVEL ────────────────────────────────────────────────
 
 export type LongevityLevel = 'Beginner' | 'Healthy' | 'Excellent' | 'Elite';

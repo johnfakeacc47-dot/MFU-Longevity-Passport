@@ -27,6 +27,11 @@ export interface MealLog {
   foodName?:   string;
   /** TF.js model class label (e.g. "pad_thai") — lets the name re-translate per language. */
   foodKey?:    string;
+  /** AI-engine dish name in each language (no fixed key like foodKey) — lets a
+   *  cloud-recognized meal re-translate per language too, instead of freezing at
+   *  whichever language was active when it was scanned. */
+  foodNameEn?: string;
+  foodNameTh?: string;
   imageUrl?:   string;
   macros?:     Macros;
 }

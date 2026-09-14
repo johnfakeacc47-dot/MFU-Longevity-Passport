@@ -273,10 +273,19 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
         </div>
 
         {/* ── Journal Note ── */}
+        {/* QA-010: there's one entry per day (handleSave upserts it), so the box
+            deliberately keeps showing what was saved — wiping it after Save would
+            look like the note "disappeared", and if the user then typed something
+            new and hit Update, it would silently overwrite the original entry
+            instead of amending it. The actual complaint was the trash button
+            appearing with no explanation and looking unrelated to what was just
+            typed — a hint label + a softer entrance for the button address that
+            without introducing that data-loss risk. */}
         <div className="mh-card">
           <h2 className="mh-card-title">
             {t('mental.journal')} <span className="mh-optional">({t('mental.optional')})</span>
           </h2>
+          {saved && <p className="mh-journal-hint">{t('mental.editingSaved')}</p>}
           <textarea
             className="mh-journal-input"
             placeholder={t('mental.journalPlaceholder')}

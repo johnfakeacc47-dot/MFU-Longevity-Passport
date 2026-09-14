@@ -23,13 +23,20 @@ export const translateFoodLabel = (label: string, t: (k: string) => string): str
 
 /**
  * Display name for a saved meal: prefer the model class key (re-translated on
- * every render), fall back to the stored name for AI / manually-named meals.
+ * every render); for AI-engine dishes, pick whichever language field matches the
+ * current UI language (QA-005 — an AI-recognized dish used to freeze in whatever
+ * language it was scanned in, e.g. staying Thai even after switching to English);
+ * fall back to the plain stored name for anything older/manually-named.
  */
 export const mealDisplayName = (
-  meal: { foodKey?: string; foodName?: string },
+  meal: { foodKey?: string; foodName?: string; foodNameEn?: string; foodNameTh?: string },
   t: (k: string) => string,
   fallback: string,
+  isTh?: boolean,
 ): string => {
   if (meal.foodKey && FOOD_NAME_KEYS[meal.foodKey]) return t(FOOD_NAME_KEYS[meal.foodKey]);
+  if (meal.foodNameEn || meal.foodNameTh) {
+    return (isTh ? meal.foodNameTh : meal.foodNameEn) || meal.foodNameEn || meal.foodNameTh || fallback;
+  }
   return meal.foodName || fallback;
 };

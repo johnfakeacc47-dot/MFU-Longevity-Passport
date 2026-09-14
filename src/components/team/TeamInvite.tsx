@@ -3,17 +3,30 @@ import qrcode from 'qrcode-generator';
 import { FaTimes, FaUserPlus, FaCopy, FaCheck, FaShareAlt, FaQrcode } from 'react-icons/fa';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
-  addTeamMemberByHandle, buildInviteUrl, normalizeHandle, previewHandle,
+  requestTeamMemberByHandle, buildInviteUrl, normalizeHandle, previewHandle,
   type HandlePreview, type InviteReason,
 } from '../../services/teamInvite';
 
 const PENDING_KEY = 'pendingTeamAdd';
+
+// Invite codes look like "swift-lotus-73" — typing the hyphens means detouring
+// to the symbols keyboard on mobile (QA-007: "missing input masking", users
+// having to switch keyboards). Auto-format as they type instead: lowercase,
+// drop anything that isn't a letter/digit/space/hyphen, and turn spaces (on
+// the primary keyboard already, unlike "-") into hyphens automatically.
+const formatHandleInput = (raw: string): string =>
+  raw
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+/, '');
 
 const reasonKey = (r?: InviteReason): string => {
   switch (r) {
     case 'not_found': return 'team.errNotFound';
     case 'self': return 'team.errSelf';
     case 'already_member': return 'team.errAlready';
+    case 'already_requested': return 'team.errAlreadyRequested';
     default: return 'team.errGeneric';
   }
 };
@@ -43,6 +56,11 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
   const [preview, setPreview] = useState<HandlePreview | null>(null);
   const [status, setStatus] = useState<'idle' | 'looking' | 'adding' | 'done'>('idle');
   const [error, setError] = useState<string | null>(null);
+  // 'pending' — the normal case, a request was filed and the modal shows
+  // "Request sent!". 'accepted' — a crossed request (they'd already asked to
+  // add me), resolved instantly, so the modal shows "You're now teammates!"
+  // instead (see request_team_member_by_handle()'s auto-accept).
+  const [doneStatus, setDoneStatus] = useState<'pending' | 'accepted' | null>(null);
 
   // Deep link: App.tsx stashes ?add=<handle> here; pick it up and pre-fill.
   useEffect(() => {
@@ -57,7 +75,7 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
   // Reset transient state whenever the modal closes.
   useEffect(() => {
     if (!open) {
-      setPreview(null); setStatus('idle'); setError(null);
+      setPreview(null); setStatus('idle'); setError(null); setDoneStatus(null);
     }
   }, [open]);
 
@@ -99,11 +117,14 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
     const h = normalizeHandle(input);
     if (!h) return;
     setStatus('adding'); setError(null);
-    const res = await addTeamMemberByHandle(h);
+    const res = await requestTeamMemberByHandle(h);
     if (res.ok) {
       setStatus('done');
-      onMemberAdded();
-      setTimeout(() => { onOpenChange(false); setInput(''); }, 1200);
+      setDoneStatus(res.status ?? 'pending');
+      // Only a crossed-request accept actually changes "My Team" right away —
+      // a fresh request doesn't add anyone until the target approves it.
+      if (res.status === 'accepted') onMemberAdded();
+      setTimeout(() => { onOpenChange(false); setInput(''); }, 1400);
     } else {
       setStatus('idle');
       setError(t(reasonKey(res.reason)));
@@ -168,7 +189,7 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
                   autoCapitalize="none"
                   spellCheck={false}
                   placeholder={t('team.codePlaceholder')}
-                  onChange={(e) => { setInput(e.target.value); setPreview(null); setError(null); }}
+                  onChange={(e) => { setInput(formatHandleInput(e.target.value)); setPreview(null); setError(null); }}
                   onKeyDown={(e) => { if (e.key === 'Enter') void handleLookup(); }}
                 />
               </div>
@@ -183,11 +204,15 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
               )}
 
               {error && <p className="team-add-error">{error}</p>}
-              {status === 'done' && <p className="team-add-success">{t('team.addSuccess')}</p>}
+              {status === 'done' && (
+                <p className="team-add-success">
+                  {doneStatus === 'accepted' ? t('team.nowTeammates') : t('team.requestSent')}
+                </p>
+              )}
 
               {preview ? (
                 <button type="button" className="modal-submit-btn" disabled={status === 'adding'} onClick={handleAdd}>
-                  {status === 'adding' ? t('team.adding') : t('team.addToTeam')}
+                  {status === 'adding' ? t('team.sending') : t('team.sendRequest')}
                 </button>
               ) : (
                 <button type="button" className="modal-submit-btn" disabled={status === 'looking' || !normalizeHandle(input)} onClick={handleLookup}>

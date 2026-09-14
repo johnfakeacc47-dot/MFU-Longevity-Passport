@@ -1,0 +1,68 @@
+.badge-popup-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: badgePopupFadeIn 0.25s ease-out;
+}
+
+.badge-popup-card {
+  position: relative; overflow: hidden;
+  width: 100%; max-width: 340px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border-glass);
+  border-radius: 26px;
+  padding: 32px 24px 26px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  animation: badgePopupPop 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.badge-popup-glow {
+  position: absolute; top: -60%; left: 50%; transform: translateX(-50%);
+  width: 260px; height: 260px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(234,179,8,0.35) 0%, rgba(234,179,8,0) 70%);
+  pointer-events: none;
+}
+
+.badge-popup-trophy {
+  position: relative; font-size: 30px; color: #EAB308;
+  filter: drop-shadow(0 4px 10px rgba(234,179,8,0.4));
+}
+
+.badge-popup-kicker {
+  position: relative; margin: 10px 0 0;
+  font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: #EAB308;
+}
+
+.badge-popup-emoji {
+  position: relative; font-size: 52px; line-height: 1; margin: 16px 0 12px;
+}
+
+.badge-popup-title {
+  position: relative; margin: 0 0 8px;
+  font-size: 18px; font-weight: 800; color: var(--text-primary);
+}
+
+.badge-popup-desc {
+  position: relative; margin: 0 0 22px;
+  font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+}
+
+.badge-popup-cta {
+  position: relative; width: 100%;
+  padding: 13px; border: none; border-radius: 14px; cursor: pointer;
+  background: linear-gradient(135deg, #EAB308, #F59E0B);
+  color: #fff; font-size: 14px; font-weight: 800;
+  box-shadow: 0 8px 20px rgba(234,179,8,0.35);
+  transition: var(--transition);
+}
+.badge-popup-cta:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(234,179,8,0.45); }
+.badge-popup-cta:active { transform: scale(0.98); }
+
+@keyframes badgePopupFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes badgePopupPop {
+  from { opacity: 0; transform: scale(0.85) translateY(10px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
