@@ -26,3 +26,20 @@ export function safeGetItem<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
+
+/**
+ * Stringify + write a localStorage key, returning false instead of throwing
+ * when storage is full (QuotaExceededError) or unavailable. Without this, a
+ * quota error thrown mid-save can get caught by an unrelated try/catch further
+ * up and mistaken for success — the caller must check the return value to
+ * know the write actually happened.
+ */
+export function safeSetItem(key: string, value: unknown): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (err) {
+    console.warn(`[safeStorage] Failed to write localStorage key "${key}":`, err);
+    return false;
+  }
+}

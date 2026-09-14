@@ -3,7 +3,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
-import { FaChevronRight } from 'react-icons/fa';
+import { FaChevronRight, FaHome, FaChartBar, FaUsers } from 'react-icons/fa';
 import { GardenPlant } from '../components/garden/GardenPlant';
 import { STAGE_NAME_KEYS, type GrowthStage } from '../utils/growthStage';
 
@@ -38,10 +38,10 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
   const { t } = useLanguage();
   useSEO(`${t('aboutGarden.title')} · MFU Longevity Passport`, 'How the Longevity Garden turns your 4 health pillars into a growing Lamduan tree.');
 
-  const whereRows: Array<{ key: string; labelKey: string; page: PageType }> = [
-    { key: 'home', labelKey: 'aboutGarden.whereHome', page: 'home' },
-    { key: 'dashboard', labelKey: 'aboutGarden.whereDashboard', page: 'dashboard' },
-    { key: 'team', labelKey: 'aboutGarden.whereTeam', page: 'team' },
+  const whereRows: Array<{ key: string; labelKey: string; page: PageType; icon: React.ComponentType; color: string }> = [
+    { key: 'home', labelKey: 'aboutGarden.whereHome', page: 'home', icon: FaHome, color: '#3B82F6' },
+    { key: 'dashboard', labelKey: 'aboutGarden.whereDashboard', page: 'dashboard', icon: FaChartBar, color: '#F59E0B' },
+    { key: 'team', labelKey: 'aboutGarden.whereTeam', page: 'team', icon: FaUsers, color: '#10B981' },
   ];
 
   return (
@@ -119,18 +119,34 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
             {t('aboutGarden.whereHeading')}
           </h3>
           <div className="glass-card rounded-3xl overflow-hidden" style={{ height: 'auto', minHeight: 'fit-content' }}>
-            {whereRows.map((row, i) => (
-              <button
-                key={row.key}
-                type="button"
-                className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left"
-                style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border-glass)' }}
-                onClick={() => onNavigate(row.page)}
-              >
-                <span className="text-sm" style={{ color: 'var(--text-primary)' }}>{t(row.labelKey)}</span>
-                <FaChevronRight className="text-slate-400 text-sm flex-shrink-0" />
-              </button>
-            ))}
+            {whereRows.map((row, i) => {
+              // Both locales write these as "Name — description"; split so the
+              // name reads as a title and the rest as a subtitle instead of one
+              // run-on sentence crammed against the chevron.
+              const full = t(row.labelKey);
+              const sepIdx = full.indexOf(' — ');
+              const name = sepIdx === -1 ? full : full.slice(0, sepIdx);
+              const desc = sepIdx === -1 ? null : full.slice(sepIdx + 3);
+              const Icon = row.icon;
+              return (
+                <button
+                  key={row.key}
+                  type="button"
+                  className="where-find-row"
+                  style={{ borderTop: i === 0 ? 'none' : '1px solid var(--border-glass)' }}
+                  onClick={() => onNavigate(row.page)}
+                >
+                  <span className="where-find-icon" style={{ color: row.color, background: `${row.color}26` }}>
+                    <Icon />
+                  </span>
+                  <span className="where-find-text">
+                    <span className="where-find-name">{name}</span>
+                    {desc && <span className="where-find-desc">{desc}</span>}
+                  </span>
+                  <FaChevronRight className="where-find-chevron" />
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

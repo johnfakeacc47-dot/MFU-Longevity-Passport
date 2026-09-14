@@ -22,6 +22,10 @@ import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
 import { pullDailyLogs, schedulePushDailyLogs } from './services/dailyLogsSync'
 import { PWAInstallPrompt } from './components/PWAInstallPrompt'
 import { useDailyReset } from './hooks/useDailyReset'
+import { checkForNewlyUnlockedBadges } from './utils/healthCoach'
+import type { BadgeItem } from './utils/healthCoach'
+import { notifyBadgeUnlocked } from './services/notifications'
+import { BadgeUnlockPopup } from './components/BadgeUnlockPopup'
 
 // FoodRecognition pulls in TensorFlow.js (~1 MB gzip). Load it only when the
 // camera is actually opened, so it stays out of every page's critical path.
@@ -107,6 +111,9 @@ function App() {
   const [showPwaPrompt, setShowPwaPrompt] = useState(false)
   // FIX: Track auth loading state to prevent login flash bug
   const [isAuthLoading, setIsAuthLoading] = useState(true)
+  // Newly-unlocked badges awaiting their celebratory popup — shown one at a
+  // time in case more than one crosses its threshold in the same update.
+  const [badgePopupQueue, setBadgePopupQueue] = useState<BadgeItem[]>([])
 
   // Clears yesterday's meals/activities/sleep logs on day rollover so they
   // don't keep bleeding into "today's" score. Previously written but never wired up.
@@ -212,6 +219,19 @@ function App() {
         console.error('Failed to auto-sync score to Supabase:', error)
       }
       schedulePushDailyLogs()
+
+      // Achievement badges are recomputed fresh from local logs on every
+      // render with nothing remembering what was already unlocked — this is
+      // the one place that actually notices the moment one crosses its
+      // threshold. Queue a celebratory popup for right now, and fire the real
+      // notification (bell + push) so it's not lost if the app isn't open.
+      const newlyUnlocked = checkForNewlyUnlockedBadges()
+      if (newlyUnlocked.length > 0) {
+        setBadgePopupQueue((q) => [...q, ...newlyUnlocked])
+        for (const badge of newlyUnlocked) {
+          void notifyBadgeUnlocked(badge.id)
+        }
+      }
     }
 
     window.addEventListener('healthDataUpdated', handleHealthUpdate)
@@ -363,6 +383,12 @@ function App() {
           </FoodRecognitionErrorBoundary>
         )}
         <PWAInstallPrompt triggerOnLogin={showPwaPrompt} />
+        {badgePopupQueue.length > 0 && (
+          <BadgeUnlockPopup
+            badge={badgePopupQueue[0]}
+            onClose={() => setBadgePopupQueue((q) => q.slice(1))}
+          />
+        )}
         <Suspense fallback={null}>
           <HealthChatWidget hidden={currentPage === 'login' || showFoodRecognition} />
         </Suspense>

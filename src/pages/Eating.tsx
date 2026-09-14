@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
-import { safeGetItem } from '../utils/safeStorage';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import type { MealLog, Macros } from '../utils/longevityScore';
 import { getTodayWater, saveTodayWater } from '../utils/healthCoach';
 import { mealDisplayName } from '../utils/foodNames';
@@ -233,7 +233,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   const deleteMeal = (globalIdx: number) => {
     const all = [...meals];
     all.splice(globalIdx, 1);
-    localStorage.setItem('meals', JSON.stringify(all));
+    safeSetItem('meals', all);
     setMeals(all);
     window.dispatchEvent(new Event('healthDataUpdated'));
     setSelectedMeal(null);
@@ -242,7 +242,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   const saveMealEdit = (updated: MealLog, globalIdx: number) => {
     const all = [...meals];
     all[globalIdx] = updated;
-    localStorage.setItem('meals', JSON.stringify(all));
+    if (!safeSetItem('meals', all)) return; // storage full — keep the on-screen state untouched rather than claim the edit saved
     setMeals(all);
     window.dispatchEvent(new Event('healthDataUpdated'));
     setSelectedMeal(null);
@@ -459,7 +459,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                 )}
                 <div className="ev-hist-body">
                   <div className="ev-hist-header">
-                    <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
+                    <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h4>
                     <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
                   </div>
                   <div className="ev-hist-cals">{meal.calories} kcal</div>
@@ -743,7 +743,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                   )}
                   <div className="ev-hist-body">
                     <div className="ev-hist-header">
-                      <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h4>
+                      <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h4>
                       <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
                     </div>
                     <div className="ev-hist-cals">{meal.calories} kcal</div>
@@ -915,7 +915,7 @@ const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDele
       <div className="ev-modal" onClick={e => e.stopPropagation()}>
         <div className="ev-modal-header">
           <button className="ev-modal-close" onClick={onClose}><FaXmark /></button>
-          <h2>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal')}</h2>
+          <h2>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h2>
           <span className="ev-meal-time-badge">{fmtTime(meal.timestamp)}</span>
         </div>
         {meal.imageUrl && <img src={meal.imageUrl} alt={meal.foodName} className="ev-modal-img" />}

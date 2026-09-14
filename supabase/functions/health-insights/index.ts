@@ -231,6 +231,7 @@ serve(async (req: Request) => {
       .select('*')
       .eq('user_id', user.id)
       .eq('period_type', periodType)
+      .eq('language', lang)
       .order('period_end', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -293,11 +294,12 @@ serve(async (req: Request) => {
         period_type: periodType,
         period_start: from,
         period_end: to,
+        language: lang,
         payload,
         model,
         generated_at: new Date().toISOString(),
       },
-      { onConflict: 'user_id,period_type,period_end' },
+      { onConflict: 'user_id,period_type,period_end,language' },
     )
 
     return json(

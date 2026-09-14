@@ -33,17 +33,45 @@
 .notif-panel-header h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--text-primary); }
 .notif-mark-all { background: none; border: none; color: var(--accent); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 
-.notif-panel-body { flex: 1; overflow-y: auto; padding: 8px; }
+.notif-panel-body { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 2px; }
 .notif-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 48px 20px; }
 
+/* "Enable on this device" — surfaced right where the user is already looking
+   at notifications, not just buried in Settings. Hidden once subscribed. */
+.notif-push-banner {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  text-align: left; border: none; border-radius: 14px; cursor: pointer;
+  padding: 12px; margin-bottom: 6px;
+  background: var(--accent-soft, rgba(56,189,248,0.10));
+  border: 1px solid var(--accent, #38BDF8);
+}
+.notif-push-banner:disabled { opacity: 0.7; cursor: default; }
+.notif-push-banner-icon {
+  width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent, #38BDF8); color: #fff; font-size: 15px;
+}
+.notif-push-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.notif-push-banner-text strong { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.notif-push-banner-text span:last-child { font-size: 11.5px; color: var(--text-secondary); line-height: 1.4; }
+.notif-push-banner-chevron { color: var(--accent, #38BDF8); font-size: 13px; flex-shrink: 0; }
+.notif-push-spin { animation: spin 1s linear infinite; color: var(--accent, #38BDF8); flex-shrink: 0; }
+.notif-push-error { font-size: 11.5px; color: var(--color-danger, #EF4444); line-height: 1.5; margin: -2px 0 8px; padding: 0 4px; }
+
 .notif-item {
-  width: 100%; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  width: 100%; display: flex; align-items: flex-start; gap: 10px;
   text-align: left; background: none; border: none; border-radius: 14px;
   padding: 12px; cursor: pointer;
 }
 .notif-item:hover { background: var(--surface-hover); }
 .notif-item.is-unread { background: var(--accent-soft); }
-.notif-item-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.notif-item-icon {
+  width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 14px;
+}
+.notif-item-main { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.notif-item-title-row { display: flex; align-items: baseline; gap: 6px; }
 .notif-item-title { font-size: 13.5px; font-weight: 700; color: var(--text-primary); }
+.notif-item-count { font-size: 11px; font-weight: 700; color: var(--text-tertiary); }
 .notif-item-body { font-size: 12.5px; color: var(--text-secondary); line-height: 1.4; }
 .notif-item-time { font-size: 10.5px; color: var(--text-tertiary); white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
