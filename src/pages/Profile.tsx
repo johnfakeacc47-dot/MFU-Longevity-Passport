@@ -3,7 +3,7 @@ import {
   FaUser, FaWeight, FaRulerVertical, FaEdit, FaBars, FaTimes,
   FaShieldAlt, FaSignOutAlt, FaGlobe, FaChevronRight,
   FaHeartbeat, FaBullseye, FaUsers, FaInfoCircle, FaBell,
-  FaDumbbell, FaAppleAlt, FaFire, FaCheck, FaSeedling,
+  FaDumbbell, FaAppleAlt, FaFire, FaCheck, FaSeedling, FaAddressCard,
 } from 'react-icons/fa';
 import {
   isSupabaseConfigured,
@@ -21,7 +21,7 @@ import '../styles/Profile.css';
 type PageType =
   | 'login' | 'home' | 'eating' | 'dashboard' | 'team'
   | 'profile' | 'edit-profile' | 'user-management'
-  | 'privacy-settings' | 'set-goals' | 'about-tracker' | 'about-garden' | 'activity' | 'sleep' | 'settings' | 'eating-food-log' | 'eating-macros' | 'eating-water' | 'eating-schedule' | 'eating-history';
+  | 'privacy-settings' | 'set-goals' | 'about-tracker' | 'about-garden' | 'about-us' | 'activity' | 'sleep' | 'settings' | 'eating-food-log' | 'eating-macros' | 'eating-water' | 'eating-schedule' | 'eating-history';
 
 interface ProfileProps {
   onNavigate: (page: PageType) => void;
@@ -528,6 +528,12 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           <button className="pv2-drawer-item" onClick={() => { setDrawerOpen(false); onNavigate('about-garden'); }}>
             <span className="pv2-drawer-item-icon"><FaSeedling /></span>
             <span className="pv2-drawer-item-label">{t('profile.aboutGarden')}</span>
+            <FaChevronRight className="pv2-drawer-item-arrow" />
+          </button>
+
+          <button className="pv2-drawer-item" onClick={() => { setDrawerOpen(false); onNavigate('about-us'); }}>
+            <span className="pv2-drawer-item-icon"><FaAddressCard /></span>
+            <span className="pv2-drawer-item-label">{t('aboutUs.title')}</span>
             <FaChevronRight className="pv2-drawer-item-arrow" />
           </button>
 
