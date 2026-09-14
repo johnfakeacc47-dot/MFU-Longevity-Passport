@@ -49,9 +49,10 @@ export const getLeaderboard = async () => {
 };
 
 // Team invites are handled by handle/QR code — see services/teamInvite.ts, which
-// calls the add_team_member_by_handle RPC. The old email lookup was removed: RLS
-// on `profiles` hides any user whose score is private, so `.eq('email', …)`
-// returned nothing for almost everyone.
+// calls the request_team_member_by_handle RPC (a pending request the target must
+// approve — see supabase/migrations/0013_team_request_approval.sql / QA-008). The
+// old email lookup was removed: RLS on `profiles` hides any user whose score is
+// private, so `.eq('email', …)` returned nothing for almost everyone.
 
 export const getMyTeamLeaderboard = async () => {
   if (!supabase) return [];
@@ -74,17 +75,18 @@ export const getMyTeamLeaderboard = async () => {
   const memberIds = teamMembers.map(tm => tm.member_id);
   memberIds.push(user.id);
 
-  // 2. Fetch profiles for all member IDs. `profiles` (not the public-only
-  // `leaderboard_profiles` view) -- "My Team" is a mutual, opted-in
-  // relationship (see migration 0006/0007), so a teammate who hasn't made
-  // their score public should still show up here, just with points
-  // hidden -- mapMember() below already does that. leaderboard_profiles
-  // stays reserved for the actual public "All Teams" leaderboard.
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('id, name, total_points, avatar_url, role, is_score_public')
-    .in('id', memberIds)
-    .order('total_points', { ascending: false });
+  // 2. Fetch profiles for all member IDs, via get_team_profiles() (safe
+  // columns only) rather than the raw `profiles` table -- the RLS policy
+  // that used to grant teammates the raw table exposed the whole row (email,
+  // phone, national ID, address...), not just what's needed here. See
+  // 0015_privacy_hardening.sql. "My Team" is a mutual, opted-in relationship
+  // (migration 0006/0007), so a teammate who hasn't made their score public
+  // should still show up here, just with points hidden -- mapMember() below
+  // already does that. leaderboard_profiles stays reserved for the actual
+  // public "All Teams" leaderboard.
+  const { data: profilesRaw, error: profilesError } = await supabase
+    .rpc('get_team_profiles', { p_ids: memberIds });
+  const profiles = (profilesRaw ?? []).sort((a: any, b: any) => (b.total_points ?? 0) - (a.total_points ?? 0));
 
   if (profilesError) {
     console.error('Error fetching team profiles:', profilesError);
@@ -382,25 +384,43 @@ export const updateScoreVisibility = async (isPublic: boolean) => {
   return data;
 };
 
+// Lets server-generated content (notifications — see LanguageContext.tsx,
+// which calls this on every language switch) know which language to use.
+// profiles never stored this before (QA-001 — notifications always came
+// back in English regardless of the UI language).
+export const updateUserLanguage = async (language: 'en' | 'th') => {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ language })
+    .eq('id', user.id);
+
+  if (error) console.error('Error syncing language preference:', error);
+};
+
 // ── Account Deletion (Part 1: Data) ──────────────────────────
+// Used to delete team_members/health_scores/profiles one table at a time as
+// the calling user -- a list that had to be hand-kept in sync with every new
+// user-owned table forever, and it silently broke: team_members' direct
+// DELETE grant for `authenticated` was revoked (closing a different privacy
+// hole -- see 0013), so this failed on the very first table and account
+// deletion stopped working entirely. Routed through a SECURITY DEFINER RPC
+// instead -- it deletes only the profiles row, and every user-owned table's
+// ON DELETE CASCADE (checked directly against the schema, not assumed) takes
+// care of the rest, regardless of what the calling role can do to any one
+// child table. See 0015_privacy_hardening.sql.
 export const deleteUserAccount = async () => {
   if (!supabase) throw new Error('Supabase not configured');
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Delete in order to respect potential foreign-key constraints
-  const tables = ['team_members', 'health_scores', 'profiles'] as const;
-
-  for (const table of tables) {
-    const { error } = await supabase
-      .from(table)
-      .delete()
-      .eq(table === 'profiles' ? 'id' : 'user_id', user.id);
-
-    if (error) {
-      console.error(`Error deleting from ${table}:`, error);
-      throw error;
-    }
+  const { error } = await supabase.rpc('delete_own_account_data');
+  if (error) {
+    console.error('Error deleting account data:', error);
+    throw error;
   }
 
   return { success: true, userId: user.id };

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FaExclamationTriangle, FaFileAlt, FaHandshake, FaListAlt, FaShieldAlt, FaSkullCrossbones } from 'react-icons/fa';
+import {
+  FaExclamationTriangle, FaFileAlt, FaHandshake, FaListAlt, FaShieldAlt, FaSkullCrossbones,
+  FaChartLine, FaClipboardList, FaRobot, FaDownload, FaTrashAlt, FaFileExport, FaExternalLinkAlt,
+} from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
@@ -91,13 +94,29 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
     // Step 2 confirmed — proceed with deletion
     setIsDeleting(true);
     try {
-      // Part 1: Delete data from tables
+      // Part 1: Delete data from tables (profiles + everything cascading
+      // from it — team_members, health_scores, notifications, etc.)
       await deleteUserAccount();
 
-      // Part 2: Call Edge Function to delete auth user
+      // Part 2: Edge Function deletes the actual auth.users row (also
+      // cascades ai_reports/chat_messages/daily_logs, which hang off
+      // auth.users rather than profiles). If Part 1 succeeded but this
+      // fails, the bulk of their data is already gone, but the login
+      // credential and those 3 tables would be left behind — say so
+      // honestly instead of quietly treating it as a full success.
+      let authDeleteFailed = false;
       if (supabase) {
         const { error: fnError } = await supabase.functions.invoke('delete-user', { body: {} });
-        if (fnError) console.error('delete-user function error:', fnError);
+        if (fnError) {
+          console.error('delete-user function error:', fnError);
+          authDeleteFailed = true;
+        }
+      }
+
+      if (authDeleteFailed) {
+        alert(isTh
+          ? 'ลบข้อมูลสุขภาพของคุณเรียบร้อยแล้ว แต่ไม่สามารถลบบัญชีเข้าสู่ระบบได้อย่างสมบูรณ์ กรุณาติดต่อฝ่ายสนับสนุนเพื่อปิดบัญชีให้เสร็จสมบูรณ์'
+          : "Your health data was deleted, but we couldn't fully remove your login. Please contact support to finish closing your account.");
       }
 
       // Clear local storage and redirect
@@ -129,11 +148,12 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <span className="section-title font-bold">{isTh ? 'การตั้งค่าการแบ่งปันข้อมูล' : 'Sharing Preferences'}</span>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div className="flex-1 pr-4">
-                <div className="font-bold text-sm">{isTh ? 'แชร์คะแนนการชะลอวัย' : 'Share Longevity Score'}</div>
-                <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'อนุญาตให้สมาชิกในทีมเห็นคะแนนรวมของคุณ' : 'Allow team members to see your overall score.'}</div>
+          <div className="pv-toggle-list">
+            <div className="pv-toggle-row">
+              <span className="pv-row-icon" style={{ color: '#3B82F6', background: 'rgba(59,130,246,0.15)' }}><FaChartLine /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'แชร์คะแนนการชะลอวัย' : 'Share Longevity Score'}</div>
+                <div className="pv-row-desc">{isTh ? 'อนุญาตให้สมาชิกในทีมเห็นคะแนนรวมของคุณ' : 'Allow team members to see your overall score.'}</div>
               </div>
               <label className="toggle-switch">
                 <input
@@ -146,10 +166,11 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
               </label>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t" style={{ borderTopColor: 'var(--border-glass)' }}>
-              <div className="flex-1 pr-4">
-                <div className="font-bold text-sm">{isTh ? 'แชร์รายละเอียดพฤติกรรม' : 'Share Detailed Habits'}</div>
-                <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'แสดงให้สมาชิกในทีมเห็นระหว่างทำภารกิจร่วมกัน' : 'Visible to team members during shared missions.'}</div>
+            <div className="pv-toggle-row">
+              <span className="pv-row-icon" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.15)' }}><FaClipboardList /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'แชร์รายละเอียดพฤติกรรม' : 'Share Detailed Habits'}</div>
+                <div className="pv-row-desc">{isTh ? 'แสดงให้สมาชิกในทีมเห็นระหว่างทำภารกิจร่วมกัน' : 'Visible to team members during shared missions.'}</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={shareHabits} onChange={(e) => setShareHabits(e.target.checked)} />
@@ -157,10 +178,11 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
               </label>
             </div>
 
-            <div className="flex justify-between items-center pt-4 border-t" style={{ borderTopColor: 'var(--border-glass)' }}>
-              <div className="flex-1 pr-4">
-                <div className="font-bold text-sm">{isTh ? 'การมีส่วนร่วมพัฒนาระบบ AI' : 'AI Model Contribution'}</div>
-                <div className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'แบ่งปันข้อมูลการแก้ไขโดยไม่ระบุตัวตนเพื่อปรับปรุงการจดจำอาหาร' : 'Share anonymous corrections to improve food recognition.'}</div>
+            <div className="pv-toggle-row">
+              <span className="pv-row-icon" style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.15)' }}><FaRobot /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'การมีส่วนร่วมพัฒนาระบบ AI' : 'AI Model Contribution'}</div>
+                <div className="pv-row-desc">{isTh ? 'แบ่งปันข้อมูลการแก้ไขโดยไม่ระบุตัวตนเพื่อปรับปรุงการจดจำอาหาร' : 'Share anonymous corrections to improve food recognition.'}</div>
               </div>
               <label className="toggle-switch">
                 <input type="checkbox" checked={anonymousAI} onChange={(e) => setAnonymousAI(e.target.checked)} />
@@ -176,18 +198,27 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
             <span className="section-icon"><FaFileAlt /></span>
             <span className="section-title font-bold">{isTh ? 'สิทธิของคุณตามกฎหมายคุ้มครองข้อมูลส่วนบุคคล' : 'Your Rights (PDPA)'}</span>
           </div>
-          <div className="grid grid-cols-1 gap-4 mt-4">
-            <div className="p-3 rounded-xl border" style={{ background: 'var(--surface-soft)', borderColor: 'var(--border-glass)' }}>
-              <div className="text-sm font-bold">{isTh ? 'สิทธิในการเข้าถึงข้อมูล' : 'Right to Access'}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'คุณสามารถขอสำเนาข้อมูลส่วนบุคคลทั้งหมดที่เราจัดเก็บไว้เกี่ยวกับคุณได้ตลอดเวลา' : 'You can request a copy of all personal data we store about you at any time.'}</p>
+          <div className="pv-rights-list mt-4">
+            <div className="pv-rights-item">
+              <span className="pv-row-icon" style={{ color: '#3B82F6', background: 'rgba(59,130,246,0.15)' }}><FaDownload /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'สิทธิในการเข้าถึงข้อมูล' : 'Right to Access'}</div>
+                <p className="pv-row-desc">{isTh ? 'คุณสามารถขอสำเนาข้อมูลส่วนบุคคลทั้งหมดที่เราจัดเก็บไว้เกี่ยวกับคุณได้ตลอดเวลา' : 'You can request a copy of all personal data we store about you at any time.'}</p>
+              </div>
             </div>
-            <div className="p-3 rounded-xl border" style={{ background: 'var(--surface-soft)', borderColor: 'var(--border-glass)' }}>
-              <div className="text-sm font-bold">{isTh ? 'สิทธิในการลบข้อมูล' : 'Right to Erasure'}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'คุณมีสิทธิขอให้ลบบันทึกข้อมูลสุขภาพของคุณออกจากระบบอย่างถาวร' : 'You have the right to request permanent deletion of your health records.'}</p>
+            <div className="pv-rights-item">
+              <span className="pv-row-icon" style={{ color: '#EF4444', background: 'rgba(239,68,68,0.15)' }}><FaTrashAlt /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'สิทธิในการลบข้อมูล' : 'Right to Erasure'}</div>
+                <p className="pv-row-desc">{isTh ? 'คุณมีสิทธิขอให้ลบบันทึกข้อมูลสุขภาพของคุณออกจากระบบอย่างถาวร' : 'You have the right to request permanent deletion of your health records.'}</p>
+              </div>
             </div>
-            <div className="p-3 rounded-xl border" style={{ background: 'var(--surface-soft)', borderColor: 'var(--border-glass)' }}>
-              <div className="text-sm font-bold">{isTh ? 'สิทธิในการถ่ายโอนข้อมูล' : 'Data Portability'}</div>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'ส่งออกประวัติกิจกรรมและโภชนาการของคุณในรูปแบบไฟล์มาตรฐาน' : 'Export your activity and nutrition history in standard digital formats.'}</p>
+            <div className="pv-rights-item">
+              <span className="pv-row-icon" style={{ color: '#10B981', background: 'rgba(16,185,129,0.15)' }}><FaFileExport /></span>
+              <div className="pv-row-text">
+                <div className="pv-row-title">{isTh ? 'สิทธิในการถ่ายโอนข้อมูล' : 'Data Portability'}</div>
+                <p className="pv-row-desc">{isTh ? 'ส่งออกประวัติกิจกรรมและโภชนาการของคุณในรูปแบบไฟล์มาตรฐาน' : 'Export your activity and nutrition history in standard digital formats.'}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -209,7 +240,10 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
               <>We use industry-standard encryption to protect your data. Your specific health logs are <strong>never</strong> shared with third parties without your explicit consent.</>
             )}
           </p>
-          <button className="mt-4 text-xs font-bold text-blue-700 underline">{isTh ? 'อ่านนโยบายความเป็นส่วนตัวฉบับเต็ม' : 'Read Full Privacy Policy'}</button>
+          <button type="button" className="pv-policy-link">
+            {isTh ? 'อ่านนโยบายความเป็นส่วนตัวฉบับเต็ม' : 'Read Full Privacy Policy'}
+            <FaExternalLinkAlt />
+          </button>
         </div>
 
         {/* Danger Zone */}
