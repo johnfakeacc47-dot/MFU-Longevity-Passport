@@ -7241,4 +7241,81 @@ section + section {
 .pv-policy-link svg { font-size: 11px; }
 .pv-policy-link:hover { background: var(--surface-hover); border-color: var(--accent, #3B82F6); }
 
+/* ── About Us page ── */
+.about-us-crest {
+  width: 88px; height: 88px; border-radius: 22px;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(185,28,28,0.28);
+}
+.about-us-person {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px; border-radius: 18px;
+  background: var(--surface-soft); border: 1px solid var(--border-glass);
+  text-decoration: none; color: inherit;
+  transition: var(--transition);
+}
+.about-us-person:hover { background: var(--surface-hover); border-color: var(--accent, #3B82F6); }
+.about-us-person--advisor { border-color: rgba(234,179,8,0.35); }
+.about-us-avatar {
+  width: 46px; height: 46px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 800; color: #fff;
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+}
+.about-us-avatar--advisor { background: linear-gradient(135deg, #EAB308, #F59E0B); }
+.about-us-person-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.about-us-person-name { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.about-us-person-role { font-size: 11.5px; font-weight: 700; color: var(--accent, #3B82F6); text-transform: uppercase; letter-spacing: 0.4px; }
+.about-us-person-contacts { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+.about-us-contact {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-secondary);
+}
+.about-us-contact svg { font-size: 10px; flex-shrink: 0; }
+.about-us-external-icon { font-size: 12px; color: var(--text-tertiary); flex-shrink: 0; }
+
+/* Org chart: advisor node, a trunk line down, then 3 sibling nodes on one
+   level, each with its own stub line up to a shared horizontal bar. On
+   narrow phone widths the 3-column row collapses to a single column and the
+   shared bar hides — each card keeps just its own stub, which lines up under
+   the one above it and still reads as one connected hierarchy, just vertical
+   instead of branching. */
+.org-chart { display: flex; flex-direction: column; align-items: center; width: 100%; }
+.org-chart-advisor { width: 100%; max-width: 380px; }
+.org-chart-trunk {
+  width: 3px; height: 22px; flex-shrink: 0;
+  background: linear-gradient(180deg, #EAB308, var(--accent, #3B82F6));
+}
+.org-chart-children {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 14px;
+  position: relative;
+}
+.org-chart-children::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16.6%; right: 16.6%;
+  height: 3px;
+  background: var(--accent, #3B82F6);
+}
+.org-chart-child { position: relative; padding-top: 16px; }
+.org-chart-child-stub {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 16px;
+  background: var(--accent, #3B82F6);
+}
+.org-chart-child .about-us-person { flex-direction: column; text-align: center; padding: 16px 12px; }
+.org-chart-child .about-us-person-contacts { align-items: center; }
+.org-chart-child .about-us-contact { justify-content: center; }
+
+@media (max-width: 640px) {
+  .org-chart-children { grid-template-columns: 1fr; gap: 20px; }
+  .org-chart-children::before { display: none; }
+  .org-chart-child .about-us-person { flex-direction: row; text-align: left; padding: 14px; }
+  .org-chart-child .about-us-person-contacts { align-items: flex-start; }
+  .org-chart-child .about-us-contact { justify-content: flex-start; }
+}
+
 

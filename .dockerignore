@@ -1,0 +1,26 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# Not part of the frontend image — see the Dockerfile's top comment.
+backend
+dataset
+thai_food_model.keras
+thai_food_model_savedmodel
+*.ipynb
+
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+.claude
+.agent
+.agents
+.venv
+.mcp.json
+
+*.md
