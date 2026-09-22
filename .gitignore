@@ -35,3 +35,12 @@ dist/
 .agents/
 skills-lock.json
 .claude/settings.local.json
+
+# ML training assets - deliberately untracked.
+# These once bloated the repo history to 173MB and were stripped out of it.
+# Keep local copies outside the repo; ask the team for the dataset.
+# NOTE: public/model/ is intentionally NOT ignored - the browser fetches it at runtime.
+dataset/
+thai_food_model.keras
+thai_food_model_savedmodel/
+public/model_backup/
