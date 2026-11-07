@@ -6,7 +6,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   FaBell, FaUtensils, FaTint, FaMoon, FaRunning, FaClock, FaUserPlus,
-  FaCheckCircle, FaTrophy, FaMobileAlt, FaChevronRight, FaSpinner,
+  FaCheckCircle, FaTrophy, FaMobileAlt, FaChevronRight, FaSpinner, FaTimes,
 } from 'react-icons/fa';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { supabase, isSupabaseConfigured } from '../../services/supabaseClient';
@@ -127,6 +127,13 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigate }
     setItems(await fetchNotifications(30));
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
   const groups = useMemo(() => groupNotifications(items), [items]);
 
   const handleGroupClick = async (g: NotifGroup) => {
@@ -183,9 +190,16 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigate }
           <div className="notif-panel" onClick={(e) => e.stopPropagation()}>
             <div className="notif-panel-header">
               <h3>{t('notifications.title')}</h3>
-              {unread > 0 && (
-                <button type="button" className="notif-mark-all" onClick={handleMarkAll}>{t('notifications.markAllRead')}</button>
-              )}
+              <div className="notif-panel-actions">
+                {unread > 0 && (
+                  <button type="button" className="notif-mark-all" onClick={handleMarkAll}>{t('notifications.markAllRead')}</button>
+                )}
+                {/* Tapping the dimmed overlay also closes, but on a phone the
+                    panel is full-width (min(380px, 100%)) and covers all of it. */}
+                <button type="button" className="notif-close-btn" onClick={() => setOpen(false)} aria-label={t('common.close')}>
+                  <FaTimes aria-hidden="true" />
+                </button>
+              </div>
             </div>
             <div className="notif-panel-body">
               {pushSupported && pushEnabled === false && (
