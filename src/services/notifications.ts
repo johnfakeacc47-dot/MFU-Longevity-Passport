@@ -157,13 +157,45 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-/** True once this device already has an active push subscription. */
+// Records (or refreshes) a device's push subscription server-side. Keyed on
+// the endpoint, so re-sending the same subscription is idempotent and just
+// bumps last_seen_at.
+async function saveSubscription(sub: PushSubscription, userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  const subJson = sub.toJSON();
+  const { error } = await supabase.from('push_subscriptions').upsert({
+    user_id: userId,
+    endpoint: sub.endpoint,
+    p256dh: subJson.keys?.p256dh ?? '',
+    auth: subJson.keys?.auth ?? '',
+    last_seen_at: new Date().toISOString(),
+  }, { onConflict: 'endpoint' });
+  if (error) { console.error('saving push subscription failed:', error); return false; }
+  return true;
+}
+
+/**
+ * True once this device has an active push subscription that the server
+ * knows about. A browser-side subscription on its own isn't enough: the
+ * server only ever delivers to rows in push_subscriptions, and the two can
+ * drift apart (pushManager.subscribe() succeeded but the upsert failed, the
+ * row was deleted after a 404/410 from the push service, the user signed in
+ * to a different account on the same device...). So whenever the browser
+ * already holds a subscription, re-send it — that heals any of those cases
+ * on the next app open and keeps last_seen_at fresh — and only report
+ * "enabled" if the server accepted it, so a failure shows the Enable button
+ * again instead of a toggle that says on while nothing arrives.
+ */
 export async function isPushSubscribed(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
   try {
     const registration = await navigator.serviceWorker.ready;
     const sub = await registration.pushManager.getSubscription();
-    return !!sub;
+    if (!sub) return false;
+    if (!supabase) return true;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return true;
+    return await saveSubscription(sub, user.id);
   } catch {
     return false;
   }
@@ -210,15 +242,7 @@ export async function subscribeToPush(): Promise<PushSubscribeResult> {
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
     }
-    const subJson = sub.toJSON();
-    const { error } = await supabase.from('push_subscriptions').upsert({
-      user_id: user.id,
-      endpoint: sub.endpoint,
-      p256dh: subJson.keys?.p256dh ?? '',
-      auth: subJson.keys?.auth ?? '',
-      last_seen_at: new Date().toISOString(),
-    }, { onConflict: 'endpoint' });
-    if (error) { console.error('saving push subscription failed:', error); return { ok: false, reason: 'error' }; }
+    if (!(await saveSubscription(sub, user.id))) return { ok: false, reason: 'error' };
     return { ok: true };
   } catch (err) {
     console.error('subscribeToPush failed:', err);
