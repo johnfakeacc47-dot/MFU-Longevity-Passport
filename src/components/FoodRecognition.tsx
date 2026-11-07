@@ -5,7 +5,7 @@ import { LuCamera, LuImage, LuSparkles, LuX, LuFlame, LuHeart, LuApple, LuRefres
 import { THAI_FOOD_CLASSES } from '../config/foodClasses';
 import { useLanguage } from '../contexts/LanguageContext';
 import { healthApi } from '../services/healthApi';
-import { recognizeFoodWithAi, downscaleForStorage, type AiFoodResult } from '../services/foodAiApi';
+import { recognizeFoodWithAi, downscaleForStorage, FoodAiError, type AiFoodResult } from '../services/foodAiApi';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import { translateFoodLabel, FOOD_NAME_KEYS } from '../utils/foodNames';
 import '../styles/FoodRecognition.css';
@@ -61,12 +61,28 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     safeGetItem<RecognitionEngine>(ENGINE_KEY, 'local') === 'ai' ? 'ai' : 'local',
   );
   const [aiResult, setAiResult] = useState<AiFoodResult | null>(null);
+  // Set once a meal has been written so a second tap on "Log meal" (during the
+  // 1.2 s success pause before the modal closes) can't save a duplicate.
+  const [mealLogged, setMealLogged] = useState<boolean>(false);
+  const savingRef = useRef(false);
+  // Flipped when the user closes the modal (or it unmounts) so an in-flight
+  // recognition result is dropped instead of calling setState on a dead modal.
+  const cancelledRef = useRef(false);
+  const engineRef = useRef<RecognitionEngine>('local');
   const { t } = useLanguage();
 
   const chooseEngine = (next: RecognitionEngine) => {
+    engineRef.current = next;
     setEngine(next);
     try { localStorage.setItem(ENGINE_KEY, next); } catch { /* storage unavailable */ }
   };
+  engineRef.current = engine;
+
+  const handleClose = () => {
+    cancelledRef.current = true;
+    onClose();
+  };
+  useEffect(() => () => { cancelledRef.current = true; }, []);
 
   // Cycling status messages while the on-device model runs. The AI path sets its
   // own single message and shouldn't be overwritten by these.
@@ -200,7 +216,12 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       }
     } catch (error) {
       console.error('Error initializing model:', error);
-      alert(t('food.alertModelUnavailable'));
+      // The user may already have tapped "Use AI instead" while we were loading.
+      if (engineRef.current === 'local' && !cancelledRef.current) {
+        setUploadStatus('error');
+        setErrorMessage(t('food.errModelSwitchedToAi'));
+        chooseEngine('ai');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -396,10 +417,11 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setStatusMessage(t('food.stCompleteBang'));
 
     } catch (error) {
+      // Technical detail goes to the console only — the user sees a localized line.
       console.error('Error during prediction:', error);
-      const errorMsg = (error as Error).message || 'Unknown error';
+      if (cancelledRef.current) return;
       setUploadStatus('error');
-      setErrorMessage(`${t('food.stCannotAnalyze')}${errorMsg}`);
+      setErrorMessage(t('food.stCannotAnalyze').replace(/[:：]\s*$/, ''));
     } finally {
       // Cleanup tensors safely
       if (tensor) {
@@ -435,6 +457,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
 
     try {
       const r = await recognizeFoodWithAi(imageUrl, hint);
+      if (cancelledRef.current) return; // modal was closed mid-flight — drop the result
       if (!r.isFood) {
         setUploadStatus('error');
         setErrorMessage(t('food.stNoFood'));
@@ -459,11 +482,21 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setUploadStatus('success');
       setStatusMessage(t('food.stAiDone'));
     } catch (err) {
+      console.error('AI recognition failed:', err);
+      if (cancelledRef.current) return;
+      const code = err instanceof FoodAiError ? err.code : 'server';
+      const msg =
+        code === 'offline' ? t('food.errAiOffline')
+        : code === 'not_signed_in' ? t('food.errAiNotSignedIn')
+        : code === 'timeout' ? t('food.stAiCannot')
+        : t('food.errAiServer');
       setUploadStatus('error');
-      setErrorMessage((err as Error).message || t('food.stAiCannot'));
+      setErrorMessage(msg);
     } finally {
-      setIsProcessing(false);
-      setUploadProgress(100);
+      if (!cancelledRef.current) {
+        setIsProcessing(false);
+        setUploadProgress(100);
+      }
     }
   };
 
@@ -508,6 +541,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setStatusMessage(t('food.stUploadingPrep'));
     setUploadProgress(20);
     setErrorMessage('');
+    setMealLogged(false);
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
@@ -569,7 +603,9 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
       setIsCameraActive(true);
     } catch (error) {
       console.error('Error accessing camera:', error);
-      alert(t('food.alertCameraDenied'));
+      setIsCameraActive(false);
+      setUploadStatus('error');
+      setErrorMessage(t('food.alertCameraDenied'));
     }
   };
 
@@ -619,6 +655,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setStatusMessage(t('food.stCapturing'));
     setUploadProgress(50);
     setErrorMessage('');
+    setMealLogged(false);
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
@@ -643,6 +680,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
     setStatusMessage('');
     setErrorMessage('');
     setUploadProgress(0);
+    setMealLogged(false);
     setImagePreview(null);
     setPredictions([]);
     setNutritionData(null);
@@ -650,14 +688,14 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
   };
 
   return (
-    <div className="food-recognition-overlay" onClick={(e) => { if (e.target === e.currentTarget && uploadStatus !== 'uploading' && uploadStatus !== 'processing') onClose(); }}>
+    <div className="food-recognition-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="food-recognition-modal">
-        {/* Top-Right Absolute Close Button */}
-        <button 
-          className="close-btn-refined" 
-          onClick={onClose} 
-          disabled={uploadStatus === 'uploading' || uploadStatus === 'processing'}
-          aria-label="Close"
+        {/* Top-Right Absolute Close Button — never disabled: the user can always
+            leave, and any in-flight recognition result is dropped (cancelledRef). */}
+        <button
+          className="close-btn-refined"
+          onClick={handleClose}
+          aria-label={t('common.close')}
         >
           <LuX />
         </button>
@@ -689,6 +727,15 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                 <LuLoader className="spinner-lu" />
               </div>
               <p className="loading-text">{t('food.loading')}</p>
+              <button
+                type="button"
+                className="health-btn-secondary"
+                style={{ marginTop: 12 }}
+                onClick={() => chooseEngine('ai')}
+              >
+                <LuSparkles className="btn-icon" />
+                <span>{t('food.useAiInstead')}</span>
+              </button>
             </div>
           )}
 
@@ -776,7 +823,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                         {t('food.aiAnalyze')}
                       </p>
 
-                      <div className="engine-toggle" role="group" aria-label="Recognition engine">
+                      <div className="engine-toggle" role="group" aria-label={t('food.a11yEngineGroup')}>
                         <button
                           type="button"
                           className={`engine-opt ${engine === 'local' ? 'engine-opt--active' : ''}`}
@@ -880,7 +927,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                     accept="image/*"
                     onChange={handleFileUpload}
                     style={{ display: 'none' }}
-                    aria-label="Upload food image"
+                    aria-label={t('food.a11yUploadInput')}
                   />
                 </div>
               )}
@@ -914,7 +961,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       <span>{t('food.captureBtn')}</span>
                     </button>
 
-                    <button className="flip-btn-clean" onClick={flipCamera} aria-label="Flip Camera">
+                    <button className="flip-btn-clean" onClick={flipCamera} aria-label={t('food.a11yFlipCamera')}>
                       <LuRefreshCw />
                     </button>
                   </div>
@@ -926,7 +973,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                   <div className="preview-image-wrapper">
                     <img 
                       src={imagePreview} 
-                      alt="Food" 
+                      alt={t('food.a11yFoodPhoto')} 
                       className={`food-image-clean ${uploadStatus === 'processing' || uploadStatus === 'uploading' ? 'is-analyzing-blur' : ''}`} 
                     />
                     
@@ -990,7 +1037,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               <button
                                 className="edit-prediction-btn-clean"
                                 onClick={() => setIsEditingPrediction(true)}
-                                aria-label="Correct prediction"
+                                aria-label={t('food.a11yCorrectPrediction')}
                               >
                                 <LuPencil /> <span>{t('food.notThisDish')}</span>
                               </button>
@@ -1000,7 +1047,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                                 className="edit-prediction-btn-clean edit-prediction-btn-clean--ai"
                                 onClick={() => imagePreview && runAiRecognition(imagePreview)}
                                 disabled={uploadStatus === 'processing'}
-                                aria-label="Re-identify with AI"
+                                aria-label={t('food.a11yReidentifyAi')}
                               >
                                 <LuSparkles /> <span>{t('food.identifyWithAi')}</span>
                               </button>
@@ -1013,7 +1060,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                             </label>
                             <select 
                               id="food-correction-select"
-                              title="Select correct food"
+                              title={t('food.a11ySelectCorrect')}
                               value={selectedPredictionIndex}
                               onChange={(e) => {
                                 const newIdx = parseInt(e.target.value, 10);
@@ -1127,11 +1174,15 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                       <div className="results-actions-clean">
                         <button 
                           className="health-btn-primary log-meal-btn-clean"
-                          disabled={uploadStatus === 'uploading' || uploadStatus === 'processing'}
+                          disabled={uploadStatus === 'uploading' || uploadStatus === 'processing' || mealLogged}
                           onClick={async () => {
                             if (!nutritionData || predictions.length === 0) return;
                             if (uploadStatus === 'uploading' || uploadStatus === 'processing') return; // Prevent double click
-                            
+                            // `uploadStatus === 'success'` is also the state right after
+                            // recognition, so it can't be the guard — a ref + flag is.
+                            if (savingRef.current || mealLogged) return;
+                            savingRef.current = true;
+
                             setUploadStatus('uploading');
                             setStatusMessage(t('food.stSavingToPassport'));
                             setUploadProgress(40);
@@ -1195,11 +1246,13 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               mealSaved = safeSetItem('meals', existingMeals);
                             }
                             if (!mealSaved) {
+                              savingRef.current = false;
                               setUploadProgress(100);
                               setUploadStatus('error');
                               setErrorMessage(t('food.stStorageFull'));
                               return;
                             }
+                            setMealLogged(true);
 
                             try {
                               setUploadProgress(75);
@@ -1232,6 +1285,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               setStatusMessage(t('food.stMealSaved'));
 
                               setTimeout(() => {
+                                if (cancelledRef.current) return;
                                 if (onSuccess) onSuccess();
                                 else onClose();
                               }, 1200);
@@ -1242,6 +1296,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
                               setUploadStatus('success');
                               setStatusMessage(t('food.stMealSavedOffline'));
                               setTimeout(() => {
+                                if (cancelledRef.current) return;
                                 if (onSuccess) onSuccess();
                                 else onClose();
                               }, 1200);
