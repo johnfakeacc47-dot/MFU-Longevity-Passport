@@ -39,7 +39,12 @@ export const KPIStatCard: React.FC<KPIStatCardProps> = ({
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => e.key === 'Enter' && onClick() : undefined}
+      onKeyDown={onClick ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault(); // Space would otherwise scroll the page
+          onClick();
+        }
+      } : undefined}
       style={{ borderColor: `${color}22` }}
     >
       <div className="kpi-icon-wrap" style={{ background: bg, color }}>

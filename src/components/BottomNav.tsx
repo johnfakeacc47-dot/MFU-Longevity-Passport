@@ -34,7 +34,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   // Rendered into <body> so no page container's transform/filter/overflow can
   // break its `position: fixed` and float it into the middle of the screen (QA-010).
   return createPortal(
-    <nav className={className ?? 'bottom-nav-v2'} aria-label="Main navigation">
+    <nav className={className ?? 'bottom-nav-v2'} aria-label={t('nav.mainNavigation')}>
       <div className="bottom-nav-pill">
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon;

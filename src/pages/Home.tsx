@@ -100,6 +100,9 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
   const [isLiveDB,  setIsLiveDB]  = useState(false);
   const [userName,  setUserName]  = useState('');
   const [yesterday, setYesterday] = useState<number | null>(null);
+  // When the score was last successfully fetched — NOT the render time, which
+  // is what used to be shown (and which ticked forward on every re-render).
+  const [lastFetchedAt, setLastFetchedAt] = useState<Date | null>(null);
 
   const scoreColor    = getScoreColor(score.total);
   const scoreLabelKey = getScoreLabelKey(score.total);
@@ -159,12 +162,21 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
           const dbScore = await getTodayHealthScore();
           if (dbScore) {
             setScore({ nutrition: dbScore.nutrition, exercise: dbScore.activity, sleep: dbScore.sleep, mental: dbScore.fasting ?? 0, total: dbScore.total, activity: dbScore.activity, fasting: 0 });
+            setLastFetchedAt(new Date());
             return;
           }
         } else {
           const stored = localStorage.getItem('profileData');
           if (stored) setUserName(safeParse<any>(stored, {}).fullName || '');
         }
+        setScore(calculateLongevityScore());
+        setLastFetchedAt(new Date());
+      } catch (err) {
+        // Network/auth hiccup: keep whatever is on screen and fall back to the
+        // locally computed score rather than letting the rejection escape
+        // (this runs from a 60s interval and event handlers, so an unhandled
+        // rejection here used to surface as console noise with a stale UI).
+        console.error('Home: fetchScore failed, using local score:', err);
         setScore(calculateLongevityScore());
       } finally {
         setIsLoading(false);
@@ -200,10 +212,12 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
     { weekday: 'long', month: 'long', day: 'numeric' },
   );
 
-  const lastUpdatedTime = new Date().toLocaleTimeString(
-    language === 'th' ? 'th-TH' : 'en-US',
-    { hour: '2-digit', minute: '2-digit' },
-  );
+  const lastUpdatedTime = lastFetchedAt
+    ? lastFetchedAt.toLocaleTimeString(
+        language === 'th' ? 'th-TH' : 'en-US',
+        { hour: '2-digit', minute: '2-digit' },
+      )
+    : '—';
 
   const avatarLetter = userName ? userName[0].toUpperCase() : null;
 
@@ -297,7 +311,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
                   key={key}
                   className="hd-pillar-card hd-pillar-shortcut"
                   onClick={() => isFood ? onOpenFoodRecognition() : nav && onNavigate(nav)}
-                  aria-label={`${t(labelKey)} shortcut`}
+                  aria-label={t('home.pillarShortcut').replace('{pillar}', t(labelKey))}
                 >
                   <div className="hd-pillar-shortcut-top">
                     <div className="hd-pillar-icon-wrap" style={{ background: bg }}>

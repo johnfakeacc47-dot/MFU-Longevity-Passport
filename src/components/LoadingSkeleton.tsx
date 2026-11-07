@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 type SkeletonType = 'ring' | 'card' | 'list' | 'kpi' | 'text';
 
@@ -73,8 +74,9 @@ export const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   count = 1,
   className = '',
 }) => {
+  const { t } = useLanguage();
   return (
-    <div className={`loading-skeleton-wrapper ${className}`} aria-busy="true" aria-label="Loading...">
+    <div className={`loading-skeleton-wrapper ${className}`} role="status" aria-busy="true" aria-label={t('common.loading')}>
       {Array.from({ length: count }).map((_, i) => (
         <React.Fragment key={i}>
           {type === 'ring'  && <RingSkeleton />}

@@ -134,7 +134,13 @@ export const ScoreRing: React.FC<ScoreRingProps> = ({
   return (
     <div className="score-ring-container">
       <div className="score-ring-wrapper" style={{ position: 'relative', width: size, height: size, margin: '0 auto' }}>
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-label={`Longevity score ${score.total} out of 100`}>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          role="img"
+          aria-label={t ? t('longevity.ringAria').replace('{score}', String(score.total)) : `Longevity score ${score.total} out of 100`}
+        >
           {/* Background track */}
           <circle
             cx={cx} cy={cy} r={radius}

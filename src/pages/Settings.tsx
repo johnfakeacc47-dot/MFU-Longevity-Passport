@@ -22,10 +22,13 @@ import {
   FaMobileAlt,
 } from 'react-icons/fa';
 import {
-  getNotificationPreferences, updateNotificationPreference, subscribeToPush, isPushSubscribed,
+  getNotificationPreferences, updateNotificationPreference, subscribeToPush, unsubscribeFromPush, isPushSubscribed,
   type NotificationPrefs,
 } from '../services/notifications';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import '../styles/Settings.css';
+
+const APP_VERSION = '3.0.0';
 
 const DEFAULT_PREFS: NotificationPrefs = {
   mealReminder: true, waterReminder: true, sleepReminder: true,
@@ -37,9 +40,11 @@ interface SettingsProps {
   onNavigate: (page: any) => void;
   currentPage?: string;
   onOpenFoodRecognition?: () => void;
+  /** Wired from App — ends the Supabase session and clears local state. */
+  onLogout: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecognition = () => {} }) => {
+export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecognition = () => {}, onLogout }) => {
   const { language, setLanguage, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   useSEO(`${t('settings.title')} · MFU Longevity Passport`, 'Configure app preferences and account options.');
@@ -48,6 +53,8 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const [pushError, setPushError] = useState<string | null>(null);
+  const [prefError, setPrefError] = useState<string | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
 
   useEffect(() => {
@@ -56,9 +63,19 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const togglePref = (key: keyof NotificationPrefs, checked: boolean) => {
+  const togglePref = async (key: keyof NotificationPrefs, checked: boolean) => {
+    // Optimistic flip, but revert (and say so) if the server write fails —
+    // the old fire-and-forget left the switch showing a state that was never saved.
+    const previous = prefs[key];
+    setPrefError(null);
     setPrefs((prev) => ({ ...prev, [key]: checked }));
-    void updateNotificationPreference(key, checked);
+    try {
+      await updateNotificationPreference(key, checked);
+    } catch (err) {
+      console.error('updateNotificationPreference failed:', err);
+      setPrefs((prev) => ({ ...prev, [key]: previous }));
+      setPrefError(t('settings.prefSaveFailed'));
+    }
   };
 
   const handleEnablePush = async () => {
@@ -78,13 +95,20 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
     setPushBusy(false);
   };
 
-  const handleLogout = () => {
-    if (window.confirm(t('settings.logoutConfirm'))) {
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('userEmail');
-      onNavigate('login');
+  const handleDisablePush = async () => {
+    setPushBusy(true);
+    setPushError(null);
+    try {
+      await unsubscribeFromPush();
+    } catch (err) {
+      console.error('unsubscribeFromPush failed:', err);
     }
+    // Re-check rather than assume — if the browser refused to unsubscribe the card should still say "enabled".
+    setPushEnabled(await isPushSubscribed());
+    setPushBusy(false);
   };
+
+  const handleLogout = () => setShowLogoutConfirm(true);
 
   return (
     <div className="settings-page">
@@ -306,6 +330,9 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
               </label>
             </div>
           </div>
+          {prefError && (
+            <p role="alert" style={{ color: 'var(--color-danger, #EF4444)', fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>{prefError}</p>
+          )}
         </section>
 
         {/* Push Notifications */}
@@ -322,10 +349,24 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
           {!pushSupported ? (
             <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{t('settings.pushUnsupported')}</p>
           ) : pushEnabled ? (
-            <div className="toggle-item">
-              <div className="toggle-info"><strong style={{ color: 'var(--color-success, #10B981)' }}>{t('settings.pushEnabled')}</strong></div>
-              <FaCheck style={{ color: 'var(--color-success, #10B981)' }} />
-            </div>
+            <>
+              <div className="toggle-item">
+                <div className="toggle-info"><strong style={{ color: 'var(--color-success, #10B981)' }}>{t('settings.pushEnabled')}</strong></div>
+                <FaCheck style={{ color: 'var(--color-success, #10B981)' }} />
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleDisablePush}
+                disabled={pushBusy}
+                style={{ width: '100%', marginTop: 10 }}
+              >
+                {pushBusy ? t('common.loading') : t('settings.pushDisableBtn')}
+              </button>
+              {pushError && (
+                <p role="alert" style={{ color: 'var(--color-danger, #EF4444)', fontSize: 12.5, marginTop: 10, lineHeight: 1.5 }}>{pushError}</p>
+              )}
+            </>
           ) : (
             <>
               <button type="button" className="btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
@@ -366,7 +407,7 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
                 <span className="settings-link-icon text-indigo-500 bg-indigo-500/15">
                   <FaUsers />
                 </span>
-                <span>{t('nav.team') || (language === 'th' ? 'ทีม และความท้าทาย' : 'Team & Challenges')}</span>
+                <span>{t('nav.team')}</span>
               </div>
               <FaChevronRight className="text-slate-400 text-sm" />
             </button>
@@ -390,10 +431,22 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
             <span>{t('settings.logout')}</span>
           </button>
           <div className="app-version-info">
-            Longevity Passport {t('settings.version')} 3.0.0
+            {t('settings.versionLine').replace('{version}', APP_VERSION)}
           </div>
         </section>
       </main>
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        icon={<FaSignOutAlt />}
+        title={t('settings.logoutTitle')}
+        message={t('settings.logoutConfirm')}
+        confirmLabel={t('settings.logout')}
+        cancelLabel={t('common.cancel')}
+        variant="danger"
+        onConfirm={() => { setShowLogoutConfirm(false); onLogout(); }}
+        onClose={() => setShowLogoutConfirm(false)}
+      />
 
       <BottomNav active="profile" onNavigate={onNavigate} onOpenFoodRecognition={onOpenFoodRecognition} t={t} />
     </div>

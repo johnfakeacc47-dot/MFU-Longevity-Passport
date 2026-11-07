@@ -26,6 +26,7 @@ import type { TimeRangeFilter, AnalyticsResult } from '../utils/analyticsScore';
 import { getHealthInsights, type HealthInsightsResult } from '../services/healthInsightsApi';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
+import { EmptyState } from '../components/EmptyState';
 import { AnalyticsChart } from '../components/AnalyticsChart';
 import { HealthCalendarSection } from '../components/coach/HealthCalendarSection';
 import { WeeklyChallengesCard } from '../components/coach/WeeklyChallengesCard';
@@ -78,6 +79,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'nutrition' | 'exercise' | 'sleep' | 'mental'>('nutrition');
   const [data, setData] = useState<AnalyticsResult>(() => emptyAnalytics('week', language));
   const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  // Bumped by the "Try again" button to re-run the effect below.
+  const [retryTick, setRetryTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +89,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setIsLoadingAnalytics(true);
       try {
         const result = await getAnalyticsData(timeRange, customStart, customEnd, 25, language);
-        if (!cancelled) setData(result);
+        if (!cancelled) {
+          setData(result);
+          setLoadError(false);
+        }
+      } catch (err) {
+        // Used to escape as an unhandled rejection while the page quietly kept
+        // showing all-zero placeholders as if the user had logged nothing.
+        console.error('Dashboard: getAnalyticsData failed:', err);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setIsLoadingAnalytics(false);
       }
@@ -100,7 +112,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       window.removeEventListener('healthDataUpdated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, [timeRange, customStart, customEnd, language]);
+  }, [timeRange, customStart, customEnd, language, retryTick]);
 
   // Real AI period report (week / month only; other ranges use the rule-based text).
   const [aiInsight, setAiInsight] = useState<HealthInsightsResult | null>(null);
@@ -223,13 +235,25 @@ export const Dashboard: React.FC<DashboardProps> = ({
           )}
         </section>
 
+        {loadError && (
+          <section className="ana-card">
+            <EmptyState
+              icon={<FaChartLine />}
+              title={t('dashboard.loadErrorTitle')}
+              description={t('dashboard.loadErrorDesc')}
+              action={t('common.retry')}
+              onAction={() => setRetryTick((n) => n + 1)}
+            />
+          </section>
+        )}
+
         {/* ── 2. Overall Longevity Score Card ── */}
         <section className="ana-card ana-hero-card">
           <div className="ana-hero-header">
             <div>
               <h2 className="ana-card-title">{t('dashboard.avgLongevityScore')}</h2>
               <p className="ana-card-subtitle">
-                {data.startDateStr} to {data.endDateStr}
+                {data.startDateStr} {t('dashboard.dateRangeTo')} {data.endDateStr}
               </p>
             </div>
           </div>
@@ -402,7 +426,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
               <div className="ana-sum-info">
                 <span className="ana-sum-label">{t('dashboard.avgSleepHours')}</span>
-                <span className="ana-sum-val">{healthSummary.avgSleepHours} <small>hrs</small></span>
+                <span className="ana-sum-val">{healthSummary.avgSleepHours} <small>{t('common.hrs')}</small></span>
               </div>
             </div>
 
@@ -432,7 +456,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
               <div className="ana-sum-info">
                 <span className="ana-sum-label">{t('dashboard.avgWaterIntake')}</span>
-                <span className="ana-sum-val">{healthSummary.avgWaterIntake} <small>glasses</small></span>
+                <span className="ana-sum-val">{healthSummary.avgWaterIntake} <small>{t('dashboard.unitGlasses')}</small></span>
               </div>
             </div>
 
@@ -507,7 +531,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div className="ana-improve-top">
                     <span className="ana-improve-pillar">{item.pillar}</span>
                     <span className="ana-improve-delta" style={{ color }}>
-                      {item.delta > 0 ? `+${item.delta}` : item.delta} pts
+                      {item.delta > 0 ? `+${item.delta}` : item.delta} {t('common.pts')}
                     </span>
                   </div>
                   <div className="ana-improve-status" style={{ color }}>

@@ -1,13 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import {
   FaExclamationTriangle, FaFileAlt, FaHandshake, FaListAlt, FaShieldAlt, FaSkullCrossbones,
-  FaChartLine, FaClipboardList, FaRobot, FaDownload, FaTrashAlt, FaFileExport, FaExternalLinkAlt,
+  FaChartLine, FaClipboardList, FaRobot, FaDownload, FaTrashAlt, FaFileExport, FaChevronDown, FaChevronUp,
 } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { supabase, getCurrentUserProfile, updateScoreVisibility, deleteUserAccount } from '../services/supabaseClient';
 import { BackButton } from '../components/BackButton';
+
+// Local-only preference flags (no server column exists for these yet).
+const SHARE_HABITS_KEY = 'privacy.shareHabits';
+const ANONYMOUS_AI_KEY = 'privacy.anonymousAI';
+
+function readFlag(key: string, fallback: boolean): boolean {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : raw === 'true';
+  } catch {
+    return fallback;
+  }
+}
+
+function writeFlag(key: string, value: boolean) {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch (err) {
+    console.warn(`Could not persist ${key}:`, err);
+  }
+}
+
+interface NoticeState {
+  title: string;
+  body: string;
+  /** Runs when the notice is dismissed (e.g. finish navigating to login). */
+  onDismiss?: () => void;
+}
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
 
@@ -21,13 +50,26 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
   const isTh = language === 'th';
   useSEO(`${t('privacySettings.title')} · MFU Longevity Passport`, 'Manage your privacy and data preferences.');
   const [shareScore, setShareScore] = useState(false);
-  const [shareHabits, setShareHabits] = useState(false);
-  const [anonymousAI, setAnonymousAI] = useState(true);
+  const [shareHabits, setShareHabitsState] = useState(() => readFlag(SHARE_HABITS_KEY, false));
+  const [anonymousAI, setAnonymousAIState] = useState(() => readFlag(ANONYMOUS_AI_KEY, true));
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [sharePending, setSharePending] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showFullPolicy, setShowFullPolicy] = useState(false);
+  const [notice, setNotice] = useState<NoticeState | null>(null);
+
+  const setShareHabits = (value: boolean) => {
+    setShareHabitsState(value);
+    writeFlag(SHARE_HABITS_KEY, value);
+  };
+  const setAnonymousAI = (value: boolean) => {
+    setAnonymousAIState(value);
+    writeFlag(ANONYMOUS_AI_KEY, value);
+  };
 
   // Load the real setting from Supabase on mount
   useEffect(() => {
@@ -47,6 +89,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
   }, []);
 
   const handleShareToggle = (checked: boolean) => {
+    setShareError(null);
     if (checked) {
       // Show confirmation modal before enabling
       setShowConfirmModal(true);
@@ -57,6 +100,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
   };
 
   const confirmShareChange = async (isPublic: boolean) => {
+    setSharePending(true);
+    setShareError(null);
     try {
       await updateScoreVisibility(isPublic);
       setShareScore(isPublic);
@@ -82,8 +127,27 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         }
       }
     } catch (error) {
+      // The switch is controlled by `shareScore`, which we only flip on
+      // success — so it already shows the real (unchanged) state. Surface the
+      // failure inline (in the modal when enabling, under the row when
+      // disabling) instead of leaving the modal silently stuck.
       console.error('Error updating score visibility:', error);
+      setShareError(t('privacySettings.shareErr'));
+    } finally {
+      setSharePending(false);
     }
+  };
+
+  const closeShareModal = () => {
+    if (sharePending) return;
+    setShowConfirmModal(false);
+    setShareError(null);
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleting) return;
+    setShowDeleteModal(false);
+    setDeleteStep(1);
   };
 
   const handleDeleteAccount = async () => {
@@ -113,18 +177,29 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         }
       }
 
-      if (authDeleteFailed) {
-        alert(isTh
-          ? 'ลบข้อมูลสุขภาพของคุณเรียบร้อยแล้ว แต่ไม่สามารถลบบัญชีเข้าสู่ระบบได้อย่างสมบูรณ์ กรุณาติดต่อฝ่ายสนับสนุนเพื่อปิดบัญชีให้เสร็จสมบูรณ์'
-          : "Your health data was deleted, but we couldn't fully remove your login. Please contact support to finish closing your account.");
-      }
+      const finishLogout = () => {
+        // Clear local storage and redirect
+        localStorage.clear();
+        onNavigate('login');
+      };
 
-      // Clear local storage and redirect
-      localStorage.clear();
-      onNavigate('login');
+      if (authDeleteFailed) {
+        // Non-blocking replacement for the old alert(): hold the redirect
+        // until the user has actually read the message.
+        setNotice({
+          title: t('privacySettings.deletePartialTitle'),
+          body: t('privacySettings.deletePartialBody'),
+          onDismiss: finishLogout,
+        });
+      } else {
+        finishLogout();
+      }
     } catch (error) {
       console.error('Error deleting account:', error);
-      alert(isTh ? 'ลบบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' : 'Failed to delete account. Please try again.');
+      setNotice({
+        title: t('privacySettings.deleteFailedTitle'),
+        body: t('privacySettings.deleteFailedBody'),
+      });
     } finally {
       setIsDeleting(false);
       setShowDeleteModal(false);
@@ -165,6 +240,9 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
                 <span className="toggle-slider"></span>
               </label>
             </div>
+            {shareError && !showConfirmModal && (
+              <p role="alert" style={{ color: 'var(--color-danger, #EF4444)', fontSize: 12.5, margin: '-4px 0 8px', lineHeight: 1.5 }}>{shareError}</p>
+            )}
 
             <div className="pv-toggle-row">
               <span className="pv-row-icon" style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.15)' }}><FaClipboardList /></span>
@@ -240,9 +318,33 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
               <>We use industry-standard encryption to protect your data. Your specific health logs are <strong>never</strong> shared with third parties without your explicit consent.</>
             )}
           </p>
-          <button type="button" className="pv-policy-link">
-            {isTh ? 'อ่านนโยบายความเป็นส่วนตัวฉบับเต็ม' : 'Read Full Privacy Policy'}
-            <FaExternalLinkAlt />
+          {/* There is no separate policy page or /privacy-policy.html in this
+              app, so "read the full policy" expands the summary in place
+              rather than being a dead control. */}
+          {showFullPolicy && (
+            <div id="pv-full-policy" className="mt-4" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {([
+                ['privacySettings.policyCollectTitle', 'privacySettings.policyCollectBody'],
+                ['privacySettings.policyUseTitle', 'privacySettings.policyUseBody'],
+                ['privacySettings.policyShareTitle', 'privacySettings.policyShareBody'],
+                ['privacySettings.policyControlTitle', 'privacySettings.policyControlBody'],
+              ] as const).map(([titleKey, bodyKey]) => (
+                <div key={titleKey} className="pv-rights-item" style={{ flexDirection: 'column', gap: 4 }}>
+                  <div className="pv-row-title">{t(titleKey)}</div>
+                  <p className="pv-row-desc" style={{ margin: 0 }}>{t(bodyKey)}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          <button
+            type="button"
+            className="pv-policy-link"
+            onClick={() => setShowFullPolicy((v) => !v)}
+            aria-expanded={showFullPolicy}
+            aria-controls="pv-full-policy"
+          >
+            {showFullPolicy ? t('privacySettings.hideFullPolicy') : t('privacySettings.readFullPolicy')}
+            {showFullPolicy ? <FaChevronUp /> : <FaChevronDown />}
           </button>
         </div>
 
@@ -260,128 +362,55 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {showConfirmModal && (
-        <div
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: '20px',
-          }}
-          onClick={() => setShowConfirmModal(false)}
-        >
-          <div
-            style={{
-              background: 'var(--surface-solid)', backdropFilter: 'blur(16px)',
-              borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%',
-              border: '1px solid var(--border-glass)',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
-              textAlign: 'center',
-              animation: 'slideUp 0.3s ease-out',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}><FaHandshake /></div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-primary)', marginBottom: '8px' }}>
-              {isTh ? 'แชร์กับทีมหรือไม่?' : 'Share with Team?'}
-            </h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
-              {isTh ? 'คะแนนการชะลอวัยของคุณจะแสดงให้สมาชิกในทีมเห็น' : 'Your current longevity score will be visible to your team members.'}
-            </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '12px',
-                  border: '1px solid var(--border-glass)', background: 'var(--surface-soft)',
-                  fontSize: '14px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)',
-                }}
-              >
-                {isTh ? 'ยกเลิก' : 'Cancel'}
-              </button>
-              <button
-                onClick={() => confirmShareChange(true)}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '12px',
-                  border: 'none', background: 'linear-gradient(135deg, #1976D2, #1565C0)',
-                  color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(25,118,210,0.3)',
-                }}
-              >
-                {isTh ? 'ยืนยัน' : 'Confirm'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Share-with-team confirmation */}
+      <ConfirmDialog
+        open={showConfirmModal}
+        icon={<FaHandshake />}
+        title={isTh ? 'แชร์กับทีมหรือไม่?' : 'Share with Team?'}
+        message={isTh ? 'คะแนนการชะลอวัยของคุณจะแสดงให้สมาชิกในทีมเห็น' : 'Your current longevity score will be visible to your team members.'}
+        confirmLabel={isTh ? 'ยืนยัน' : 'Confirm'}
+        cancelLabel={isTh ? 'ยกเลิก' : 'Cancel'}
+        pending={sharePending}
+        pendingLabel={t('privacySettings.saving')}
+        error={shareError}
+        onConfirm={() => confirmShareChange(true)}
+        onClose={closeShareModal}
+      />
 
-      {/* Delete Account Double-Confirmation Modal */}
-      {showDeleteModal && (
-        <div
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 9999, padding: '20px',
-          }}
-          onClick={() => { setShowDeleteModal(false); setDeleteStep(1); }}
-        >
-          <div
-            style={{
-              background: 'var(--surface-solid)', backdropFilter: 'blur(16px)',
-              borderRadius: '24px', padding: '28px', maxWidth: '360px', width: '100%',
-              border: '1px solid var(--border-glass)',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.35)',
-              textAlign: 'center',
-              animation: 'slideUp 0.3s ease-out',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ fontSize: '48px', marginBottom: '12px' }}>{deleteStep === 1 ? <FaExclamationTriangle /> : <FaSkullCrossbones />}</div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--color-danger)', marginBottom: '8px' }}>
-              {deleteStep === 1 ? (isTh ? 'ต้องการลบบัญชีหรือไม่?' : 'Delete Account?') : (isTh ? 'คุณแน่ใจจริง ๆ หรือไม่?' : 'Are you absolutely sure?')}
-            </h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '24px' }}>
-              {deleteStep === 1
-                ? (isTh ? 'การดำเนินการนี้จะลบบัญชีและข้อมูลการชะลอวัยของคุณอย่างถาวร' : 'This will permanently delete your account and all longevity data.')
-                : (isTh ? 'การดำเนินการนี้เป็นการถาวรและข้อมูลทั้งหมดของคุณจะสูญหาย ไม่สามารถกู้คืนได้' : 'This action is permanent and all your longevity data will be lost. This cannot be undone.')}
-            </p>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button
-                onClick={() => { setShowDeleteModal(false); setDeleteStep(1); }}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '12px',
-                  border: '1px solid var(--border-glass)', background: 'var(--surface-soft)',
-                  fontSize: '14px', fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)',
-                }}
-              >
-                {isTh ? 'ยกเลิก' : 'Cancel'}
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={isDeleting}
-                style={{
-                  flex: 1, padding: '12px', borderRadius: '12px',
-                  border: 'none', background: deleteStep === 1 ? 'var(--color-danger)' : '#b91c1c',
-                  color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 4px 12px rgba(239,68,68,0.3)',
-                  opacity: isDeleting ? 0.6 : 1,
-                }}
-              >
-                {isDeleting ? (isTh ? 'กำลังลบ...' : 'Deleting...') : (deleteStep === 1 ? (isTh ? 'ยืนยันการลบ' : 'Yes, Delete') : (isTh ? 'ลบอย่างถาวร' : 'Permanently Delete'))}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete account — two-step confirmation */}
+      <ConfirmDialog
+        open={showDeleteModal}
+        variant="danger"
+        icon={deleteStep === 1 ? <FaExclamationTriangle /> : <FaSkullCrossbones />}
+        title={deleteStep === 1 ? (isTh ? 'ต้องการลบบัญชีหรือไม่?' : 'Delete Account?') : (isTh ? 'คุณแน่ใจจริง ๆ หรือไม่?' : 'Are you absolutely sure?')}
+        message={deleteStep === 1
+          ? (isTh ? 'การดำเนินการนี้จะลบบัญชีและข้อมูลการชะลอวัยของคุณอย่างถาวร' : 'This will permanently delete your account and all longevity data.')
+          : (isTh ? 'การดำเนินการนี้เป็นการถาวรและข้อมูลทั้งหมดของคุณจะสูญหาย ไม่สามารถกู้คืนได้' : 'This action is permanent and all your longevity data will be lost. This cannot be undone.')}
+        confirmLabel={deleteStep === 1 ? (isTh ? 'ยืนยันการลบ' : 'Yes, Delete') : (isTh ? 'ลบอย่างถาวร' : 'Permanently Delete')}
+        cancelLabel={isTh ? 'ยกเลิก' : 'Cancel'}
+        pending={isDeleting}
+        pendingLabel={isTh ? 'กำลังลบ...' : 'Deleting...'}
+        onConfirm={handleDeleteAccount}
+        onClose={closeDeleteModal}
+      />
+
+      {/* Non-blocking replacement for alert() */}
+      <ConfirmDialog
+        open={notice !== null}
+        variant="danger"
+        icon={<FaExclamationTriangle />}
+        title={notice?.title ?? ''}
+        message={notice?.body}
+        confirmLabel={t('common.close')}
+        onConfirm={() => { const n = notice; setNotice(null); n?.onDismiss?.(); }}
+        onClose={() => { const n = notice; setNotice(null); n?.onDismiss?.(); }}
+      />
 
       <BottomNav
         active="profile"
         onNavigate={onNavigate}
         onOpenFoodRecognition={onOpenFoodRecognition}
         t={t}
-        className="bottom-nav glass-card"
       />
     </div>
   );
