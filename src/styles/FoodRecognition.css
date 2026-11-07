@@ -126,7 +126,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 28px 16px;
+  /* Right padding clears the absolutely-positioned .close-btn-refined
+     (40px wide at right: 24px) so the status badge isn't hidden under it. */
+  padding: 20px 76px 16px 28px;
   border-bottom: 1px solid #F1F5F9;
   background: var(--surface-card, #FFFFFF);
   position: sticky;
@@ -1184,6 +1186,42 @@
   justify-content: center;
 }
 
+/* Base chrome for the modal's primary / secondary buttons. The results view
+   layers .log-meal-btn-clean / .retake-btn-clean on top (with !important);
+   the error view's "Try again" / "Choose another" rely on these alone — and
+   Tailwind preflight strips default button padding, so without them those
+   two rendered as a bare gradient slab and unstyled text. */
+.health-btn-primary,
+.health-btn-secondary {
+  padding: 14px 20px;
+  border-radius: 16px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.health-btn-primary {
+  background: linear-gradient(135deg, var(--accent, #38BDF8) 0%, var(--accent-dark, #0284C7) 100%);
+  color: #fff;
+  border: none;
+}
+.health-btn-secondary {
+  background: var(--surface-card, #FFFFFF);
+  color: #475569;
+  border: 1.5px solid #CBD5E1;
+}
+[data-theme="dark"] .health-btn-secondary,
+[data-theme="dark"] .retake-btn-clean {
+  background: var(--surface-solid, #1F2937) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.15)) !important;
+}
+[data-theme="dark"] .retake-btn-clean:hover { background: var(--surface-hover, #374151) !important; }
+
 .retry-btn {
   background: linear-gradient(135deg, #F43F5E 0%, #E11D48 100%) !important;
   box-shadow: 0 8px 20px rgba(244, 63, 94, 0.3) !important;
@@ -1617,12 +1655,90 @@
 [data-theme="dark"] .ai-result-serving { color: #C4B5FD; }
 [data-theme="dark"] .ai-result-advice { color: var(--text-secondary); }
 
-@media (prefers-color-scheme: dark) {
-  .engine-toggle { background: #1E293B; border-color: #334155; }
-  .engine-opt--active { color: #F1F5F9; background: #0F172A; }
-  .ai-result-note { background: rgba(139, 92, 246, 0.12); border-color: rgba(139, 92, 246, 0.3); }
-  .ai-result-advice { color: #CBD5E1; }
+/* Results card. The dark pass above themes the modal and forces its
+   headings white, but never touched this card, which stayed hardcoded
+   #F8FAFC: a white dish name on a near-white card, and the translucent
+   purple AI note washed out on top of it. Theme the card like every other
+   surface instead of un-theming the heading. */
+[data-theme="dark"] .results-container-clean {
+  background: var(--surface-soft, #2A3447);
+  border-color: var(--border-glass, rgba(255,255,255,0.10));
+  box-shadow: none;
 }
+[data-theme="dark"] .macros-row-clean,
+[data-theme="dark"] .health-score-card,
+[data-theme="dark"] .nutrition-facts-clean,
+[data-theme="dark"] .correction-select {
+  background: var(--surface-solid, #1F2937);
+  border-color: var(--border-glass, rgba(255,255,255,0.10));
+  box-shadow: none;
+}
+[data-theme="dark"] .edit-prediction-btn-clean {
+  background: var(--surface-solid, #1F2937) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+  color: var(--text-accent, #7DD3FC) !important;
+}
+[data-theme="dark"] .edit-prediction-btn-clean:hover {
+  background: var(--accent-soft, rgba(56,189,248,0.15)) !important;
+  border-color: var(--accent, #38BDF8) !important;
+}
+[data-theme="dark"] .food-title-clean,
+[data-theme="dark"] .calories-number-clean,
+[data-theme="dark"] .macro-value-clean,
+[data-theme="dark"] .health-label-clean,
+[data-theme="dark"] .nutrition-title-clean,
+[data-theme="dark"] .nutrition-value-clean,
+[data-theme="dark"] .correction-select {
+  color: var(--text-primary, #F1F5F9);
+}
+[data-theme="dark"] .calories-unit-clean,
+[data-theme="dark"] .macro-label-clean,
+[data-theme="dark"] .nutrition-label-clean,
+[data-theme="dark"] .correction-label {
+  color: var(--text-secondary, #B7C0CF);
+}
+[data-theme="dark"] .nutrition-header-clean { border-bottom-color: var(--border-glass, rgba(255,255,255,0.10)); }
+[data-theme="dark"] .macro-divider,
+[data-theme="dark"] .health-bar-container-clean { background: rgba(255,255,255,0.12); }
+[data-theme="dark"] .health-score-val { color: var(--color-success-text, #34D399); }
+[data-theme="dark"] .health-icon-box { background: rgba(239,68,68,0.18); }
+[data-theme="dark"] .calories-icon-box { background: rgba(250,204,21,0.18); border-color: rgba(250,204,21,0.35); }
+
+/* Upload view: the gallery card kept its light-mode near-black text on a
+   themed (dark) surface, and the secondary copy used the light-mode grey. */
+[data-theme="dark"] .action-card-secondary {
+  background: var(--surface-soft, #2A3447) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+[data-theme="dark"] .action-title-secondary { color: var(--text-primary, #F1F5F9); }
+[data-theme="dark"] .action-sub-secondary,
+[data-theme="dark"] .subtitle-refined,
+[data-theme="dark"] .file-format-note,
+[data-theme="dark"] .loading-text { color: var(--text-secondary, #B7C0CF); }
+[data-theme="dark"] .action-arrow-secondary { color: var(--text-tertiary, #7C8798); }
+
+/* Error and upload cards: their headings are h3s, which the modal-wide dark
+   rule forces white, but the cards themselves stayed pastel/white. */
+[data-theme="dark"] .status-error-container {
+  background: rgba(244, 63, 94, 0.10);
+  border-color: rgba(244, 63, 94, 0.30);
+}
+[data-theme="dark"] .error-icon-ring { background: rgba(244, 63, 94, 0.18); color: #FB7185; }
+[data-theme="dark"] .error-message-text { color: var(--text-secondary, #B7C0CF); }
+[data-theme="dark"] .loading-card-glass {
+  background: var(--surface-soft, #2A3447);
+  border-color: var(--border-glass, rgba(255,255,255,0.10));
+}
+[data-theme="dark"] .loading-icon-ring { background: rgba(59, 130, 246, 0.18); border-color: rgba(59, 130, 246, 0.30); }
+[data-theme="dark"] .loading-sub-text { color: var(--text-secondary, #B7C0CF); }
+
+/* The app themes via data-theme (explicit light / dark / system), so a bare
+   prefers-color-scheme block would apply dark colours to a user who chose
+   Light on a dark-OS phone. The engine-toggle and AI-note rules already
+   exist as [data-theme="dark"] variants above; this is the only one that
+   didn't. */
+[data-theme="dark"] .analyzing-engine--ai { color: #C4B5FD; }
+[data-theme="dark"] .analyzing-engine--local { color: #7DD3FC; }
 
 /* Engine indicator shown in the processing overlay */
 .analyzing-engine {
@@ -1643,8 +1759,4 @@
 .analyzing-engine--local {
   color: #0369A1;
   background: rgba(14, 165, 233, 0.14);
-}
-@media (prefers-color-scheme: dark) {
-  .analyzing-engine--ai { color: #C4B5FD; }
-  .analyzing-engine--local { color: #7DD3FC; }
 }
