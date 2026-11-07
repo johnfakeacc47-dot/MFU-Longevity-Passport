@@ -135,8 +135,8 @@ export const HealthCalendarSection: React.FC = () => {
           <div className="calendar-modal-box" onClick={(e) => e.stopPropagation()}>
             <div className="calendar-modal-header">
               <h4>{t('calendar.modalTitle')} - {selectedDay.dateStr}</h4>
-              <button type="button" className="calendar-modal-close" onClick={() => setSelectedDay(null)}>
-                <FaTimes />
+              <button type="button" className="calendar-modal-close" onClick={() => setSelectedDay(null)} aria-label={t('common.close')}>
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 

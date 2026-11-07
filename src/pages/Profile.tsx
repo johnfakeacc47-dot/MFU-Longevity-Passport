@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   FaUser, FaWeight, FaRulerVertical, FaEdit, FaBars, FaTimes,
   FaShieldAlt, FaSignOutAlt, FaGlobe, FaChevronRight,
@@ -150,6 +150,9 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingGoal, setIsSavingGoal] = useState(false);
+  // Transient "couldn't save" message shown in the goal-card header slot.
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const saveErrorTimer = useRef<number | null>(null);
 
   const [profileData, setProfileData] = useState<{
     fullName?: string;
@@ -184,7 +187,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           return;
         }
         const userEmail = localStorage.getItem('userEmail');
-        setProfileData({ fullName: 'New User', email: userEmail || undefined, activityLevel: 'moderate', goal: 'maintain' });
+        // fullName stays undefined; the hero renders t('profile.newUser') so it follows the current language.
+        setProfileData({ email: userEmail || undefined, activityLevel: 'moderate', goal: 'maintain' });
         return;
       }
       // Fallback localStorage
@@ -201,6 +205,10 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
     window.addEventListener('profileUpdated', handler);
     return () => window.removeEventListener('profileUpdated', handler);
   }, [fetchProfileData]);
+
+  useEffect(() => () => {
+    if (saveErrorTimer.current) window.clearTimeout(saveErrorTimer.current);
+  }, []);
 
   // ── Derived Values ─────────────────────────────────────────────────────────
   const ageYears = useMemo(() => {
@@ -237,27 +245,42 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
   }, [profileData, ageYears, language]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleGoalChange = async (newGoal: string) => {
-    const updated = { ...profileData, goal: newGoal };
+  const flashSaveError = () => {
+    setSaveError(t('profile.saveFailed'));
+    if (saveErrorTimer.current) window.clearTimeout(saveErrorTimer.current);
+    saveErrorTimer.current = window.setTimeout(() => setSaveError(null), 4000);
+  };
+
+  // Optimistic update of goal / activity level. updateUserGoalAndActivity()
+  // swallows Supabase errors and returns null, so a null while configured is a
+  // failure too — in that case revert the optimistic state and tell the user.
+  const persistGoalAndActivity = async (updated: typeof profileData, previous: typeof profileData) => {
     setProfileData(updated);
     setIsSavingGoal(true);
+    setSaveError(null);
     try {
       if (isSupabaseConfigured()) {
-        await updateUserGoalAndActivity(newGoal, profileData.activityLevel || 'moderate');
+        const result = await updateUserGoalAndActivity(updated.goal || 'maintain', updated.activityLevel || 'moderate');
+        if (!result) throw new Error('goal/activity save returned no row');
       }
       localStorage.setItem('profileData', JSON.stringify(updated));
+    } catch (err) {
+      console.error('Failed to save goal/activity:', err);
+      setProfileData(previous);
+      flashSaveError();
     } finally {
       setIsSavingGoal(false);
     }
   };
 
-  const handleActivityChange = async (newActivity: string) => {
-    const updated = { ...profileData, activityLevel: newActivity };
-    setProfileData(updated);
-    if (isSupabaseConfigured()) {
-      await updateUserGoalAndActivity(profileData.goal || 'maintain', newActivity);
-    }
-    localStorage.setItem('profileData', JSON.stringify(updated));
+  const handleGoalChange = (newGoal: string) => {
+    if (isSavingGoal || (profileData.goal || 'maintain') === newGoal) return;
+    void persistGoalAndActivity({ ...profileData, goal: newGoal }, profileData);
+  };
+
+  const handleActivityChange = (newActivity: string) => {
+    if (isSavingGoal || (profileData.activityLevel || 'moderate') === newActivity) return;
+    void persistGoalAndActivity({ ...profileData, activityLevel: newActivity }, profileData);
   };
   const avatarLetter = profileData.fullName?.charAt(0).toUpperCase() || 'U';
 
@@ -266,12 +289,12 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
     <div className="profile-v2">
       {/* Header */}
       <header className="pv2-header">
-        <BackButton onClick={() => onNavigate('home')} ariaLabel="Go back to home" />
+        <BackButton onClick={() => onNavigate('home')} ariaLabel={t('profile.backHome')} />
         <h1 className="pv2-header-title">{t('profile.title')}</h1>
         <button
           className="pv2-hamburger"
           onClick={() => setDrawerOpen(true)}
-          aria-label="Open settings menu"
+          aria-label={t('profile.openSettingsMenu')}
         >
           <FaBars />
         </button>
@@ -285,7 +308,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
             <span className="pv2-avatar-letter">{isLoading ? '…' : avatarLetter}</span>
           </div>
           <div className="pv2-hero-info">
-            <h2 className="pv2-name">{isLoading ? '…' : (profileData.fullName || 'New User')}</h2>
+            <h2 className="pv2-name">{isLoading ? '…' : (profileData.fullName || t('profile.newUser'))}</h2>
             <p className="pv2-email">{isLoading ? '…' : (profileData.email || '—')}</p>
             <span className="pv2-badge pv2-badge--active">{t('profile.active')}</span>
           </div>
@@ -389,6 +412,11 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                 <FaBullseye className="pv2-card-icon" />
                 <h3 className="pv2-card-title">{t('profile.myGoal')}</h3>
                 {isSavingGoal && <span className="pv2-saving-badge">{t('profile.goalSaving')}</span>}
+                {!isSavingGoal && saveError && (
+                  <span className="pv2-saving-badge" role="alert" style={{ color: '#EF4444', animation: 'none' }}>
+                    {saveError}
+                  </span>
+                )}
               </div>
               <div className="pv2-goal-grid">
                 {GOAL_OPTIONS.map(({ value, labelKey, icon: Icon }) => {
@@ -398,6 +426,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                       key={value}
                       className={`pv2-goal-btn ${isSelected ? 'pv2-goal-btn--active' : ''}`}
                       onClick={() => handleGoalChange(value)}
+                      aria-pressed={isSelected}
+                      disabled={isSavingGoal}
                     >
                       <span className="pv2-goal-icon"><Icon /></span>
                       <span className="pv2-goal-label">{t(labelKey)}</span>
@@ -418,6 +448,8 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
                         key={value}
                         className={`pv2-activity-chip ${isSelected ? 'pv2-activity-chip--active' : ''}`}
                         onClick={() => handleActivityChange(value)}
+                        aria-pressed={isSelected}
+                        disabled={isSavingGoal}
                       >
                         {t(labelKey)}
                       </button>
@@ -489,7 +521,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
       <div className={`pv2-drawer ${drawerOpen ? 'pv2-drawer--open' : ''}`}>
         <div className="pv2-drawer-header">
           <span className="pv2-drawer-title">{t('profile.settings')}</span>
-          <button className="pv2-drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Close settings">
+          <button className="pv2-drawer-close" onClick={() => setDrawerOpen(false)} aria-label={t('profile.closeSettings')}>
             <FaTimes />
           </button>
         </div>

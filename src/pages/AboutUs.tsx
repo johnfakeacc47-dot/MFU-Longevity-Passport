@@ -11,6 +11,8 @@ type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' |
 interface AboutUsProps {
   onNavigate: (page: PageType) => void;
   onOpenFoodRecognition: () => void;
+  /** Where the Back button returns to. Opened from the Profile drawer by default. */
+  backTo?: PageType;
 }
 
 const REPO_URL = 'https://github.com/johnfakeacc47-dot/MFU-Longevity-Passport';
@@ -40,14 +42,14 @@ const STUDENTS: Person[] = [
 const initialsOf = (name: string): string =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
-export const AboutUs: React.FC<AboutUsProps> = ({ onNavigate, onOpenFoodRecognition }) => {
+export const AboutUs: React.FC<AboutUsProps> = ({ onNavigate, onOpenFoodRecognition, backTo = 'profile' }) => {
   const { t } = useLanguage();
   useSEO(`${t('aboutUs.title')} · MFU Longevity Passport`, 'The team and mission behind MFU Longevity Passport.');
 
   return (
     <div className="profile-container pb-24 premium-gradient" style={{ minHeight: '100vh' }}>
       <header className="profile-top-header" style={{ background: 'transparent', border: 'none' }}>
-        <BackButton onClick={() => onNavigate('settings')} ariaLabel={t('common.back')} />
+        <BackButton onClick={() => onNavigate(backTo)} ariaLabel={t('common.back')} />
         <h1 className="header-title text-gradient">{t('aboutUs.title')}</h1>
         <div style={{ width: 44 }} />
       </header>
@@ -146,7 +148,6 @@ export const AboutUs: React.FC<AboutUsProps> = ({ onNavigate, onOpenFoodRecognit
         onNavigate={onNavigate}
         onOpenFoodRecognition={onOpenFoodRecognition}
         t={t}
-        className="bottom-nav glass-card"
       />
     </div>
   );

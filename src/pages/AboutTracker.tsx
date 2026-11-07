@@ -2,7 +2,7 @@ import React from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
-import { FaBed, FaCircle, FaDumbbell, FaFlask, FaGraduationCap, FaHourglassHalf, FaLeaf } from "react-icons/fa";
+import { FaBed, FaDumbbell, FaFlask, FaGraduationCap, FaHourglassHalf, FaLeaf } from 'react-icons/fa';
 import { BackButton } from '../components/BackButton';
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
@@ -12,22 +12,22 @@ interface AboutTrackerProps {
   onOpenFoodRecognition: () => void;
 }
 
+const PILLARS = [
+  { key: 'nutrition', icon: <FaLeaf />,          titleKey: 'aboutTracker.pillarNutrition', descKey: 'aboutTracker.pillarNutritionDesc' },
+  { key: 'fasting',   icon: <FaHourglassHalf />, titleKey: 'aboutTracker.pillarFasting',   descKey: 'aboutTracker.pillarFastingDesc' },
+  { key: 'activity',  icon: <FaDumbbell />,      titleKey: 'aboutTracker.pillarActivity',  descKey: 'aboutTracker.pillarActivityDesc' },
+  { key: 'sleep',     icon: <FaBed />,           titleKey: 'aboutTracker.pillarSleep',     descKey: 'aboutTracker.pillarSleepDesc' },
+] as const;
+
 export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const { t } = useLanguage();
-  useSEO('The Science · MFU Longevity Passport', 'Learn the science behind the Longevity Passport scoring system.');
-
-  const pillars = [
-    { title: 'Nutrition', icon: <FaLeaf />, desc: 'Personalized AI-tracking to optimize nutrient density and caloric balance.' },
-    { title: 'Fasting', icon: <FaHourglassHalf />, desc: 'Harnessing autophagy and metabolic flexibility through structured windows.' },
-    { title: 'Activity', icon: <FaDumbbell />, desc: 'Enhancing mitochondrial health and VO2 max via consistent movement.' },
-    { title: 'Sleep', icon: <FaBed />, desc: 'Critical regenerative phases for cognitive health and DNA repair.' },
-  ];
+  useSEO(`${t('aboutTracker.title')} · MFU Longevity Passport`, 'Learn the science behind the Longevity Passport scoring system.');
 
   return (
     <div className="profile-container pb-24 premium-gradient" style={{ minHeight: '100vh' }}>
       <header className="profile-top-header" style={{ background: 'transparent', border: 'none' }}>
-        <BackButton onClick={() => onNavigate('profile')} ariaLabel="Go back to profile" />
-        <h1 className="header-title text-gradient">The Science</h1>
+        <BackButton onClick={() => onNavigate('profile')} ariaLabel={t('common.back')} />
+        <h1 className="header-title text-gradient">{t('aboutTracker.title')}</h1>
         <div style={{ width: 44 }} />
       </header>
 
@@ -35,21 +35,21 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
         {/* University Info */}
         <div className="flex flex-col items-center justify-center text-center py-8">
           <div className="w-24 h-24 backdrop-blur-md rounded-3xl flex items-center justify-center mb-4 shadow-xl border" style={{ background: 'var(--surface-soft)', borderColor: 'var(--border-glass)' }}>
-            <span className="text-5xl" style={{ color: 'var(--color-primary)' }}><FaGraduationCap /></span>
+            <span className="text-5xl" style={{ color: 'var(--accent)' }}><FaGraduationCap /></span>
           </div>
           <h2 className="text-2xl font-black leading-tight">MFU Longevity Passport</h2>
-          <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>Mae Fah Luang University Research Project</p>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>{t('aboutTracker.subtitle')}</p>
         </div>
 
         {/* The 4 Pillars */}
         <div className="space-y-4">
-          <h3 className="text-sm font-black uppercase tracking-widest pl-2" style={{ color: 'var(--text-secondary)' }}>The Four Pillars</h3>
+          <h3 className="text-sm font-black uppercase tracking-widest pl-2" style={{ color: 'var(--text-secondary)' }}>{t('aboutTracker.pillarsHeading')}</h3>
           <div className="grid grid-cols-2 gap-4">
-            {pillars.map((pillar) => (
-              <div key={pillar.title} className="glass-card p-4 rounded-2xl flex flex-col items-center text-center" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
-                <span className="text-4xl mb-3" style={{ color: 'var(--color-primary)' }}>{pillar.icon}</span>
-                <div className="font-bold text-base">{pillar.title}</div>
-                <p className="text-xs mt-2 leading-relaxed break-words" style={{ overflowWrap: 'break-word', color: 'var(--text-secondary)' }}>{pillar.desc}</p>
+            {PILLARS.map((pillar) => (
+              <div key={pillar.key} className="glass-card p-4 rounded-2xl flex flex-col items-center text-center" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
+                <span className="text-4xl mb-3" style={{ color: 'var(--accent)' }}>{pillar.icon}</span>
+                <div className="font-bold text-base">{t(pillar.titleKey)}</div>
+                <p className="text-xs mt-2 leading-relaxed break-words" style={{ overflowWrap: 'break-word', color: 'var(--text-secondary)' }}>{t(pillar.descKey)}</p>
               </div>
             ))}
           </div>
@@ -59,29 +59,28 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
         <div className="glass-card p-6 rounded-3xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="section-header mb-4">
             <span className="section-icon"><FaFlask /></span>
-            <span className="section-title font-bold">Research Methodology</span>
+            <span className="section-title font-bold">{t('aboutTracker.methodHeading')}</span>
           </div>
           <div className="space-y-4 text-sm leading-relaxed break-words" style={{ overflowWrap: 'break-word', color: 'var(--text-secondary)' }}>
+            {/* Emphasised fragments are separate keys so each language keeps its own word order. */}
             <p>
-              Our Longevity Score is derived from the **"Blue Zones"** lifestyle research and modern geroscience. We analyze real-time data to provide a holistic view of your health trajectory.
+              {t('aboutTracker.methodP1a')}<strong>{t('aboutTracker.methodP1b')}</strong>{t('aboutTracker.methodP1c')}
             </p>
             <p>
-              Developed by the **School of Information Technology** and **School of Medicine** at MFU, this platform integrates advanced AI and clinical insights to democratize longevity.
+              {t('aboutTracker.methodP2a')}<strong>{t('aboutTracker.methodP2b')}</strong>{t('aboutTracker.methodP2c')}<strong>{t('aboutTracker.methodP2d')}</strong>{t('aboutTracker.methodP2e')}
             </p>
           </div>
         </div>
 
         {/* Legal/Links */}
-        <div className="pt-6 border-t flex flex-wrap justify-center gap-4 text-xs font-bold text-blue-700 uppercase tracking-tighter" style={{ borderTopColor: 'var(--border-glass)' }}>
-          <button className="hover:underline">Terms of Service</button>
-          <span><FaCircle size={8} aria-hidden="true" /></span>
-          <button className="hover:underline">Privacy Policy (PDPA)</button>
-          <span><FaCircle size={8} aria-hidden="true" /></span>
-          <button className="hover:underline">API Documentation</button>
+        <div className="pt-6 border-t flex flex-wrap justify-center gap-4 text-xs font-bold uppercase tracking-tighter" style={{ borderTopColor: 'var(--border-glass)', color: 'var(--text-accent)' }}>
+          <button type="button" className="hover:underline" style={{ color: 'inherit' }} onClick={() => onNavigate('privacy-settings')}>
+            {t('aboutTracker.privacyPolicy')}
+          </button>
         </div>
 
         <div className="text-center text-xs pb-10" style={{ color: 'var(--text-secondary)' }}>
-          © 2026 Mae Fah Luang University. All rights reserved.
+          {t('aboutTracker.copyright')}
         </div>
       </div>
 
@@ -90,7 +89,6 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
         onNavigate={onNavigate}
         onOpenFoodRecognition={onOpenFoodRecognition}
         t={t}
-        className="bottom-nav glass-card"
       />
     </div>
   );

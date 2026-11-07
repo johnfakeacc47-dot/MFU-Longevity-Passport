@@ -30,7 +30,8 @@ export const LongevityIndexCard: React.FC<LongevityIndexCardProps> = ({ indexDat
           </div>
         </div>
         <div className="index-level-badge" style={{ background: badgeStyle.bg, color: badgeStyle.color }}>
-          {t(levelKey).split(' ')[0]}
+          {/* Dedicated short label per level — splitting the long label on spaces breaks in Thai. */}
+          {t(`${levelKey}Short`)}
         </div>
       </div>
 

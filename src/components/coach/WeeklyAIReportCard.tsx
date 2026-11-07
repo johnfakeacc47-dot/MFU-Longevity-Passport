@@ -83,7 +83,7 @@ export const WeeklyAIReportCard: React.FC = () => {
             className="ai-report-refresh"
             onClick={() => void load(true)}
             disabled={refreshing}
-            aria-label="Refresh AI report"
+            aria-label={t('coach.refreshReport')}
           >
             <FaSyncAlt className={refreshing ? 'spin' : ''} />
           </button>
@@ -92,10 +92,10 @@ export const WeeklyAIReportCard: React.FC = () => {
 
       <div className="ai-report-banner" style={loading ? { opacity: 0.55 } : undefined}>
         <div className="ai-report-badge">
-          <FaStar style={{ color: '#F59E0B' }} /> {rep ? 'AI ANALYSIS' : (isTh ? 'สรุปเบื้องต้น' : 'SUMMARY')}
+          <FaStar style={{ color: '#F59E0B' }} /> {rep ? t('coach.aiAnalysisBadge') : t('coach.summaryBadge')}
           {rep && rep.scoreTrend === 'improving' && <FaArrowUp style={{ color: '#10B981', marginLeft: 6 }} />}
         </div>
-        <p className="ai-report-summary">{loading ? (isTh ? 'กำลังโหลด...' : 'Loading…') : summary}</p>
+        <p className="ai-report-summary">{loading ? t('common.loading') : summary}</p>
 
         {rep && (
           <div className="ai-report-detail">

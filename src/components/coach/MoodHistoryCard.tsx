@@ -52,7 +52,7 @@ export const MoodHistoryCard: React.FC = () => {
             <FaHistory />
           </span>
           <div>
-            <h3 className="coach-card-title">{t('mental.title')} History (7D)</h3>
+            <h3 className="coach-card-title">{t('mental.historyTitle')}</h3>
             <p className="coach-card-subtitle">{history.length} {t('common.recorded')}</p>
           </div>
         </div>
