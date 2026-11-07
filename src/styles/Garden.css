@@ -66,13 +66,24 @@ html[data-theme="dark"] {
 .garden-hero-readout {
   align-self: stretch;
   display: flex;
+  flex-wrap: wrap; /* a long caption drops below the stage name, never squeezes it */
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
+  gap: 2px 8px;
   font-size: 13px;
   color: var(--text-secondary);
 }
-.garden-hero-stage { font-weight: 700; color: var(--text-primary); }
+.garden-hero-stage { font-weight: 700; color: var(--text-primary); white-space: nowrap; }
+.garden-hero-progress { text-align: right; margin-left: auto; }
+/* Seed/Sprout: the 160px plant is 208px tall; keep its bottom 116px (aura,
+   sprout and soil) and drop the empty sky above. */
+.garden-hero-plant--early {
+  height: 116px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
 .garden-hero-caption { font-size: 12.5px; color: var(--text-secondary); text-align: center; max-width: 34ch; line-height: 1.5; }
 
 /* ---- loading state — same shape as the loaded card so nothing pops in,

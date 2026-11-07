@@ -721,6 +721,9 @@ export interface WeeklyAIReportResult {
   avgMental: number;
   summaryText: string;
   bestPillarLabel: string;
+  /** false when nothing was logged in the window (summaryText is then the
+   *  "not enough data" prompt). */
+  hasData: boolean;
 }
 
 export const getWeeklyAIReport = (lang: string): WeeklyAIReportResult => {
@@ -738,6 +741,7 @@ export const getWeeklyAIReport = (lang: string): WeeklyAIReportResult => {
         ? 'ยังไม่มีข้อมูลเพียงพอในรอบ 7 วันที่ผ่านมา เริ่มต้นบันทึกสุขภาพทั้ง 4 ด้านเพื่อให้ AI สรุปรายงานสัปดาห์นี้ให้คุณ'
         : 'Not enough data across the past 7 days. Start logging your 4 core pillars to unlock your Weekly AI Health Summary.',
       bestPillarLabel: '-',
+      hasData: false,
     };
   }
 
@@ -770,5 +774,6 @@ export const getWeeklyAIReport = (lang: string): WeeklyAIReportResult => {
     avgMental,
     summaryText,
     bestPillarLabel: best.label,
+    hasData: true,
   };
 };

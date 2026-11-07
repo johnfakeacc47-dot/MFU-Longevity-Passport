@@ -2,7 +2,9 @@
   min-height: 100vh;
   background: var(--bg);
   color: var(--text-primary);
-  padding-bottom: 100px;
+  /* .settings-content already reserves the bottom-nav clearance (110px+);
+     a second 100px here left a blank band under the version line. */
+  padding-bottom: 0;
   display: flex;
   flex-direction: column;
 }
@@ -181,6 +183,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px; /* keep long descriptions off the switch */
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-soft, rgba(255, 255, 255, 0.08));
 }
@@ -194,6 +197,8 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .toggle-info strong {
@@ -342,3 +347,12 @@ input:checked + .slider:before {
   color: var(--text-tertiary, #94A3B8);
   text-align: center;
 }
+
+/* Push "Enable" is the section's primary action, but the global dark rule
+   repaints every .btn as a flat --surface-solid slab, so it read as disabled.
+   Keep the accent fill; ink text for contrast on the light sky accent. */
+[data-theme="dark"] .btn.settings-push-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  color: #0F172A !important;
+}
+[data-theme="dark"] .btn.settings-push-btn:disabled { opacity: 0.6; }

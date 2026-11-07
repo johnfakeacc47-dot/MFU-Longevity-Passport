@@ -52,7 +52,7 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
         <div style={{ width: 44 }} />
       </header>
 
-      <div className="profile-content page-content p-4 space-y-8">
+      <div className="profile-content page-content p-4">
         {/* Hero */}
         <div className="flex flex-col items-center justify-center text-center py-4">
           <GardenPlant breakdown={GOOD_DAY} stage={4} size={140} title={t('aboutGarden.title')} />
@@ -100,9 +100,11 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
           <h3 className="text-sm font-black uppercase tracking-widest pl-2" style={{ color: 'var(--text-secondary)' }}>
             {t('aboutGarden.stagesHeading')}
           </h3>
-          <div className="flex gap-3 overflow-x-auto pb-2">
+          {/* Wider than the screen on phones: scroll-snap + a faded right edge
+              (.ag-stage-scroller) so the cut-off card reads as "swipe for more". */}
+          <div className="ag-stage-scroller flex gap-3 overflow-x-auto pb-2">
             {([0, 1, 2, 3, 4] as GrowthStage[]).map((stage) => (
-              <div key={stage} className="flex flex-col items-center gap-1" style={{ minWidth: 84 }}>
+              <div key={stage} className="ag-stage-item flex flex-col items-center gap-1" style={{ minWidth: 84, width: 84 }}>
                 <div className="glass-card rounded-2xl flex items-center justify-center" style={{ width: 84, height: 96 }}>
                   <GardenPlant breakdown={GOOD_DAY} stage={stage} size={56} />
                 </div>

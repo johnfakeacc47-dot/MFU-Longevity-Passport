@@ -54,7 +54,7 @@ export const AboutUs: React.FC<AboutUsProps> = ({ onNavigate, onOpenFoodRecognit
         <div style={{ width: 44 }} />
       </header>
 
-      <div className="profile-content page-content p-4 space-y-8">
+      <div className="profile-content page-content p-4">
         {/* Hero */}
         <div className="flex flex-col items-center justify-center text-center py-4">
           <img src="/mfu-logo.png" alt="Mae Fah Luang University" className="about-us-crest" />

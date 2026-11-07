@@ -31,7 +31,7 @@ export const AboutTracker: React.FC<AboutTrackerProps> = ({ onNavigate, onOpenFo
         <div style={{ width: 44 }} />
       </header>
 
-      <div className="profile-content page-content p-4 space-y-8">
+      <div className="profile-content page-content p-4">
         {/* University Info */}
         <div className="flex flex-col items-center justify-center text-center py-8">
           <div className="w-24 h-24 backdrop-blur-md rounded-3xl flex items-center justify-center mb-4 shadow-xl border" style={{ background: 'var(--surface-soft)', borderColor: 'var(--border-glass)' }}>

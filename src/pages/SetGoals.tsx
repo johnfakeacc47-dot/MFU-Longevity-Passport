@@ -74,7 +74,7 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         <div style={{ width: 44 }} />
       </header>
 
-      <div className="profile-content page-content p-4 space-y-6">
+      <div className="profile-content page-content p-4">
         {/* Health Potential Indicator */}
         <div
           className="glass-card p-6 rounded-2xl"
@@ -132,16 +132,16 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'var(--surface-soft)', color: 'var(--color-primary, #3b82f6)' }}>{fastingGoal} {isTh ? 'ชม.' : 'hrs'}</span>
           </div>
-          <input 
-            type="range" min="12" max="22" step="1" 
-            className="w-full accent-blue-700 h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ background: 'var(--border-soft, #e5e7eb)' }}
+          {/* One control: the range paints its own filled track (.sg-range)
+              rather than stacking a second progress bar under it. */}
+          <input
+            type="range" min="12" max="22" step="1"
+            className="sg-range"
+            style={{ '--sg-pct': `${fastingPct}%` } as React.CSSProperties}
+            aria-label={isTh ? 'ช่วงเวลาอดอาหาร' : 'Fasting Window'}
             value={fastingGoal}
             onChange={(e) => setFastingGoal(parseInt(e.target.value))}
           />
-          <div className="h-1.5 rounded-full mt-3 overflow-hidden" style={{ background: 'var(--border-soft, #f1f5f9)' }}>
-            <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-700 transition-all duration-500" style={{ width: `${fastingPct}%` }}></div>
-          </div>
           <div className="flex justify-between text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
             <span>12 {isTh ? 'ชม.' : 'h'}</span>
             <span>{isTh ? '16 ชม. (เหมาะสม)' : '16h (Optimal)'}</span>
@@ -167,16 +167,16 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'var(--surface-soft)', color: 'var(--color-primary, #3b82f6)' }}>{sleepGoal} {isTh ? 'ชม.' : 'hrs'}</span>
           </div>
-          <input 
-            type="range" min="4" max="10" step="0.5" 
-            className="w-full accent-blue-700 h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ background: 'var(--border-soft, #e5e7eb)' }}
+          {/* One control: the range paints its own filled track (.sg-range)
+              rather than stacking a second progress bar under it. */}
+          <input
+            type="range" min="4" max="10" step="0.5"
+            className="sg-range"
+            style={{ '--sg-pct': `${sleepPct}%` } as React.CSSProperties}
+            aria-label={isTh ? 'เป้าหมายการนอนหลับ' : 'Sleep Target'}
             value={sleepGoal}
             onChange={(e) => setSleepGoal(parseFloat(e.target.value))}
           />
-          <div className="h-1.5 rounded-full mt-3 overflow-hidden" style={{ background: 'var(--border-soft, #f1f5f9)' }}>
-            <div className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-700 transition-all duration-500" style={{ width: `${sleepPct}%` }}></div>
-          </div>
           <div className="flex justify-between text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
             <span>4 {isTh ? 'ชม.' : 'h'}</span>
             <span>{isTh ? '8 ชม. (แนะนำ)' : '8h (Recommended)'}</span>
@@ -202,16 +202,16 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
             </div>
             <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'var(--surface-soft)', color: 'var(--color-primary, #3b82f6)' }}>{activityGoal} {isTh ? 'นาที' : 'min'}</span>
           </div>
-          <input 
-            type="range" min="15" max="120" step="5" 
-            className="w-full accent-blue-600 h-2 rounded-lg appearance-none cursor-pointer"
-            style={{ background: 'var(--border-soft, #e5e7eb)' }}
+          {/* One control: the range paints its own filled track (.sg-range)
+              rather than stacking a second progress bar under it. */}
+          <input
+            type="range" min="15" max="120" step="5"
+            className="sg-range"
+            style={{ '--sg-pct': `${activityPct}%` } as React.CSSProperties}
+            aria-label={isTh ? 'เวลาออกกำลังกาย' : 'Active Minutes'}
             value={activityGoal}
             onChange={(e) => setActivityGoal(parseInt(e.target.value))}
           />
-          <div className="h-1.5 rounded-full mt-3 overflow-hidden" style={{ background: 'var(--border-soft, #f1f5f9)' }}>
-            <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-700 transition-all duration-500" style={{ width: `${activityPct}%` }}></div>
-          </div>
           <div className="flex justify-between text-xs mt-2" style={{ color: 'var(--text-secondary)' }}>
             <span>15 {isTh ? 'นาที' : 'm'}</span>
             <span>{isTh ? '45+ นาที (ปานกลาง)' : '45m+ (Moderate)'}</span>

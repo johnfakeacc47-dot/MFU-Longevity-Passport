@@ -28,7 +28,7 @@ import {
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import '../styles/Settings.css';
 
-const APP_VERSION = '3.0.0';
+import { APP_VERSION } from '../utils/appVersion';
 
 const DEFAULT_PREFS: NotificationPrefs = {
   mealReminder: true, waterReminder: true, sleepReminder: true,
@@ -369,7 +369,7 @@ export const Settings: React.FC<SettingsProps> = ({ onNavigate, onOpenFoodRecogn
             </>
           ) : (
             <>
-              <button type="button" className="btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
+              <button type="button" className="btn settings-push-btn" onClick={handleEnablePush} disabled={pushBusy} style={{ width: '100%' }}>
                 {pushBusy ? t('common.loading') : t('settings.pushEnableBtn')}
               </button>
               {pushError && (

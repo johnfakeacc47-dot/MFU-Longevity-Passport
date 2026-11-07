@@ -60,6 +60,10 @@ export const WeeklyAIReportCard: React.FC = () => {
           : `Only ${ai.loggedDays ?? 0} day(s) logged this week — AI needs at least 3 to write a summary.`)
       : rule.summaryText);
 
+  // When the card is already saying "not enough data" (from the AI or, if it
+  // failed, the local rule), a "couldn't generate" error under it is noise.
+  const showsNotEnoughData = !rep && (ai ? ai.enoughData === false : !rule.hasData);
+
   const relative = ai?.generatedAt
     ? new Date(ai.generatedAt).toLocaleDateString(isTh ? 'th-TH' : 'en-US', { month: 'short', day: 'numeric' })
     : null;
@@ -135,7 +139,7 @@ export const WeeklyAIReportCard: React.FC = () => {
             )}
           </div>
         )}
-        {err && <p className="ai-report-err">{err}</p>}
+        {err && !showsNotEnoughData && <p className="ai-report-err">{err}</p>}
       </div>
 
       <div className="ai-report-stats-grid">
