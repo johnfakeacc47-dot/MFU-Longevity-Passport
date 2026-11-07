@@ -107,10 +107,12 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
     const h = normalizeHandle(input);
     if (!h) return;
     setStatus('looking'); setError(null); setPreview(null);
-    const p = await previewHandle(h);
-    if (!p) { setStatus('idle'); setError(t('team.errNotFound')); return; }
-    setPreview(p);
+    const res = await previewHandle(h);
     setStatus('idle');
+    if (res.kind === 'found') { setPreview(res.profile); return; }
+    // Only a genuine miss is "code not found"; an RPC/network failure gets
+    // the generic "try again" message instead of blaming the typed code.
+    setError(t(res.kind === 'not_found' ? 'team.errNotFound' : 'team.errGeneric'));
   };
 
   const handleAdd = async () => {
@@ -210,7 +212,10 @@ export const TeamInvite: React.FC<Props> = ({ myHandle, open, onOpenChange, onMe
                 </p>
               )}
 
-              {preview ? (
+              {/* Once the request went through the modal auto-closes after
+                  1.4s — hide the button in that window so a second tap can't
+                  file a duplicate request. */}
+              {status === 'done' ? null : preview ? (
                 <button type="button" className="modal-submit-btn" disabled={status === 'adding'} onClick={handleAdd}>
                   {status === 'adding' ? t('team.sending') : t('team.sendRequest')}
                 </button>

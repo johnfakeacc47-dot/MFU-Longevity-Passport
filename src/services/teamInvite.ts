@@ -50,20 +50,36 @@ export const normalizeHandle = (raw: string): string =>
 export const buildInviteUrl = (handle: string): string =>
   `${INVITE_ORIGIN}/?add=${encodeURIComponent(normalizeHandle(handle))}`;
 
-/** Read-only lookup for the "Add <name>?" confirmation step. */
-export const previewHandle = async (handle: string): Promise<HandlePreview | null> => {
-  if (!supabase) return null;
-  const h = normalizeHandle(handle);
-  if (!h) return null;
+/** Outcome of a handle lookup. 'not_found' is the only case that means "this
+ *  code doesn't exist" — a network/RPC failure is 'error' so the UI can say
+ *  "try again" instead of blaming the code the user typed. */
+export type PreviewResult =
+  | { kind: 'found'; profile: HandlePreview }
+  | { kind: 'not_found' }
+  | { kind: 'error' };
 
-  const { data, error } = await supabase.rpc('find_profile_by_handle', { p_handle: h });
-  if (error) {
-    console.error('previewHandle failed:', error);
-    return null;
+/** Read-only lookup for the "Add <name>?" confirmation step. */
+export const previewHandle = async (handle: string): Promise<PreviewResult> => {
+  if (!supabase) return { kind: 'error' };
+  const h = normalizeHandle(handle);
+  if (!h) return { kind: 'not_found' };
+
+  try {
+    const { data, error } = await supabase.rpc('find_profile_by_handle', { p_handle: h });
+    if (error) {
+      console.error('previewHandle failed:', error);
+      return { kind: 'error' };
+    }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return { kind: 'not_found' };
+    return {
+      kind: 'found',
+      profile: { id: row.id, name: row.name || 'MFU member', avatarUrl: row.avatar_url ?? null },
+    };
+  } catch (err) {
+    console.error('previewHandle failed:', err);
+    return { kind: 'error' };
   }
-  const row = Array.isArray(data) ? data[0] : data;
-  if (!row) return null;
-  return { id: row.id, name: row.name || 'MFU member', avatarUrl: row.avatar_url ?? null };
 };
 
 // QA-008: this used to insert the caller's team_members row directly (instant

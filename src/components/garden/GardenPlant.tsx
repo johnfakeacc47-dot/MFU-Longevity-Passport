@@ -13,7 +13,8 @@
 // has no visual outlet before stage 3 — same as the real thing.
 import React, { useId } from 'react';
 import { taperedRibbon, bladeShape } from './gardenGeometry';
-import { pillarTier, type GrowthStage } from '../../utils/growthStage';
+import { pillarTier, STAGE_NAME_KEYS, type GrowthStage } from '../../utils/growthStage';
+import { useLanguage } from '../../contexts/LanguageContext';
 import '../../styles/Garden.css';
 
 export interface GardenBreakdown {
@@ -270,6 +271,7 @@ const FIREFLY_OFFSETS: ReadonlyArray<readonly [number, number]> = [[-30, 0], [32
 const FLY_KEYFRAMES = ['fireflyFloatA', 'fireflyFloatB', 'fireflyFloatC'];
 
 export const GardenPlant: React.FC<GardenPlantProps> = ({ breakdown, stage, size = 200, className, title }) => {
+  const { t } = useLanguage();
   const rawId = useId().replace(/[^a-zA-Z0-9]/g, '');
   const tN = pillarTier(breakdown.nutrition);
   const tE = pillarTier(breakdown.exercise);
@@ -308,7 +310,7 @@ export const GardenPlant: React.FC<GardenPlantProps> = ({ breakdown, stage, size
       height={size * 1.3}
       className={className}
       role="img"
-      aria-label={title ?? `Longevity garden tree, stage ${stage}`}
+      aria-label={title ?? `${t('garden.treeAria')} · ${t(STAGE_NAME_KEYS[stage])}`}
     >
       <defs>
         <filter id={auraBlurId} x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation={10} /></filter>

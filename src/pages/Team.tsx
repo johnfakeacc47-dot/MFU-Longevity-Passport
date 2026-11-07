@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { FaCheck, FaCrown, FaLock, FaUserPlus, FaUser } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
@@ -9,7 +9,7 @@ import { LoadingSkeleton } from '../components/LoadingSkeleton';
 import { TeamInvite } from '../components/team/TeamInvite';
 import { PendingRequests } from '../components/team/PendingRequests';
 import { GardenPlant } from '../components/garden/GardenPlant';
-import { stageFromPoints } from '../utils/growthStage';
+import { stageFromPoints, STAGE_NAME_KEYS } from '../utils/growthStage';
 import '../styles/Garden.css';
 import {
   getLeaderboard, getChallengeStatus, isSupabaseConfigured,
@@ -33,12 +33,18 @@ interface TeamProps {
 }
 
 const RANK_MEDALS = ['🥇', '🥈', '🥉'];
+// Internal day ids — they match `challenges.day_name` from the server, so they
+// stay English. What the user *sees* is `dayLabels` (Intl, current language).
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition }) => {
   const [activeTab, setActiveTab] = useState<'myTeam' | 'allTeams'>('myTeam');
   const [isScorePublic, setIsScorePublic] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  // True when a leaderboard call failed — the lists then hold [] (or stale
+  // data) and the empty slot shows a "couldn't load / retry" state instead of
+  // claiming the team has no members.
+  const [loadError, setLoadError] = useState(false);
   const [myHandle, setMyHandle] = useState<string | null>(null);
   const [myId, setMyId] = useState<string | null>(null);
   // Real today breakdown for *my own* row only — the Team Garden falls
@@ -48,11 +54,17 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const [myBreakdown, setMyBreakdown] = useState<typeof TEAM_GARDEN_REFERENCE | null>(null);
   const [showInvite, setShowInvite] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<PendingTeamRequest[]>([]);
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === 'th' ? 'th-TH' : 'en-US';
   useSEO(`${t('team.title')} · MFU Longevity Passport`, 'Join wellness challenges and compare progress with your team.');
 
   const currentDayIndex = (() => { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; })();
-  const todayDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const todayDate = new Date().toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' });
+  // Short weekday names in the current language (2024-01-01 is a Monday).
+  const dayLabels = useMemo(() => {
+    const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+    return DAYS.map((_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+  }, [locale]);
 
   // null = not loaded yet (show skeleton); [] = loaded and genuinely empty.
   const [allTeamsData, setAllTeamsData] = useState<any[] | null>(null);
@@ -65,19 +77,28 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   const challengeDone = teamPoints >= CHALLENGE_GOAL;
 
   const fetchData = async () => {
-    if (!isSupabaseConfigured()) { setIsLoading(false); return; }
+    setLoadError(false);
+    if (!isSupabaseConfigured()) {
+      // No backend: resolve the lists to "genuinely empty" rather than leaving
+      // them null, which would keep the leaderboard skeleton up forever.
+      setAllTeamsData([]);
+      setMyTeamData([]);
+      setIsLoading(false);
+      return;
+    }
     try {
       const mapMember = (m: any) => ({
         id: m.id, name: m.name || t('team.unknownMember'),
         points: m.is_score_public ? (m.total_points || 0) : null,
         rawPoints: m.total_points || 0,
         avatar: m.avatar_url,
-        role: m.role || 'Member',
+        role: m.role || t('team.roleMember'),
         isPublic: m.is_score_public ?? false,
       });
 
-      // One parallel round instead of six sequential awaits.
-      const [profile, lb, myT, challenges, todayScore, pending] = await Promise.all([
+      // One parallel round instead of six sequential awaits. allSettled so one
+      // failing call (e.g. pending requests) doesn't blank the whole page.
+      const [profileR, lbR, myTR, challengesR, todayScoreR, pendingR] = await Promise.allSettled([
         getCurrentUserProfile(),
         getLeaderboard(),
         getMyTeamLeaderboard(),
@@ -85,14 +106,19 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
         getTodayHealthScore(),
         listPendingTeamRequests(),
       ]);
-      setPendingRequests(pending);
+      const settled = [profileR, lbR, myTR, challengesR, todayScoreR, pendingR];
+      settled.forEach((r) => { if (r.status === 'rejected') console.error('Team fetch error:', r.reason); });
 
-      if (profile) {
+      if (pendingR.status === 'fulfilled') setPendingRequests(pendingR.value);
+
+      if (profileR.status === 'fulfilled' && profileR.value) {
+        const profile = profileR.value;
         setIsScorePublic(profile.is_score_public ?? false);
         setMyHandle(profile.handle ?? null);
         setMyId(profile.id ?? null);
       }
-      if (todayScore) {
+      if (todayScoreR.status === 'fulfilled' && todayScoreR.value) {
+        const todayScore = todayScoreR.value;
         setMyBreakdown({
           nutrition: todayScore.nutrition ?? 0,
           exercise: todayScore.activity ?? 0,
@@ -100,10 +126,16 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
           mental: todayScore.fasting ?? 0,
         });
       }
-      setAllTeamsData((lb ?? []).map(mapMember));
-      setMyTeamData((myT ?? []).map(mapMember));
 
-      if (challenges?.length > 0) {
+      // The two leaderboards are the page's core: a failure there is an error
+      // state, not "no members". Keep whatever was shown before (or []).
+      if (lbR.status === 'fulfilled') setAllTeamsData((lbR.value ?? []).map(mapMember));
+      else { setLoadError(true); setAllTeamsData((prev) => prev ?? []); }
+      if (myTR.status === 'fulfilled') setMyTeamData((myTR.value ?? []).map(mapMember));
+      else { setLoadError(true); setMyTeamData((prev) => prev ?? []); }
+
+      if (challengesR.status === 'fulfilled' && challengesR.value?.length > 0) {
+        const challenges = challengesR.value;
         setWeekDays(DAYS.map(d => {
           const found = challenges.find((c: any) => c.day_name === d);
           return { day: d, completed: found?.completed ?? false };
@@ -111,6 +143,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
       }
     } catch (err) {
       console.error('Team fetch error:', err);
+      setLoadError(true);
       setAllTeamsData((prev) => prev ?? []);
       setMyTeamData((prev) => prev ?? []);
     } finally {
@@ -122,15 +155,16 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
   useEffect(() => { fetchData(); }, []);
 
   const handleInvite = () => setShowInvite(true);
+  const handleRetry = () => { setIsLoading(true); void fetchData(); };
 
   const displayData = activeTab === 'myTeam' ? myTeamData : allTeamsData;
 
   return (
     <div className="team-v2">
       <header className="team-header-v2">
-        <BackButton onClick={() => onNavigate('home')} ariaLabel="Go back" />
+        <BackButton onClick={() => onNavigate('home')} ariaLabel={t('common.back')} />
         <h1 className="team-header-title">{t('team.title')}</h1>
-        <button className="team-invite-icon-btn" onClick={handleInvite} aria-label="Invite member">
+        <button className="team-invite-icon-btn" onClick={handleInvite} aria-label={t('team.addTeammate')}>
           <FaUserPlus />
         </button>
       </header>
@@ -185,7 +219,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                     <div className={`team-day-circle ${day.completed ? 'team-day-circle--done' : ''} ${i === currentDayIndex ? 'team-day-circle--today' : ''}`}>
                       {day.completed ? <FaCheck className="team-day-check" /> : (i === currentDayIndex ? '•' : '')}
                     </div>
-                    <div className={`team-day-label ${i === currentDayIndex ? 'team-day-label--today' : ''}`}>{day.day}</div>
+                    <div className={`team-day-label ${i === currentDayIndex ? 'team-day-label--today' : ''}`}>{dayLabels[i] ?? day.day}</div>
                   </div>
                 ))}
               </div>
@@ -217,6 +251,13 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
 
               {displayData === null ? (
                 <LoadingSkeleton type="list" />
+              ) : displayData.length === 0 && loadError ? (
+                <EmptyState
+                  icon="⚠️"
+                  title={t('team.loadError')}
+                  action={t('team.retry')}
+                  onAction={handleRetry}
+                />
               ) : displayData.length === 0 ? (
                 <EmptyState
                   icon="👥"
@@ -235,12 +276,15 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                       // else's private row stays a generic silhouette.
                       const isMe = member.id === myId;
                       const visible = isMe || member.isPublic;
+                      const stage = visible ? stageFromPoints(member.rawPoints) : 1;
+                      const label = visible ? member.name : t('team.private');
                       return (
                         <div key={member.id} className={`team-garden-cell ${!visible ? 'is-private' : ''}`}>
                           <GardenPlant
                             breakdown={isMe && myBreakdown ? myBreakdown : TEAM_GARDEN_REFERENCE}
-                            stage={visible ? stageFromPoints(member.rawPoints) : 1}
+                            stage={stage}
                             size={48}
+                            title={`${label} · ${t(STAGE_NAME_KEYS[stage])}`}
                           />
                           <span className="team-garden-name">{visible ? member.name : t('team.private')}</span>
                         </div>
@@ -248,7 +292,11 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                     })}
                   </div>
                   <div className="team-lb-list">
-                  {displayData.map((member, i) => (
+                  {displayData.map((member, i) => {
+                    // Same rule as the garden row above: I always see my own
+                    // real score; privacy only hides it from *others*.
+                    const showPoints = member.id === myId || member.isPublic;
+                    return (
                     <div key={member.id} className={`team-lb-card ${i < 3 ? 'team-lb-card--top' : ''}`}>
                       <div className="team-lb-rank">
                         {i < 3 ? (
@@ -268,10 +316,10 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                         <div className="team-lb-role">{member.role}</div>
                       </div>
                       <div className="team-lb-points">
-                        {member.isPublic ? (
+                        {showPoints ? (
                           <>
-                            <span className="team-lb-points-val">{member.points?.toLocaleString()}</span>
-                            <span className="team-lb-pts-label">pts</span>
+                            <span className="team-lb-points-val">{member.rawPoints.toLocaleString(locale)}</span>
+                            <span className="team-lb-pts-label">{t('common.pts')}</span>
                           </>
                         ) : (
                           <span className="team-lb-private"><FaLock /> {t('team.private')}</span>
@@ -279,7 +327,8 @@ export const Team: React.FC<TeamProps> = ({ onNavigate, onOpenFoodRecognition })
                         {i === 0 && <FaCrown className="team-lb-crown" />}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                   </div>
                 </>
               )}

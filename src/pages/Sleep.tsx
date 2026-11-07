@@ -29,17 +29,28 @@ interface SleepLog {
 
 const QUALITY_COLORS = ['', '#ef4444','#ef4444','#f97316','#f97316','#f59e0b','#84cc16','#22c55e','#10b981','#10b981','#06b6d4'];
 
+// This page only talks to the Nest health API when Supabase isn't the backend.
+// Note the backend (backend/src/health/controllers/sleep.controller.ts) exposes
+// POST + GET only — there is no DELETE /health/sleep/:id — so in API mode a
+// local delete would be undone by the next loadSleepLogs() reload. The delete
+// button is therefore hidden in that mode until the endpoint exists.
+const usesHealthApi = isApiConfigured && !isSupabaseConfigured();
+
 export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const locale = language === 'th' ? 'th-TH' : 'en-US';
   useSEO(`${t('sleep.title')} · MFU Longevity Passport`, 'Log and review your sleep quality and duration.');
   const [sleepLogs, setSleepLogs]   = useState<SleepLog[]>([]);
   const [showModal, setShowModal]   = useState(false);
   const [bedtime, setBedtime]       = useState('22:00');
   const [waketime, setWaketime]     = useState('06:30');
   const [weekAvg, setWeekAvg]       = useState({ hours: 0, quality: 0 });
+  // Set when the local save worked but the API write didn't — shown inline
+  // instead of being swallowed into console.error.
+  const [syncError, setSyncError]   = useState<string | null>(null);
 
   const loadSleepLogs = React.useCallback(async () => {
-    if (isApiConfigured && !isSupabaseConfigured()) {
+    if (usesHealthApi) {
       try {
         const to = new Date(); const from = new Date();
         from.setDate(to.getDate() - 30);
@@ -86,6 +97,10 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
 
   const logSleep = async () => {
     const duration = calcDuration(bedtime, waketime);
+    // Guard against a 0-hour night (bedtime === wake time); the button is
+    // disabled for this too, this just makes the handler safe on its own.
+    if (duration <= 0) return;
+    setSyncError(null);
     const { score: calculatedQuality } = calculateSleepQuality(duration, bedtime);
     const newLog: SleepLog = {
       id: Date.now(), bedtime, waketime, duration, quality: calculatedQuality,
@@ -95,7 +110,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
     const updated = [newLog, ...sleepLogs];
     setSleepLogs(updated);
     localStorage.setItem('sleepLogs', JSON.stringify(updated));
-    if (isApiConfigured && !isSupabaseConfigured()) {
+    if (usesHealthApi) {
       try {
         const now = new Date();
         const [bH, bM] = bedtime.split(':').map(Number);
@@ -106,6 +121,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
         await healthApi.logSleep({ bedtime: bedT.toISOString(), waketime: wakeT.toISOString(), duration: Math.round(duration * 60), quality: calculatedQuality });
       } catch (e) {
         console.error('Failed to log sleep API:', e);
+        setSyncError(t('sleep.syncFailed'));
       }
     }
     window.dispatchEvent(new Event('healthDataUpdated'));
@@ -121,6 +137,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
   };
 
   const duration = calcDuration(bedtime, waketime);
+  const durationInvalid = duration <= 0;
   const hoursTarget = 8;
   const sleepPct = weekAvg.hours ? Math.min((weekAvg.hours / hoursTarget) * 100, 100) : 0;
 
@@ -129,7 +146,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
       <header className="sleep-header-v2">
         <BackButton onClick={() => onNavigate('home')} ariaLabel={t('sleep.back')} />
         <h1 className="sleep-header-title">{t('sleep.title')}</h1>
-        <button className="sleep-add-btn" onClick={() => setShowModal(true)} aria-label="Log sleep">
+        <button className="sleep-add-btn" onClick={() => setShowModal(true)} aria-label={t('sleep.logSleep')}>
           <LuPlus />
         </button>
       </header>
@@ -161,7 +178,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
               <LuStar />
             </div>
             <div className="sleep-stat-body">
-              <div className="sleep-stat-value" style={{ color: QUALITY_COLORS[Math.round(weekAvg.quality)] || '#0f172a' }}>
+              <div className="sleep-stat-value" style={{ color: QUALITY_COLORS[Math.round(weekAvg.quality)] || 'inherit' }}>
                 {weekAvg.quality || '--'}
                 {weekAvg.quality > 0 && <span className="sleep-stat-unit">/10</span>}
               </div>
@@ -175,6 +192,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
           <LuBedDouble className="sleep-log-btn-icon" />
           {t('sleep.logSleep')}
         </button>
+        {syncError && <p className="team-add-error" role="alert">{syncError}</p>}
 
         {/* ── History ── */}
         <div className="sleep-history-v2">
@@ -193,7 +211,7 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
                 <div key={log.id} className="sleep-item-v2">
                   <div className="sleep-item-header-v2">
                     <span className="sleep-item-date">
-                      {new Date(log.timestamp).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      {new Date(log.timestamp).toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                     <div className="sleep-item-actions">
                       <span
@@ -202,9 +220,13 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
                       >
                         ★ {log.quality}/10
                       </span>
-                      <button className="sleep-delete-btn" onClick={() => deleteSleepLog(log.id)} aria-label="Delete">
-                        <LuTrash2 />
-                      </button>
+                      {/* No DELETE endpoint on the health API yet (see usesHealthApi) —
+                          a local-only delete would reappear on the next reload. */}
+                      {!usesHealthApi && (
+                        <button className="sleep-delete-btn" onClick={() => deleteSleepLog(log.id)} aria-label={t('common.delete')}>
+                          <LuTrash2 />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div className="sleep-item-timeline">
@@ -236,19 +258,19 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
           <div className="modal-card modal-card--sleep" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-v2">
               <h3 className="modal-title">{t('sleep.logSleep')}</h3>
-              <button className="modal-close-btn" onClick={() => setShowModal(false)}><LuX /></button>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)} aria-label={t('common.close')}><LuX /></button>
             </div>
 
             <div className="modal-body">
               <div className="sleep-modal-time-row">
                 <div className="sleep-modal-time-field">
-                  <label className="modal-label"><LuMoon style={{ color: '#3b82f6' }} /> {t('sleep.bedtime')}</label>
-                  <input type="time" value={bedtime} onChange={(e) => setBedtime(e.target.value)} className="modal-time-input" />
+                  <label className="modal-label" htmlFor="sleep-bedtime-input"><LuMoon style={{ color: '#3b82f6' }} /> {t('sleep.bedtime')}</label>
+                  <input id="sleep-bedtime-input" type="time" value={bedtime} onChange={(e) => setBedtime(e.target.value)} className="modal-time-input" />
                 </div>
-                <div className="sleep-modal-time-arrow">→</div>
+                <div className="sleep-modal-time-arrow" aria-hidden="true">→</div>
                 <div className="sleep-modal-time-field">
-                  <label className="modal-label"><LuSun style={{ color: '#f59e0b' }} /> {t('sleep.waketime')}</label>
-                  <input type="time" value={waketime} onChange={(e) => setWaketime(e.target.value)} className="modal-time-input" />
+                  <label className="modal-label" htmlFor="sleep-waketime-input"><LuSun style={{ color: '#f59e0b' }} /> {t('sleep.waketime')}</label>
+                  <input id="sleep-waketime-input" type="time" value={waketime} onChange={(e) => setWaketime(e.target.value)} className="modal-time-input" />
                 </div>
               </div>
 
@@ -257,7 +279,8 @@ export const Sleep: React.FC<SleepProps> = ({ onNavigate, onOpenFoodRecognition 
                 <SleepQualityIndicator duration={duration} bedtime={bedtime} />
               </div>
 
-              <button className="modal-submit-btn" onClick={logSleep}>{t('sleep.logButton')}</button>
+              {durationInvalid && <p className="team-add-error" role="alert">{t('sleep.invalidDuration')}</p>}
+              <button className="modal-submit-btn" onClick={logSleep} disabled={durationInvalid}>{t('sleep.logButton')}</button>
             </div>
           </div>
         </div>
