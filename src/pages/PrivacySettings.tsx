@@ -215,7 +215,7 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         <div style={{ width: 44 }} />
       </header>
 
-      <div className="profile-content page-content p-4 space-y-6">
+      <div className="profile-content page-content p-4">
         {/* Main Controls */}
         <div className="glass-card p-6 rounded-2xl" style={{ padding: '1.5rem', height: 'auto', minHeight: 'fit-content' }}>
           <div className="section-header mb-6">
@@ -352,9 +352,12 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({ onNavigate, on
         <div className="p-6 rounded-2xl border-2 border-dashed" style={{ padding: '1.5rem', background: 'var(--color-danger-soft, rgba(239, 68, 68, 0.12))', borderColor: 'var(--color-danger, #EF4444)' }}>
           <h3 className="text-sm font-bold mb-2" style={{ color: 'var(--color-danger, #EF4444)' }}>{isTh ? 'พื้นที่อันตราย' : 'Danger Zone'}</h3>
           <p className="text-sm mb-4 break-words" style={{ overflowWrap: 'break-word', color: 'var(--text-secondary)' }}>{isTh ? 'การลบบัญชีของคุณจะลบประวัติสุขภาพทั้งหมดออกจากเซิร์ฟเวอร์ของเรา การดำเนินการนี้ไม่สามารถย้อนกลับได้' : 'Deleting your account will remove all health history from our servers. This action is irreversible.'}</p>
-          <button 
-            className="w-full py-3 rounded-xl text-white text-sm font-bold active:scale-95 transition-transform mt-6"
-            style={{ marginTop: '1.5rem', background: 'var(--color-danger, #EF4444)', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.25)' }}
+          {/* Fixed red-600 rather than --color-danger: that token is a light
+              #F87171 in dark mode, where white text on it fails contrast. */}
+          <button
+            type="button"
+            className="w-full py-3 rounded-xl text-white text-sm font-bold active:scale-95 transition-transform"
+            style={{ marginTop: '1.5rem', background: '#DC2626', boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)' }}
             onClick={() => { setDeleteStep(1); setShowDeleteModal(true); }}
           >
             {isTh ? 'ลบบัญชีและข้อมูลของฉัน' : 'Delete My Account & Data'}

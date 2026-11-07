@@ -28,10 +28,15 @@
   --accent-light: #E3F2FD;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* Layered for the same reason as the reset in _palette-lock.css: an
+   unlayered `*` rule outranks Tailwind's @layer utilities, which zeroed every
+   p-*, m-*, gap-* and space-y-* utility the pages use. */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 body {
@@ -4310,20 +4315,33 @@ tbody td {
   color: #c2410c;
 }
 
+/* .actions-cell is a <td>: display:flex here took it out of table layout, so
+   its bottom border sat at a different height from the rest of the row.
+   Space the buttons with margins instead and keep it a table cell. */
 .actions-cell {
-  display: flex;
-  gap: 8px;
+  white-space: nowrap;
+}
+.actions-cell > * + * {
+  margin-left: 8px;
 }
 
-.icon-btn {
+.icon-btn,
+.um-icon-btn {
   border: 1px solid #e2e8f0;
   background: var(--surface-card, #FFFFFF);
+  color: var(--text-secondary, #475569);
   border-radius: 8px;
   padding: 6px 8px;
+  min-width: 36px;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
 }
 
-.icon-btn.danger {
+.icon-btn.danger,
+.um-icon-btn.danger {
   border-color: #fecaca;
   color: #b91c1c;
 }
@@ -7377,3 +7395,107 @@ section + section {
 }
 
 
+
+/* ── User Management, dark mode ────────────────────────────────────────────
+   The page renders with the legacy rules in this file (src/styles/
+   UserManagement.css was never imported, and its unscoped .btn-primary /
+   .filter-bar / .error-message would restyle other pages if it were). The
+   shared light-card list above forces a white gradient on .table-card and
+   .user-form with !important and the dark bridge never listed them, so on a
+   dark page the filter bar, form and table stayed white. */
+[data-theme="dark"] .table-card,
+[data-theme="dark"] .user-form {
+  background: var(--surface-card, #1F2937) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+  box-shadow: none !important;
+}
+[data-theme="dark"] .filter-bar {
+  background: var(--surface-soft, #2A3447);
+  border-color: var(--border-glass, rgba(255,255,255,0.10));
+}
+[data-theme="dark"] thead th { color: var(--text-secondary); border-bottom-color: var(--border-glass); }
+[data-theme="dark"] tbody td { color: var(--text-primary); border-bottom-color: var(--border-soft); }
+[data-theme="dark"] .user-sub,
+[data-theme="dark"] .loading-text,
+[data-theme="dark"] .table-footer { color: var(--text-secondary); }
+[data-theme="dark"] .avatar { background: var(--surface-hover, #374151); color: var(--text-primary); }
+[data-theme="dark"] .status-active { background: var(--color-success-soft); color: var(--color-success-text); }
+[data-theme="dark"] .role-student   { background: var(--color-info-soft);    color: var(--color-info-text); }
+[data-theme="dark"] .role-staff     { background: rgba(167,139,250,0.16);    color: #C4B5FD; }
+[data-theme="dark"] .role-admin     { background: var(--color-warning-soft); color: var(--color-warning-text); }
+[data-theme="dark"] .um-icon-btn {
+  background: var(--surface-solid, #1F2937);
+  border-color: var(--border-glass, rgba(255,255,255,0.12));
+  color: var(--text-secondary);
+}
+[data-theme="dark"] .um-icon-btn.danger { border-color: rgba(248,113,113,0.35); color: var(--color-danger-text); }
+
+
+/* ── Visual QA fixes ───────────────────────────────────────────────────── */
+
+/* Set Goals sliders: one control that paints its own filled track, instead of
+   a native range stacked over a separate progress bar. --sg-pct is set inline. */
+.sg-range {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin: 8px 0 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  background:
+    linear-gradient(90deg, #0EA5E9, #1D4ED8) 0 0 / var(--sg-pct, 0%) 100% no-repeat,
+    #E2E8F0;
+}
+[data-theme="dark"] .sg-range {
+  background:
+    linear-gradient(90deg, #38BDF8, #3B82F6) 0 0 / var(--sg-pct, 0%) 100% no-repeat,
+    rgba(255, 255, 255, 0.10);
+}
+.sg-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-card, #FFFFFF);
+  border: 3px solid #1D70D8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.sg-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--surface-card, #FFFFFF);
+  border: 3px solid #1D70D8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+.sg-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+/* Edit Profile: the chat FAB floats ~140px up the right edge, so the last
+   button needs that much room to scroll clear of it (the shared 104px
+   clearance only cleared the bottom nav). */
+.edit-profile-content.page-content {
+  padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* About Garden "Five stages" row: wider than a phone, so make the overflow
+   read as a scroller: snap to cards and fade the right edge; the trailing
+   padding lets the last card scroll out of the fade. */
+.ag-stage-scroller {
+  scroll-snap-type: x mandatory;
+  padding-right: 32px;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent);
+}
+.ag-stage-item { scroll-snap-align: start; flex-shrink: 0; }
+
+/* User Management search: the global text-field skin (_palette-lock, all
+   !important) drew a second rounded border + fill on the bare <input> inside
+   the already-styled .search-input pill. */
+.search-input input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}

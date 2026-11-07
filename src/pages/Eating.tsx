@@ -486,7 +486,6 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
         {filteredMeals.length === 0 ? (
           <div className="ev-empty">
             <FaUtensils style={{ fontSize: '2rem', marginBottom: 10, color: 'var(--text-secondary)', opacity: 0.5 }} />
-            <br />
             {isTh ? 'ยังไม่มีรายการอาหารในช่วงเวลานี้' : 'No meals recorded in this period.'}
           </div>
         ) : (
@@ -530,8 +529,11 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
         <span className="ev-water-ml">{water.glasses * 250} ml / {water.target * 250} ml</span>
       </div>
 
-      <div className="ev-water-bar-wrap">
-        <div className="ev-water-bar" style={{ width: `${waterPct}%` }} />
+      {/* Percentage sits beside the track, not on top of its end. */}
+      <div className="ev-water-progress">
+        <div className="ev-water-bar-wrap">
+          <div className="ev-water-bar" style={{ width: `${waterPct}%` }} />
+        </div>
         <span className="ev-water-pct">{Math.round(waterPct)}%</span>
       </div>
 
@@ -817,7 +819,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
             </div>
             <div className="ev-sec-card-actions" onClick={e => e.stopPropagation()}>
               <button className="ev-sec-btn minus" onClick={() => updateWater(water.glasses - 1)} disabled={water.glasses <= 0} aria-label={t('eating.a11yRemoveGlass')}>−</button>
-              <button className="ev-sec-btn plus" onClick={() => updateWater(water.glasses + 1)}>+ {isTh ? 'เพิ่ม 1 แก้ว' : '+1 Glass'}</button>
+              <button className="ev-sec-btn plus" onClick={() => updateWater(water.glasses + 1)}>+ {isTh ? '1 แก้ว' : '1 Glass'}</button>
             </div>
           </div>
 
@@ -913,7 +915,7 @@ const FastRing: React.FC<any> = ({ pct, elapsed, target, running, isTh, protocol
   return (
     <div className="ev-fast-ring-wrap">
       <svg width={S} height={S} style={{ display: 'block' }}>
-        <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke="var(--bg-primary)" strokeWidth={ST} />
+        <circle className="ev-fast-ring-track" cx={S / 2} cy={S / 2} r={R} fill="none" strokeWidth={ST} />
         <circle cx={S / 2} cy={S / 2} r={R} fill="none" stroke={running ? '#F59E0B' : '#3B82F6'} strokeWidth={ST}
           strokeDasharray={`${C}`} strokeDashoffset={C * (1 - pct / 100)}
           strokeLinecap="round" transform={`rotate(-90 ${S / 2} ${S / 2})`}

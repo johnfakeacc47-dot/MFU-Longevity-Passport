@@ -18,7 +18,10 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
   const { t } = useLanguage();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  if (!data || data.length === 0) {
+  // A range where this series never left zero has nothing to plot — show the
+  // same empty state for every chart (overall and per-pillar) rather than a
+  // flat line on an empty grid.
+  if (!data || data.length === 0 || data.every((pt) => !pt[activeKey])) {
     return (
       <div className="ana-chart-empty">
         <span>{t('dashboard.noTrendData')}</span>

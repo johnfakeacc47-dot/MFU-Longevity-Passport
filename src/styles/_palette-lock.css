@@ -202,7 +202,15 @@ html[data-theme="dark"] {
    3. GLOBAL RESETS & BASE STYLES
    ════════════════════════════════════════════════════════════════════════════ */
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* In @layer base, not unlayered: Tailwind v4 emits its utilities in
+   @layer utilities, and unlayered CSS beats every layer regardless of
+   specificity — as a bare rule this reset silently zeroed every p-*, m-*,
+   gap-* etc. utility in the app (Set Goals, Privacy, Settings, About…).
+   Tailwind's own preflight does the same reset in this layer, so plain
+   (non-Tailwind) markup is unaffected. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
 
 html, body {
   width: 100%;

@@ -17,6 +17,7 @@ import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
 import { AchievementsGrid } from '../components/coach/AchievementsGrid';
 import '../styles/Profile.css';
+import { APP_VERSION } from '../utils/appVersion';
 
 type PageType =
   | 'login' | 'home' | 'eating' | 'dashboard' | 'team'
@@ -511,7 +512,7 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onOpenFoodRecognit
           </>
         )}
 
-        <div className="pv2-version">v1.0.0 · MFU Longevity Passport</div>
+        <div className="pv2-version">v{APP_VERSION} · MFU Longevity Passport</div>
       </div>
 
       {/* ── Settings Drawer ── */}

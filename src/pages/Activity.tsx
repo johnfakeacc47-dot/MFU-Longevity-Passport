@@ -212,7 +212,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
                 const Icon = cfg?.Icon ?? FaRunning;
                 return (
                   <div key={act.id} className="ac-hist-card">
-                    <div className="ac-hist-icon" style={{ background: cfg?.bg ?? '#f1f5f9', color: cfg?.color ?? '#64748b' }}>
+                    <div className="ac-hist-icon" style={{ '--card-color': cfg?.color ?? '#64748b', '--card-bg': cfg?.bg ?? '#f1f5f9' } as React.CSSProperties}>
                       <Icon />
                     </div>
                     <div className="ac-hist-body">
@@ -249,7 +249,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
             </div>
 
             {selectedCfg && (
-              <div className="ac-modal-hero" style={{ background: selectedCfg.bg, color: selectedCfg.color }}>
+              <div className="ac-modal-hero" style={{ '--card-color': selectedCfg.color, '--card-bg': selectedCfg.bg } as React.CSSProperties}>
                 <selectedCfg.Icon className="ac-modal-hero-icon" />
                 <h4>{getLabel(selected)}</h4>
               </div>

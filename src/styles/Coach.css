@@ -177,6 +177,8 @@
   border: 1px solid #FDBA74;
   padding: 4px 10px;
   border-radius: 999px;
+  white-space: nowrap; /* "0 วันต่อเนื่อง" broke over two lines */
+  flex-shrink: 0;
 }
 
 .streak-flame {
@@ -263,7 +265,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  /* let the text column shrink so the value pill keeps its width */
+  flex: 1 1 auto;
+  min-width: 0;
 }
+
+.goal-item { gap: 10px; text-align: left; }
+.goal-item-right { flex-shrink: 0; }
 
 .goal-checkbox {
   font-size: 18px;
@@ -285,12 +293,18 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .goal-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-main, #111827);
+  /* up to two lines (Thai titles run long), then ellipsis */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .goal-completed .goal-title {
@@ -304,6 +318,8 @@
 }
 
 .goal-val {
+  display: inline-block;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 600;
   color: var(--text-main, #374151);

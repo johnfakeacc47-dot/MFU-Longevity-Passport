@@ -410,9 +410,12 @@
   font-size: 15px;
 }
 
+/* Follow the SVG's 600x200 viewBox: a fixed 200px box letterboxed the chart
+   on phones (~45px of blank above and below it). */
 .ana-chart-svg-wrap {
   width: 100%;
-  height: 200px;
+  aspect-ratio: 3 / 1;
+  max-height: 260px;
 }
 
 .ana-chart-svg {
@@ -439,7 +442,7 @@
 }
 
 .ana-chart-empty {
-  height: 180px;
+  height: 120px;
   display: flex;
   align-items: center;
   justify-content: center;

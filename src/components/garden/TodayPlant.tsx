@@ -25,7 +25,13 @@ export const TodayPlant: React.FC<TodayPlantProps> = ({ breakdown, isLoading = f
   const loading = isLoading || stageLoading;
 
   const nextThreshold = NEXT_THRESHOLD[stage];
-  const remaining = nextThreshold !== null && totalPoints !== null ? Math.max(0, nextThreshold - totalPoints) : null;
+  // totalPoints === null means "unknown" (profile fetch failed or returned
+  // nothing) — not "maxed out". Only the top stage may claim "fully grown".
+  const progressLine = totalPoints === null
+    ? null
+    : nextThreshold === null
+      ? t('garden.fullyGrown')
+      : `${Math.max(0, nextThreshold - totalPoints)} ${t('garden.nextStageIn')} ${t(STAGE_NAME_KEYS[(stage + 1) as GrowthStage])}`;
 
   if (loading) {
     return (
@@ -44,13 +50,18 @@ export const TodayPlant: React.FC<TodayPlantProps> = ({ breakdown, isLoading = f
     <section className="garden-hero-card" aria-label={t('garden.title')}>
       <div className="garden-hero-readout">
         <span className="garden-hero-stage">{t(STAGE_NAME_KEYS[stage])}</span>
-        {remaining !== null ? (
-          <span>{remaining} {t('garden.nextStageIn')} {t(STAGE_NAME_KEYS[(stage + 1) as GrowthStage])}</span>
-        ) : (
-          <span>{t('garden.fullyGrown')}</span>
-        )}
+        {progressLine && <span className="garden-hero-progress">{progressLine}</span>}
       </div>
-      <GardenPlant breakdown={breakdown} stage={stage} size={180} title={t('garden.title')} />
+      {stage <= 1 ? (
+        // A seed/sprout only fills the bottom of the 200x260 canvas: show
+        // that band (cropped by .garden-hero-plant--early) instead of a tall,
+        // mostly empty card.
+        <div className="garden-hero-plant--early">
+          <GardenPlant breakdown={breakdown} stage={stage} size={160} title={t('garden.title')} />
+        </div>
+      ) : (
+        <GardenPlant breakdown={breakdown} stage={stage} size={180} title={t('garden.title')} />
+      )}
       <p className="garden-hero-caption">{t('garden.subtitle')}</p>
     </section>
   );
