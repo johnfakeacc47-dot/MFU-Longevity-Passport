@@ -156,7 +156,11 @@ export const adminCreateUser = async (profileData: any) => {
     department: profileData.department,
     mfuId: profileData.mfuId,
   });
-  return data.user; // { id, email, name, mfu_id, role, faculty, department, created_at }
+  // The account gets a random password nobody knows; `recovery_link` is the
+  // one-time link the admin hands over so the person sets their own (null if
+  // generating it failed — the account still exists). See admin-users.
+  return { ...data.user, recovery_link: (data.recovery_link ?? null) as string | null };
+  // { id, email, name, mfu_id, role, faculty, department, created_at, recovery_link }
 };
 
 export const updateProfile = async (id: string, updates: any) => {

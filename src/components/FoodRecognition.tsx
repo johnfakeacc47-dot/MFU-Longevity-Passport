@@ -489,6 +489,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
         code === 'offline' ? t('food.errAiOffline')
         : code === 'not_signed_in' ? t('food.errAiNotSignedIn')
         : code === 'timeout' ? t('food.stAiCannot')
+        : code === 'quota' ? t('ai.quotaReached')
         : t('food.errAiServer');
       setUploadStatus('error');
       setErrorMessage(msg);

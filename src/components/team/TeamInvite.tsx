@@ -27,6 +27,8 @@ const reasonKey = (r?: InviteReason): string => {
     case 'self': return 'team.errSelf';
     case 'already_member': return 'team.errAlready';
     case 'already_requested': return 'team.errAlreadyRequested';
+    case 'recently_declined': return 'team.errRecentlyDeclined';
+    case 'rate_limited': return 'team.errRateLimited';
     default: return 'team.errGeneric';
   }
 };

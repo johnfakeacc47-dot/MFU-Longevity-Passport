@@ -1038,4 +1038,16 @@ export const en: Record<string, string> = {
   'aiCoach.sleepNone': 'Log your sleep tonight so the app can track your rest quality.',
   'aiCoach.mentalGreat': 'Mental health is in great shape — keep that positive energy going!',
   'aiCoach.mentalSome': 'A moment of mindfulness or journaling could help lift your mental score.',
+
+  // ── security follow-ups ──
+  'ai.quotaReached': "You've reached today's limit for AI features. It resets at midnight.",
+  'ai.reportFailed': "Couldn't generate the AI report right now. Please try again later.",
+  'team.errRecentlyDeclined': 'This person declined your request recently. You can ask again in a few days.',
+  'team.errRateLimited': "You've sent a lot of requests today. Please try again tomorrow.",
+  'userManagement.recoveryTitle': 'Account created for {email}',
+  'userManagement.recoveryBody': 'Send this one-time link to the person so they can set their own password. It only works once and expires.',
+  'userManagement.recoveryMissing': "Account created for {email}, but a sign-in link couldn't be generated. Ask them to use \"Forgot password\" on the login screen.",
+  'userManagement.copyLink': 'Copy link',
+  'userManagement.linkCopied': 'Copied',
+  'userManagement.dismiss': 'Done',
 };

@@ -16,6 +16,8 @@ export type InviteReason =
   | 'self'
   | 'already_member'
   | 'already_requested'
+  | 'recently_declined' // target declined me < 7 days ago (0019)
+  | 'rate_limited'      // > 20 requests in 24 h (0019)
   | 'error';
 
 export interface HandlePreview {

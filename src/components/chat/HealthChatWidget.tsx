@@ -18,6 +18,7 @@ const errKey = (code?: string): string => {
     case 'not-authenticated': return 'chat.errAuth';
     case 'not-configured': return 'chat.errConfig';
     case 'network': return 'chat.errNetwork';
+    case 'quota_exceeded': return 'ai.quotaReached';
     default: return 'chat.errGeneric';
   }
 };

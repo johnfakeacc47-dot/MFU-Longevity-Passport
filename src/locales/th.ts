@@ -1038,4 +1038,16 @@ export const th: Record<string, string> = {
   'aiCoach.sleepNone': 'บันทึกการนอนคืนนี้เพื่อให้แอปติดตามคุณภาพการพักผ่อนของคุณ',
   'aiCoach.mentalGreat': 'สุขภาพจิตอยู่ในสภาพดีมาก รักษาพลังบวกแบบนี้ไว้!',
   'aiCoach.mentalSome': 'การฝึกสติหรือเขียนบันทึกสักครู่อาจช่วยยกระดับคะแนนสุขภาพจิตได้',
+
+  // ── security follow-ups ──
+  'ai.quotaReached': 'คุณใช้ฟีเจอร์ AI ครบโควตาของวันนี้แล้ว จะรีเซ็ตตอนเที่ยงคืน',
+  'ai.reportFailed': 'ยังสร้างรายงาน AI ไม่ได้ในตอนนี้ กรุณาลองใหม่ภายหลัง',
+  'team.errRecentlyDeclined': 'ผู้ใช้นี้เพิ่งปฏิเสธคำขอของคุณ ลองส่งใหม่ได้อีกในไม่กี่วัน',
+  'team.errRateLimited': 'วันนี้คุณส่งคำขอไปจำนวนมากแล้ว กรุณาลองใหม่พรุ่งนี้',
+  'userManagement.recoveryTitle': 'สร้างบัญชีให้ {email} แล้ว',
+  'userManagement.recoveryBody': 'ส่งลิงก์นี้ให้เจ้าของบัญชีเพื่อตั้งรหัสผ่านเอง ลิงก์ใช้ได้ครั้งเดียวและมีวันหมดอายุ',
+  'userManagement.recoveryMissing': 'สร้างบัญชีให้ {email} แล้ว แต่สร้างลิงก์เข้าสู่ระบบไม่สำเร็จ ให้เจ้าของบัญชีกด "ลืมรหัสผ่าน" ที่หน้าเข้าสู่ระบบ',
+  'userManagement.copyLink': 'คัดลอกลิงก์',
+  'userManagement.linkCopied': 'คัดลอกแล้ว',
+  'userManagement.dismiss': 'เสร็จสิ้น',
 };

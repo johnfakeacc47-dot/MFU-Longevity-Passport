@@ -29,7 +29,9 @@ export const WeeklyAIReportCard: React.FC = () => {
     try {
       setAi(await getHealthInsights('week', { force, lang: language }));
     } catch (e) {
-      setErr((e as Error).message);
+      // The message is whatever the Edge Function / SDK said — log it, never show it.
+      console.error('getHealthInsights failed:', e);
+      setErr((e as Error).message === 'quota_exceeded' ? t('ai.quotaReached') : t('ai.reportFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);

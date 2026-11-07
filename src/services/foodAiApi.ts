@@ -97,6 +97,7 @@ export type FoodAiErrorCode =
   | 'offline'         // no network / fetch failed before reaching the function
   | 'not_signed_in'   // 401 from the Edge Function
   | 'timeout'         // no answer within AI_TIMEOUT_MS
+  | 'quota'           // 429 — this user's daily AI allowance is used up
   | 'server';         // any other failure (5xx, bad payload, …)
 
 export class FoodAiError extends Error {
@@ -171,6 +172,7 @@ export async function recognizeFoodWithAi(
       throw new FoodAiError('offline', detail);
     }
     if (status === 401) throw new FoodAiError('not_signed_in', detail);
+    if (status === 429) throw new FoodAiError('quota', detail);
     throw new FoodAiError('server', `${status ?? '?'}: ${detail}`);
   }
   if (!data) throw new FoodAiError('server', 'AI returned no result');

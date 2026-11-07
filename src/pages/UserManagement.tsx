@@ -55,6 +55,10 @@ export default function UserManagement({ onNavigate, onOpenFoodRecognition }: Us
   const [loadFailed, setLoadFailed] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // Set after a successful create: the new account has a random password, so
+  // the admin must hand this one-time link over for the person to set theirs.
+  const [recovery, setRecovery] = useState<{ email: string; link: string | null } | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,6 +229,8 @@ export default function UserManagement({ onNavigate, onOpenFoodRecognition }: Us
         let result: User;
         if (isSupabaseConfigured()) {
             const newUser = await adminCreateUser(formData);
+            setLinkCopied(false);
+            setRecovery({ email: newUser.email, link: newUser.recovery_link });
             result = {
                 id: newUser.id,
                 name: newUser.name,
@@ -366,6 +372,46 @@ export default function UserManagement({ onNavigate, onOpenFoodRecognition }: Us
       {notice && (
         <div style={infoBannerStyle} role="status">
           <span>{notice}</span>
+        </div>
+      )}
+
+      {recovery && (
+        <div style={{ ...infoBannerStyle, flexDirection: 'column', alignItems: 'stretch', gap: 8 }} role="status">
+          {recovery.link ? (
+            <>
+              <strong style={{ color: 'var(--text-primary)' }}>{fill(t('userManagement.recoveryTitle'), { email: recovery.email })}</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>{t('userManagement.recoveryBody')}</span>
+              <input
+                type="text"
+                readOnly
+                value={recovery.link}
+                aria-label={t('userManagement.recoveryTitle').replace('{email}', recovery.email)}
+                onFocus={(e) => e.currentTarget.select()}
+                style={{ width: '100%', fontSize: 12, fontFamily: 'monospace' }}
+              />
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(recovery.link!).then(() => setLinkCopied(true), () => setLinkCopied(false));
+                  }}
+                >
+                  {linkCopied ? t('userManagement.linkCopied') : t('userManagement.copyLink')}
+                </button>
+                <button type="button" className="btn-primary" onClick={() => setRecovery(null)}>
+                  {t('userManagement.dismiss')}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between' }}>
+              <span>{fill(t('userManagement.recoveryMissing'), { email: recovery.email })}</span>
+              <button type="button" className="btn-primary" onClick={() => setRecovery(null)}>
+                {t('userManagement.dismiss')}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
