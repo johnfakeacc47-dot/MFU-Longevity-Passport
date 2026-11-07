@@ -7,7 +7,7 @@
 // public.run_scheduled_reminders() — this function is just the HTTP entry
 // point pg_net can call, secret-checked the same way as send-push.
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.101.1'
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -15,11 +15,33 @@ function json(body: unknown, status: number): Response {
 
 const INTERNAL_SECRET = Deno.env.get('NOTIFY_INTERNAL_SECRET')
 
+// Constant-time comparison of two equal-length byte arrays. Deno's old
+// crypto.subtle.timingSafeEqual was a non-standard extension that is gone in
+// Deno 2, so this is spelled out by hand: XOR every byte, never exit early.
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
+
+// Same shared-secret check as send-push: hash both sides to fixed-length
+// digests, then compare in constant time, so a caller cannot learn the secret
+// one correct character at a time from response timing.
+async function secretMatches(provided: string | null, expected: string | undefined): Promise<boolean> {
+  if (!provided || !expected) return false
+  const enc = new TextEncoder()
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(provided)),
+    crypto.subtle.digest('SHA-256', enc.encode(expected)),
+  ])
+  return timingSafeEqual(new Uint8Array(a), new Uint8Array(b))
+}
+
 serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  const provided = req.headers.get('x-notify-secret')
-  if (!INTERNAL_SECRET || provided !== INTERNAL_SECRET) {
+  if (!(await secretMatches(req.headers.get('x-notify-secret'), INTERNAL_SECRET))) {
     return json({ error: 'Unauthorized' }, 401)
   }
 

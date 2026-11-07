@@ -1,5 +1,5 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.101.1'
 
 // ---------- CORS (origin allowlist) ----------
 // Set the ALLOWED_ORIGINS secret (comma-separated) to override / extend this.
@@ -71,7 +71,9 @@ serve(async (req: Request) => {
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id)
 
     if (deleteError) {
-      return new Response(JSON.stringify({ error: deleteError.message }), {
+      // Log the real reason server-side; the client only needs to know it failed.
+      console.error('delete-user deleteUser failed for', user.id, ':', deleteError.message)
+      return new Response(JSON.stringify({ error: 'Could not delete the account' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -82,8 +84,9 @@ serve(async (req: Request) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : 'Internal Server Error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    // Never echo the real error (it can carry SDK/config detail) — log it, say something generic.
+    console.error('delete-user unhandled error:', err instanceof Error ? (err.stack ?? err.message) : String(err))
+    return new Response(JSON.stringify({ error: 'Internal Server Error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

@@ -7,11 +7,36 @@
 // manual shared-secret check instead of a user JWT.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.101.1'
 import webpush from 'npm:web-push@3.6.7'
 
 function json(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+}
+
+// Constant-time comparison of two equal-length byte arrays. Deno's old
+// crypto.subtle.timingSafeEqual was a non-standard extension that is gone in
+// Deno 2, so this is spelled out by hand: XOR every byte, never exit early.
+function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
+  return diff === 0
+}
+
+// Compare the shared secret without leaking, byte by byte, how much of it a
+// caller guessed right. Both sides are hashed first so the comparison is over
+// fixed-length digests — the length check above then says nothing about the
+// real secret, and `!==` on the raw strings (which short-circuits at the first
+// differing character) is avoided entirely.
+async function secretMatches(provided: string | null, expected: string | undefined): Promise<boolean> {
+  if (!provided || !expected) return false
+  const enc = new TextEncoder()
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest('SHA-256', enc.encode(provided)),
+    crypto.subtle.digest('SHA-256', enc.encode(expected)),
+  ])
+  return timingSafeEqual(new Uint8Array(a), new Uint8Array(b))
 }
 
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')
@@ -26,8 +51,7 @@ if (VAPID_PUBLIC && VAPID_PRIVATE) {
 serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
 
-  const provided = req.headers.get('x-notify-secret')
-  if (!INTERNAL_SECRET || provided !== INTERNAL_SECRET) {
+  if (!(await secretMatches(req.headers.get('x-notify-secret'), INTERNAL_SECRET))) {
     return json({ error: 'Unauthorized' }, 401)
   }
   if (!VAPID_PUBLIC || !VAPID_PRIVATE) {
