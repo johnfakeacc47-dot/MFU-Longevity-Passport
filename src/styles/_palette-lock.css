@@ -94,6 +94,9 @@
   /* ── Card tokens ── */
   --surface-card:    var(--surface-solid, #FFFFFF);
   --card-bg:         var(--bg-card, #FFFFFF);
+
+  /* ── Legacy brand token (several rules + AboutTracker rely on it) ── */
+  --color-primary:   #3b82f6;
 }
 
 /* ── 2. DARK MODE TOKENS ───────────────────────────────────────────────────── */
@@ -189,6 +192,9 @@ html[data-theme="dark"] {
   /* ── Header tokens (Dark) ── */
   --header-bg:       rgba(15,23,42,0.92);
   --header-border:   rgba(56,189,248,0.10);
+
+  /* ── Legacy brand token (Dark) ── */
+  --color-primary:   #60a5fa;
 }
 
 
@@ -518,7 +524,10 @@ html[data-theme="dark"] {
    8. INPUT SYSTEM
    ════════════════════════════════════════════════════════════════════════════ */
 
-input,
+/* Range sliders, checkboxes and radios draw their own chrome — keep them out
+   of the text-field skin below. :where() keeps the specificity at a bare
+   `input` so page-level overrides (e.g. .ac-input-group input) still win. */
+input:where(:not([type="range"]):not([type="checkbox"]):not([type="radio"])),
 select,
 textarea,
 .modal-input,
@@ -535,7 +544,7 @@ textarea,
   outline: none !important;
 }
 
-input:focus,
+input:where(:not([type="range"]):not([type="checkbox"]):not([type="radio"])):focus,
 select:focus,
 textarea:focus,
 .modal-input:focus,
@@ -850,11 +859,16 @@ body[data-theme="dark"] {
 [data-theme="dark"] .fasting-container,
 [data-theme="dark"] .settings-container,
 [data-theme="dark"] .app-container,
-[data-theme="dark"] .page-container,
-[data-theme="dark"] .page-content,
-[data-theme="dark"] .page-content-v2 {
+[data-theme="dark"] .page-container {
   background: var(--bg, #0F172A) !important;
   color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* .page-content / .page-content-v2 are layout wrappers sitting on the body
+   gradient — forcing a flat bg on them drew a visible seam. Colour only. */
+[data-theme="dark"] .page-content,
+[data-theme="dark"] .page-content-v2 {
+  color: var(--text-primary, #F1F5F9);
 }
 
 /* All Cards & Surfaces in Dark Mode */

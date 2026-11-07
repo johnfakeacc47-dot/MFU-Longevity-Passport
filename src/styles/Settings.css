@@ -232,7 +232,12 @@
 }
 
 [data-theme="dark"] .slider {
-  background-color: var(--border-soft, #475569);
+  background-color: var(--surface-hover, #374151);
+}
+
+/* OFF knob must stay visible on the dark card */
+[data-theme="dark"] .slider:before {
+  background-color: #E5E7EB;
 }
 
 .slider:before {

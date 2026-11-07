@@ -4,7 +4,7 @@
   position: fixed;
   right: 16px;
   bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  z-index: 150;
+  z-index: 120; /* above page content / bottom nav (100), below drawers (160) and panels (200) */
   width: 52px;
   height: 52px;
   border-radius: 50%;

@@ -35,7 +35,7 @@
 .ana-mode-badge {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-primary, #0284C7);
+  color: var(--text-accent, #0284C7);
   background: rgba(2, 132, 199, 0.1);
   padding: 3px 10px;
   border-radius: 999px;
@@ -123,12 +123,12 @@
 
 .ana-filter-btn:hover {
   color: var(--text-primary, #0F172A);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.6));
 }
 
 .ana-filter-btn.active {
   background: var(--surface-soft, #FFFFFF);
-  color: var(--accent-primary, #0284C7);
+  color: var(--text-accent, #0284C7);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
@@ -429,12 +429,12 @@
 
 .ana-svg-x-label {
   font-size: 11px;
-  fill: #64748B;
+  fill: var(--text-secondary, #64748B);
   font-weight: 600;
 }
 
 .ana-svg-x-label.active {
-  fill: #0F172A;
+  fill: var(--text-primary, #0F172A);
   font-weight: 800;
 }
 
@@ -602,7 +602,7 @@
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  background: var(--accent-primary, #0284C7);
+  background: var(--accent, #0284C7);
   color: #FFFFFF;
   display: flex;
   align-items: center;
@@ -709,7 +709,14 @@
     grid-template-columns: 1fr;
     gap: 14px;
   }
+  /* Let the 5 range buttons wrap / shrink instead of pushing Year + Custom off-screen */
+  .ana-filter-bar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
   .ana-filter-btn {
+    flex: 1 1 auto;
+    min-width: 0;
     padding: 8px 10px;
     font-size: 12px;
   }
@@ -794,6 +801,23 @@
 [data-theme="dark"] .ana-habit-label,
 [data-theme="dark"] .ana-overview-label {
   color: var(--text-secondary, #CBD5E1) !important;
+}
+
+/* Sub-card tints are near-black at 2% in light; flip them to a light wash */
+[data-theme="dark"] .ana-filter-bar {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .ana-overview-item,
+[data-theme="dark"] .ana-sum-box,
+[data-theme="dark"] .ana-achieve-box {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .ana-achieve-box.completed {
+  background: rgba(16, 185, 129, 0.10);
+  border-color: rgba(16, 185, 129, 0.30);
 }
 
 

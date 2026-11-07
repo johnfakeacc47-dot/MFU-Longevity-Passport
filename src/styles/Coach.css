@@ -740,7 +740,7 @@
   background: none;
   border: none;
   font-size: 18px;
-  color: #6B7280;
+  color: var(--text-secondary, #6B7280);
   cursor: pointer;
   padding: 4px;
 }
@@ -869,7 +869,7 @@
 }
 
 .progress-num {
-  color: #6B7280;
+  color: var(--text-secondary, #6B7280);
 }
 
 .challenge-desc {
@@ -1106,7 +1106,7 @@
   border-radius: 8px;
   background: var(--bg-main, #F9FAFB);
   border: 1px solid var(--border-color, #E5E7EB);
-  color: #CBD5E1;
+  color: var(--text-tertiary, #94A3B8);
   display: flex;
   align-items: center;
   justify-content: center;
