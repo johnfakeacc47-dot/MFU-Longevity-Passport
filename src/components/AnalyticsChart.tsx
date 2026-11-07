@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { TrendPoint } from '../utils/analyticsScore';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AnalyticsChartProps {
   data: TrendPoint[];
@@ -14,12 +15,13 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
   color,
   maxVal,
 }) => {
+  const { t } = useLanguage();
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
   if (!data || data.length === 0) {
     return (
       <div className="ana-chart-empty">
-        <span>No trend data available for this time range.</span>
+        <span>{t('dashboard.noTrendData')}</span>
       </div>
     );
   }
@@ -117,7 +119,7 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
                   y1={y}
                   x2={width - paddingRight}
                   y2={y}
-                  stroke="rgba(0,0,0,0.06)"
+                  stroke="var(--border-soft)"
                   strokeDasharray={idx > 0 && idx < 4 ? '4 4' : undefined}
                 />
                 <text
@@ -157,8 +159,8 @@ export const AnalyticsChart: React.FC<AnalyticsChartProps> = ({
                 onClick={() => setHoverIdx(idx)}
                 style={{ cursor: 'pointer' }}
               >
-                {/* Hit area circle */}
-                <circle x={pt.x} y={pt.y} r="14" fill="transparent" />
+                {/* Hit area circle (was x=/y=, which <circle> ignores — it sat at 0,0) */}
+                <circle cx={pt.x} cy={pt.y} r={14} fill="transparent" />
                 <circle
                   cx={pt.x}
                   cy={pt.y}

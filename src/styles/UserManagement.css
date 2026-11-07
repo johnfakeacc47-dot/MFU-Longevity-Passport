@@ -5,7 +5,7 @@
   max-width: 1360px;
   margin: 0 auto;
   padding: 32px 36px 120px;
-  color: #1976D2;
+  color: var(--text-primary);
   box-sizing: border-box;
 }
 
@@ -24,7 +24,7 @@
 
 .user-header p {
   margin: 0;
-  color: #1976D2;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
@@ -69,8 +69,8 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 16px;
-  background: #1976D2;
-  border: 1px solid #1976D2;
+  background: var(--surface-card, #FFFFFF);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   margin-bottom: 16px;
 }
@@ -80,7 +80,7 @@
   align-items: center;
   gap: 8px;
   background: var(--surface-card, #FFFFFF);
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   padding: 8px 12px;
   min-width: 240px;
@@ -92,16 +92,16 @@
   font-size: 14px;
   width: 100%;
   background: transparent;
-  color: #1976D2;
+  color: var(--text-primary);
 }
 
 .search-input input::placeholder {
-  color: #1976D2;
+  color: var(--text-tertiary);
 }
 
 .search-icon {
   font-size: 14px;
-  color: #1976D2;
+  color: var(--text-tertiary);
 }
 
 .filter-group {
@@ -113,11 +113,11 @@
 .filter-select {
   appearance: none;
   background: var(--surface-soft, #FFFFFF);
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   border-radius: 999px;
   padding: 8px 32px 8px 14px;
   font-size: 13px;
-  color: #1976D2;
+  color: var(--text-primary);
   cursor: pointer;
   position: relative;
   background-image: linear-gradient(45deg, transparent 50%, #1976D2 50%),
@@ -132,7 +132,7 @@
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 20px;
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
 }
 
@@ -152,7 +152,7 @@
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #1976D2;
+  color: var(--text-secondary);
 }
 
 .form-grid {
@@ -169,7 +169,7 @@
   display: block;
   margin-bottom: 6px;
   font-weight: 600;
-  color: #1976D2;
+  color: var(--text-secondary);
   font-size: 13px;
 }
 
@@ -177,7 +177,7 @@
 .form-group select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #1976D2;
+  border: 1px solid var(--input-border);
   border-radius: 10px;
   font-size: 14px;
   transition: border-color 0.2s;
@@ -186,12 +186,13 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #1976D2;
+  border-color: var(--accent);
   box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.2);
 }
 
 .form-group input:disabled {
-  background-color: #1976D2;
+  background-color: var(--surface-soft) !important;
+  color: var(--text-tertiary) !important;
   cursor: not-allowed;
 }
 
@@ -202,17 +203,17 @@
 }
 
 .error-message {
-  background-color: #1976D2;
-  color: #1976D2;
+  background-color: var(--color-danger-soft);
+  color: var(--color-danger-text);
   padding: 12px 14px;
   border-radius: 10px;
   margin-bottom: 16px;
-  border: 1px solid #1976D2;
+  border: 1px solid var(--color-danger);
 }
 
 .no-users {
   text-align: center;
-  color: #1976D2;
+  color: var(--text-secondary);
   padding: 40px 20px;
   font-size: 16px;
 }
@@ -220,7 +221,7 @@
 .table-card {
   background: var(--surface-card, #FFFFFF);
   border-radius: 16px;
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.08);
   padding: 12px 0 8px;
 }
@@ -238,16 +239,16 @@ table {
 thead th {
   text-align: left;
   padding: 12px 16px;
-  color: #1976D2;
+  color: var(--text-secondary);
   font-weight: 600;
-  border-bottom: 1px solid #1976D2;
+  border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
 }
 
 tbody td {
   padding: 12px 16px;
-  border-bottom: 1px solid #1976D2;
-  color: #1976D2;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
   vertical-align: middle;
 }
 
@@ -261,8 +262,8 @@ tbody td {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #1976D2;
-  color: #1976D2;
+  background: var(--accent);
+  color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -276,7 +277,7 @@ tbody td {
 
 .user-sub {
   font-size: 12px;
-  color: #1976D2;
+  color: var(--text-secondary);
 }
 
 .status-pill {
@@ -289,8 +290,8 @@ tbody td {
 }
 
 .status-active {
-  background: #1976D2;
-  color: #1976D2;
+  background: var(--color-success-soft);
+  color: var(--color-success-text);
 }
 
 .role-pill {
@@ -303,18 +304,18 @@ tbody td {
 }
 
 .role-student {
-  background: #1976D2;
-  color: #1976D2;
+  background: var(--color-info-soft);
+  color: var(--color-info-text);
 }
 
 .role-staff {
-  background: #1976D2;
-  color: #1976D2;
+  background: var(--color-cyan-soft);
+  color: var(--color-cyan-text);
 }
 
 .role-admin {
-  background: #1976D2;
-  color: #1976D2;
+  background: var(--color-warning-soft);
+  color: var(--color-warning-text);
 }
 
 .actions-cell {
@@ -322,22 +323,28 @@ tbody td {
   gap: 8px;
 }
 
-.icon-btn {
-  border: 1px solid #1976D2;
+/* Scoped name: the global `.icon-btn` in _palette-lock / index.css is the
+   44px round header button and was fighting these table action buttons.
+   UserManagement.tsx must use className="um-icon-btn" / "um-icon-btn danger". */
+.um-icon-btn {
+  border: 1px solid var(--border-color);
   background: var(--surface-card, #FFFFFF);
+  color: var(--text-secondary);
   border-radius: 8px;
   padding: 6px 8px;
+  min-width: 36px;
+  min-height: 36px;
   cursor: pointer;
 }
 
-.icon-btn.danger {
-  border-color: #1976D2;
-  color: #1976D2;
+.um-icon-btn.danger {
+  border-color: var(--color-danger-soft);
+  color: var(--color-danger-text);
 }
 
 .loading-text {
   padding: 16px;
-  color: #1976D2;
+  color: var(--text-secondary);
 }
 
 .table-footer {
@@ -345,7 +352,7 @@ tbody td {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px 8px;
-  color: #1976D2;
+  color: var(--text-secondary);
   font-size: 12px;
 }
 
@@ -356,11 +363,11 @@ tbody td {
 
 .rows-select {
   margin: 0 6px;
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 4px 8px;
   font-size: 12px;
-  color: #1976D2;
+  color: var(--text-primary);
   background: var(--surface-card, #FFFFFF);
 }
 
@@ -371,7 +378,7 @@ tbody td {
 }
 
 .page-btn {
-  border: 1px solid #1976D2;
+  border: 1px solid var(--border-color);
   background: var(--surface-card, #FFFFFF);
   border-radius: 8px;
   padding: 4px 8px;
@@ -440,7 +447,7 @@ tbody td {
 
 /* ── Dark Mode Local Overrides for UserManagement.css ── */
 [data-theme="dark"] .user-management-page {
-  color: var(--text-primary, #F1F5F9);
+  color: var(--text-primary, #F1F5F9) !important;
 }
 
 [data-theme="dark"] .table-card,
@@ -449,7 +456,7 @@ tbody td {
 [data-theme="dark"] .search-input,
 [data-theme="dark"] .filter-select,
 [data-theme="dark"] .btn-outline,
-[data-theme="dark"] .icon-btn,
+[data-theme="dark"] .um-icon-btn,
 [data-theme="dark"] .rows-select,
 [data-theme="dark"] .page-btn {
   background: var(--surface-card, #1E293B) !important;

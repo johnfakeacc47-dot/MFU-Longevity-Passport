@@ -8,6 +8,7 @@ import type {
 import { calculateLongevityScore } from './longevityScore';
 import { safeGetItem } from './safeStorage';
 import { bangkokDateStr } from './bangkokTime';
+import { readUserGoals } from './userGoals';
 
 // ── 1. DAILY GOALS ─────────────────────────────────────────────────────────────
 
@@ -45,8 +46,11 @@ export const getDailyGoals = (): DailyGoalsResult => {
 
   const profile = safeGetItem<any>('profileData', {});
   const targetCalories = profile.targetCalories || 2000;
-  const targetExercise = 30; // 30 min minimum daily goal
-  const targetSleepMin = 7;
+  // Exercise / sleep targets come from Set Goals (defaults 30 min / 8 h) —
+  // they used to be fixed here, which made that page's Save a no-op.
+  const goals = readUserGoals();
+  const targetExercise = goals.activityMinutes;
+  const targetSleepMin = goals.sleepHours;
 
   // Nutrition completion: Logged at least 1 meal and within sensible calorie range or reached target
   const nutritionCompleted = todayMeals.length > 0 && totalCalories >= targetCalories * 0.5;

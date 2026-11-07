@@ -61,7 +61,9 @@ export const WaterTrackerCard: React.FC = () => {
               type="button"
               className={`water-glass-dot ${idx < glasses ? 'filled' : ''}`}
               onClick={() => handleUpdate(idx + 1)}
-              title={`Set to ${idx + 1} glasses`}
+              title={t('water.setGlasses').replace('{n}', String(idx + 1))}
+              aria-label={t('water.setGlasses').replace('{n}', String(idx + 1))}
+              aria-pressed={idx < glasses}
             >
               <FaTint />
             </button>
@@ -74,6 +76,7 @@ export const WaterTrackerCard: React.FC = () => {
             className="water-btn minus"
             onClick={() => handleUpdate(glasses - 1)}
             disabled={glasses <= 0}
+            aria-label={t('water.removeGlass')}
           >
             <FaMinus />
           </button>

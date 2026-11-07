@@ -135,7 +135,9 @@ export async function updateNotificationPreference(key: keyof NotificationPrefs,
   const patch: Record<string, unknown> = { user_id: user.id, updated_at: new Date().toISOString() };
   patch[PREF_COLUMN[key]] = value;
   const { error } = await supabase.from('notification_preferences').upsert(patch, { onConflict: 'user_id' });
-  if (error) console.error('updateNotificationPreference failed:', error);
+  // Throw rather than log-and-swallow: Settings flips the switch optimistically
+  // and relies on a rejection to revert it and tell the user.
+  if (error) throw error;
 }
 
 // ── Browser notification permission ─────────────────────────────────────

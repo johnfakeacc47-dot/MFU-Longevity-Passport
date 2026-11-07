@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react'
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react'
 import './App.css'
 import { Login } from './pages/Login'
 import { Home } from './pages/Home'
@@ -16,7 +16,7 @@ import { AboutTracker } from './pages/AboutTracker'
 import { AboutGarden } from './pages/AboutGarden'
 import { AboutUs } from './pages/AboutUs'
 import { MentalHealth } from './pages/MentalHealth'
-import { LanguageProvider } from './contexts/LanguageContext'
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
 import { Settings } from './pages/Settings'
 import { calculateLongevityScore } from './utils/longevityScore'
 import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
@@ -39,6 +39,23 @@ const HealthChatWidget = lazy(() =>
   import('./components/chat/HealthChatWidget').then((m) => ({ default: m.HealthChatWidget })),
 )
 
+// Rendered inside <LanguageProvider>, so the fallback can use the real t().
+// (The boundary itself is a class component and can't call hooks.)
+function FoodRecognitionErrorFallback({ message, onClose }: { message: string; onClose: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <div className="loading-overlay" role="alert">
+      <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}>
+        <div style={{ fontWeight: 700 }}>{t('foodRecognition.loadFailed')}</div>
+        {message && <div style={{ marginTop: 8, fontSize: 14, color: 'var(--text-secondary)' }}>{message}</div>}
+        <button type="button" className="btn" style={{ marginTop: 16 }} onClick={onClose}>
+          {t('common.close')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 class FoodRecognitionErrorBoundary extends React.Component<
   { onClose: () => void; children: React.ReactNode },
   { hasError: boolean; message: string }
@@ -54,20 +71,7 @@ class FoodRecognitionErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="loading-overlay">
-          <div>
-            <div>Food Recognition failed to load.</div>
-            <div style={{ marginTop: 8, fontSize: 14 }}>{this.state.message}</div>
-            <button
-              style={{ marginTop: 16, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer' }}
-              onClick={this.props.onClose}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )
+      return <FoodRecognitionErrorFallback message={this.state.message} onClose={this.props.onClose} />
     }
     return this.props.children
   }
@@ -108,6 +112,8 @@ function consumeNotifParams(): { page: PageType | null; openFood: boolean } {
 
 function App() {
   const [currentPage, setCurrentPage] = useState<PageType>('login')
+  // Page we navigated away from — only used to send About Us "Back" to the right place.
+  const prevPageRef = useRef<PageType>('profile')
   const [showFoodRecognition, setShowFoodRecognition] = useState(false)
   const [showPwaPrompt, setShowPwaPrompt] = useState(false)
   // FIX: Track auth loading state to prevent login flash bug
@@ -204,7 +210,10 @@ function App() {
             handleLoginSuccess()
           }
         } else if (event === 'SIGNED_OUT') {
-          handleLogout()
+          // Only clear local state here — handleLogout() itself calls
+          // signOut(), which fires this very event, so routing it back
+          // through handleLogout would loop.
+          clearLocalSession()
         }
       })
       subscription = data.subscription
@@ -278,13 +287,27 @@ function App() {
     void pullDailyLogs() // catch up on logs from this account's other devices
   }
 
-  function handleLogout() {
+  function clearLocalSession() {
     localStorage.removeItem('authToken')
     localStorage.removeItem('currentPage')
     localStorage.removeItem('userEmail')
     localStorage.removeItem('userId')
     localStorage.removeItem('profileData')
     setCurrentPage('login')
+  }
+
+  async function handleLogout() {
+    // Previously this only wiped our own localStorage keys and left the
+    // Supabase session (`sb-*-auth-token`) in place, so the next launch's
+    // initAuth() restored the "logged-out" user straight back in. End the
+    // real session first; clear local state regardless of the outcome so
+    // the user is never stuck on a page they asked to leave.
+    try {
+      await supabase?.auth.signOut()
+    } catch (err) {
+      console.error('Supabase signOut failed:', err)
+    }
+    clearLocalSession()
   }
 
   function handleNavigate(page: PageType) {
@@ -295,6 +318,7 @@ function App() {
       setShowFoodRecognition(true)
       return
     }
+    prevPageRef.current = currentPage
     localStorage.setItem('currentPage', page)
     setCurrentPage(page)
   }
@@ -353,7 +377,8 @@ function App() {
       case 'about-garden':
         return <AboutGarden onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
       case 'about-us':
-        return <AboutUs onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+        // Reachable from both the Profile drawer and Settings — Back returns to whichever opened it.
+        return <AboutUs onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} backTo={prevPageRef.current === 'settings' ? 'settings' : 'profile'} />
       case 'user-management':
         return (
           <div style={{ minHeight: '100vh' }}>
@@ -361,7 +386,7 @@ function App() {
           </div>
         )
       case 'settings':
-        return <Settings onNavigate={handleNavigate} currentPage={currentPage} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+        return <Settings onNavigate={handleNavigate} currentPage={currentPage} onOpenFoodRecognition={() => setShowFoodRecognition(true)} onLogout={handleLogout} />
       default:
         return <Login onLoginSuccess={handleLoginSuccess} />
     }

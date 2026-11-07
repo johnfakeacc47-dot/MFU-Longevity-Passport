@@ -47,7 +47,7 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
   return (
     <div className="profile-container pb-24 premium-gradient" style={{ minHeight: '100vh' }}>
       <header className="profile-top-header" style={{ background: 'transparent', border: 'none' }}>
-        <BackButton onClick={() => onNavigate('profile')} ariaLabel="Go back to profile" />
+        <BackButton onClick={() => onNavigate('profile')} ariaLabel={t('common.back')} />
         <h1 className="header-title text-gradient">{t('aboutGarden.title')}</h1>
         <div style={{ width: 44 }} />
       </header>
@@ -156,7 +156,6 @@ export const AboutGarden: React.FC<AboutGardenProps> = ({ onNavigate, onOpenFood
         onNavigate={onNavigate}
         onOpenFoodRecognition={onOpenFoodRecognition}
         t={t}
-        className="bottom-nav glass-card"
       />
     </div>
   );

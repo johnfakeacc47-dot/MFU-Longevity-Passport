@@ -5,7 +5,8 @@
 .activity-page {
   min-height: 100vh;
   background: var(--bg-primary);
-  padding-bottom: 80px;
+  /* clear the fixed bottom nav + chat FAB on notched phones */
+  padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
 }
 
 .activity-header {
@@ -142,12 +143,23 @@
 .ac-modal-backdrop {
   position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 500;
   display: flex; align-items: flex-end; justify-content: center;
-  padding: 0 0 env(safe-area-inset-bottom, 0) 0;
+  padding: 0;
   animation: ev-fade-in 0.2s ease;
 }
 
+/* Referenced above but were never defined anywhere (shared name with eating) */
+@keyframes ev-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ev-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .ac-modal {
-  background: var(--bg-card); border-radius: 24px 24px 0 0; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; padding: 20px;
+  background: var(--bg-card); border-radius: 24px 24px 0 0; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   animation: ev-slide-up 0.25s ease;
   display: flex; flex-direction: column; gap: 20px;
 }
@@ -172,13 +184,14 @@
 }
 .ac-input-group { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; }
 .ac-input-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+/* !important so the big "0 : 30" display survives the global input skin in _palette-lock */
 .ac-input-group input {
-  width: 100%; max-width: 120px; text-align: center;
-  font-size: 2rem; font-weight: 800; color: var(--text-primary);
-  background: var(--bg-primary); border: 2px solid var(--border-color); border-radius: 16px;
+  width: 100%; max-width: 120px; text-align: center !important;
+  font-size: 2rem !important; font-weight: 800 !important; color: var(--text-primary);
+  background: var(--bg-primary) !important; border: 2px solid var(--border-color) !important; border-radius: 16px !important;
   padding: 12px; outline: none; transition: border-color 0.15s;
 }
-.ac-input-group input:focus { border-color: #3B82F6; }
+.ac-input-group input:focus { border-color: #3B82F6 !important; }
 .ac-input-separator { font-size: 2rem; font-weight: 800; color: var(--text-secondary); align-self: flex-end; margin-bottom: 12px; }
 
 .ac-modal-stats {

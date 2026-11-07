@@ -4,8 +4,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 
 export interface QualityResult {
   score: number;       // 1 - 10
-  labelEn: string;     // Very Poor, Poor, Fair, Good, Excessive
-  labelTh: string;     // แย่มาก, แย่, พอใช้, ดี, มากเกินไป
+  labelKey: string;    // i18n key: sq.veryPoor | sq.poor | sq.fair | sq.good | sq.excessive
   color: string;       // Hex color for badge / indicator
   bgLight: string;     // Soft background color
   insightKey: string;  // i18n key for the smart health insight
@@ -20,8 +19,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
   if (duration < 5) {
     return {
       score: 2,
-      labelEn: 'Very Poor',
-      labelTh: 'แย่มาก',
+      labelKey: 'sq.veryPoor',
       color: '#ef4444', // red-500
       bgLight: '#fef2f2',
       insightKey: 'sq.insightVeryPoor',
@@ -30,8 +28,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
   } else if (duration < 6) {
     return {
       score: 4,
-      labelEn: 'Poor',
-      labelTh: 'แย่',
+      labelKey: 'sq.poor',
       color: '#f97316', // orange-500
       bgLight: '#fff7ed',
       insightKey: isLateBedtime ? 'sq.insightPoorLate' : 'sq.insightPoor',
@@ -40,8 +37,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
   } else if (duration < 7) {
     return {
       score: 6,
-      labelEn: 'Fair',
-      labelTh: 'พอใช้',
+      labelKey: 'sq.fair',
       color: '#eab308', // yellow-500
       bgLight: '#fefce8',
       insightKey: isLateBedtime ? 'sq.insightFairLate' : 'sq.insightFair',
@@ -52,8 +48,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
     const isOptimalRange = duration >= 7.5 && duration <= 8.5 && !isLateBedtime;
     return {
       score: isOptimalRange ? 10 : 9,
-      labelEn: 'Good',
-      labelTh: 'ดี',
+      labelKey: 'sq.good',
       color: '#10b981', // emerald-500
       bgLight: '#ecfdf5',
       insightKey: isLateBedtime ? 'sq.insightGoodLate' : 'sq.insightGood',
@@ -63,8 +58,7 @@ export function calculateSleepQuality(duration: number, bedtime: string): Qualit
     // > 9 hours
     return {
       score: 7,
-      labelEn: 'Excessive',
-      labelTh: 'มากเกินไป',
+      labelKey: 'sq.excessive',
       color: '#06b6d4', // cyan-500
       bgLight: '#ecfeff',
       insightKey: 'sq.insightExcessive',
@@ -81,9 +75,9 @@ interface SleepQualityIndicatorProps {
 const SEGMENT_KEYS = ['sq.veryPoor', 'sq.poor', 'sq.fair', 'sq.good', 'sq.excessive'];
 
 export const SleepQualityIndicator: React.FC<SleepQualityIndicatorProps> = ({ duration, bedtime }) => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const quality = calculateSleepQuality(duration, bedtime);
-  const qualityLabel = language === 'th' ? quality.labelTh : quality.labelEn;
+  const qualityLabel = t(quality.labelKey);
 
   return (
     <div className="sleep-quality-card">

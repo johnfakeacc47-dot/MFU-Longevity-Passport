@@ -10,16 +10,27 @@
 //   { action: 'create', email, name, role, faculty?, department?, mfuId? }
 //   { action: 'update', id, name?, role?, faculty?, department?, email? }
 //   { action: 'delete', id }
-// Responses: 2xx { users } | { user } | { success:true };  errors: { error: string }
+// Responses: 2xx { users } | { user } | { user, recovery_link } | { success:true };
+//   errors: { error: string }
+//
+// 'create' no longer sets a known password. The account is created with a
+// random, unrecoverable password and the response carries `recovery_link`
+// (a Supabase recovery action_link, single-use, expires per the project's
+// auth settings). The admin hands that link to the person, who opens it and
+// sets their own password. If link generation fails after the account was
+// created, `recovery_link` is null and the admin can use "Send password
+// reset" from the dashboard instead — the account itself is fine.
 //
 // Auto-injected env (verify with `supabase secrets list`):
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
 // Operator-set env (`supabase secrets set`):
 //   ALLOWED_ORIGINS        comma-separated origin allowlist; fallback http://localhost:5173
-//   DEFAULT_USER_PASSWORD  password for admin-created accounts; fallback 'Password123!'
+//   DEFAULT_USER_PASSWORD  DEPRECATED and ignored (every admin-created account used
+//                          to share this one password). Unset it; a warning is
+//                          logged while it is still present.
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.101.1'
 
 type AdminClient = ReturnType<typeof createClient>
 
@@ -96,7 +107,10 @@ async function handleList(admin: AdminClient, req: Request): Promise<Response> {
     const au = authById.get(p.id)
     return {
       id: p.id,
-      email: p.email ?? au?.email ?? '',
+      // auth.users is the identity of record. profiles.email is a user-writable
+      // mirror (0018 revokes the client's UPDATE on it, but existing rows may
+      // already differ), so it is only a fallback for auth rows we failed to list.
+      email: au?.email ?? p.email ?? '',
       name: p.name ?? '',
       mfu_id: p.mfu_id ?? null,
       role: p.role ?? 'student',
@@ -135,11 +149,17 @@ async function handleCreate(admin: AdminClient, body: any, req: Request): Promis
   if (!email || !name || !role) return json({ error: 'email, name and role are required' }, 400, req)
   if (!VALID_ROLES.includes(role)) return json({ error: 'role must be student, staff or admin' }, 400, req)
 
-  const defaultPassword = Deno.env.get('DEFAULT_USER_PASSWORD') ?? 'Password123!'
+  if (Deno.env.get('DEFAULT_USER_PASSWORD')) {
+    console.warn('DEFAULT_USER_PASSWORD is set but ignored — admin-created accounts now get a random password + recovery link; unset the secret.')
+  }
+
+  // Nobody — not even the admin — learns this password. The person sets their
+  // own through the recovery link returned below.
+  const throwawayPassword = crypto.randomUUID() + crypto.randomUUID()
 
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
-    password: defaultPassword,
+    password: throwawayPassword,
     email_confirm: true,
   })
   if (authError || !authData?.user) {
@@ -176,7 +196,18 @@ async function handleCreate(admin: AdminClient, body: any, req: Request): Promis
     }
     return json({ error: profileError.message }, 400, req)
   }
-  return json({ user: profileRecord }, 201, req)
+
+  // Recovery link the admin passes on so the person can set their password.
+  // Non-fatal: the account exists either way (see header comment).
+  let recoveryLink: string | null = null
+  const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({ type: 'recovery', email })
+  if (linkError || !linkData?.properties?.action_link) {
+    console.error('generateLink(recovery) failed for new user', newId, ':', linkError?.message ?? 'no action_link')
+  } else {
+    recoveryLink = linkData.properties.action_link
+  }
+
+  return json({ user: profileRecord, recovery_link: recoveryLink }, 201, req)
 }
 
 async function handleUpdate(admin: AdminClient, body: any, req: Request): Promise<Response> {

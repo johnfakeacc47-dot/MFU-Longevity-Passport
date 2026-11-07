@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FaArrowUp, FaCheckCircle, FaDownload, FaHeart, FaMobileAlt, FaPlus } from 'react-icons/fa';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface BeforeInstallPromptEvent extends Event {
@@ -29,8 +30,24 @@ const getDeviceType = (): 'ios' | 'android' | 'desktop' => {
 
 const STORAGE_KEY = 'pwaPromptDismissed';
 
+/**
+ * Locale strings mark emphasis with **double asterisks** (e.g. 'Tap the
+ * **Share** button'), so translators can move the bold word freely. Render
+ * those runs as <strong>.
+ */
+function renderBold(text: string): React.ReactNode {
+  const parts = text.split('**');
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    i % 2 === 1
+      ? <strong key={i} style={{ color: 'var(--text-primary)' }}>{part}</strong>
+      : <React.Fragment key={i}>{part}</React.Fragment>,
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLogin = false }) => {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [deviceType] = useState(getDeviceType);
@@ -48,12 +65,16 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
       e.preventDefault();
       deferredPromptRef.current = e as BeforeInstallPromptEvent;
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    window.addEventListener('appinstalled', () => {
+    const onInstalled = () => {
       localStorage.setItem(STORAGE_KEY, 'true');
       animateClose();
-    });
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   // Trigger: show after login (once), not in standalone mode
@@ -87,6 +108,31 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
 
   const canNativeInstall = deviceType !== 'ios' && deferredPromptRef.current !== null;
 
+  const stepCardStyle: React.CSSProperties = {
+    background: 'var(--surface-soft)', border: '1px solid var(--border-glass)',
+    borderRadius: '16px', padding: '16px', marginBottom: '20px', textAlign: 'left',
+  };
+  const stepTitleStyle: React.CSSProperties = {
+    margin: '0 0 12px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)',
+    textTransform: 'uppercase', letterSpacing: '0.08em',
+  };
+  const stepBubbleStyle: React.CSSProperties = {
+    width: '28px', height: '28px', borderRadius: '50%',
+    background: 'var(--surface-solid)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontSize: '14px', flexShrink: 0, color: 'var(--accent-dark)',
+  };
+  const stepTextStyle: React.CSSProperties = { fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 };
+
+  const iosSteps = [
+    { icon: <FaArrowUp />, text: t('pwa.iosStep1') },
+    { icon: <FaPlus />, text: t('pwa.iosStep2') },
+  ];
+  const androidSteps = [
+    { icon: '⋮', text: t('pwa.androidStep1') },
+    { icon: <FaMobileAlt />, text: t('pwa.androidStep2') },
+  ];
+
   return (
     <>
       {/* ── Backdrop ── */}
@@ -108,25 +154,31 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
         zIndex: 9999,
         display: 'flex',
         justifyContent: 'center',
-        padding: '0 12px 20px',
+        // Keep the sheet clear of the iPhone home indicator / Android gesture bar.
+        padding: '0 12px calc(20px + env(safe-area-inset-bottom, 0px))',
         animation: closing ? 'pwaSlideDown 0.4s cubic-bezier(0.4,0,1,1) forwards' : 'pwaSlideUp 0.45s cubic-bezier(0.16,1,0.3,1) forwards',
         pointerEvents: 'none',
       }}>
-        <div style={{
-          pointerEvents: 'auto',
-          width: '100%',
-          maxWidth: '420px',
-          background: 'var(--surface-solid)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: '28px',
-          border: '1px solid var(--border-glass)',
-          boxShadow: '0 20px 60px rgba(17,30,50,0.25)',
-          padding: '28px 24px 20px',
-          textAlign: 'center',
-        }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pwa-install-title"
+          style={{
+            pointerEvents: 'auto',
+            width: '100%',
+            maxWidth: '420px',
+            background: 'var(--surface-solid)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderRadius: '28px',
+            border: '1px solid var(--border-glass)',
+            boxShadow: '0 20px 60px rgba(17,30,50,0.25)',
+            padding: '28px 24px 20px',
+            textAlign: 'center',
+          }}
+        >
           {/* ── Logo ── */}
-          <div style={{
+          <div aria-hidden="true" style={{
             width: '72px', height: '72px',
             margin: '0 auto 18px',
             background: 'var(--surface-soft)',
@@ -136,38 +188,28 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
             border: '1px solid var(--border-glass)',
             fontSize: '38px',
             lineHeight: 1,
+            color: 'var(--accent)',
           }}>
             <FaHeart />
           </div>
 
           {/* ── Header ── */}
-          <h2 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>
-            Add to Home Screen
+          <h2 id="pwa-install-title" style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '-0.4px' }}>
+            {t('pwa.title')}
           </h2>
           <p style={{ margin: '0 0 22px', fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: 1.55, fontWeight: 500 }}>
-            Install <strong style={{ color: 'var(--text-primary)' }}>MFU Longevity Passport</strong> for offline access and push notifications.
+            {renderBold(t('pwa.body'))}
           </p>
 
           {/* ── Platform Instructions ── */}
           {deviceType === 'ios' && (
-            <div style={{
-              background: 'var(--surface-soft)', border: '1px solid var(--border-glass)',
-              borderRadius: '16px', padding: '16px', marginBottom: '20px', textAlign: 'left',
-            }}>
-              <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Steps to Install</p>
+            <div style={stepCardStyle}>
+              <p style={stepTitleStyle}>{t('pwa.stepsTitle')}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { n: '1', icon: <FaArrowUp />, text: <>Tap the <strong>Share</strong> button at the bottom of Safari</> },
-                  { n: '2', icon: <FaPlus />, text: <>Scroll down and tap <strong>"Add to Home Screen"</strong></> },
-                ].map(step => (
-                  <div key={step.n} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
-                      background: 'var(--surface-solid)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '14px', flexShrink: 0,
-                    }}>{step.icon}</div>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{step.text}</span>
+                {iosSteps.map((step, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={stepBubbleStyle}>{step.icon}</div>
+                    <span style={stepTextStyle}>{renderBold(step.text)}</span>
                   </div>
                 ))}
               </div>
@@ -175,25 +217,13 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
           )}
 
           {deviceType === 'android' && !canNativeInstall && (
-            <div style={{
-              background: 'var(--surface-soft)', border: '1px solid var(--border-glass)',
-              borderRadius: '16px', padding: '16px', marginBottom: '20px', textAlign: 'left',
-            }}>
-              <p style={{ margin: '0 0 12px', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Steps to Install</p>
+            <div style={stepCardStyle}>
+              <p style={stepTitleStyle}>{t('pwa.stepsTitle')}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {[
-                  { icon: '⋮', text: <>Tap the <strong>Menu</strong> (three dots) in the top right</> },
-                  { icon: <FaMobileAlt />, text: <>Tap <strong>"Install App"</strong> or <strong>"Add to Home Screen"</strong></> },
-                ].map((step, i) => (
+                {androidSteps.map((step, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
-                      background: 'var(--surface-solid)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: i === 0 ? '18px' : '14px', fontWeight: 900,
-                      flexShrink: 0, color: 'var(--accent-dark)',
-                    }}>{step.icon}</div>
-                    <span style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>{step.text}</span>
+                    <div style={{ ...stepBubbleStyle, fontSize: i === 0 ? '18px' : '14px', fontWeight: 900 }}>{step.icon}</div>
+                    <span style={stepTextStyle}>{renderBold(step.text)}</span>
                   </div>
                 ))}
               </div>
@@ -205,6 +235,7 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
             {/* Primary: install now if Chrome supports it */}
             {canNativeInstall ? (
               <button
+                type="button"
                 onClick={handleInstallNow}
                 style={{
                   width: '100%', padding: '15px',
@@ -214,14 +245,16 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
                   boxShadow: '0 8px 24px rgba(25,118,210,0.30)',
                   transition: 'transform 0.15s, box-shadow 0.15s',
                   letterSpacing: '-0.2px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-1px)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'; }}
               >
-                <FaDownload /> Install Now
+                <FaDownload aria-hidden="true" /> {t('pwa.installNow')}
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleDone}
                 style={{
                   width: '100%', padding: '15px',
@@ -230,13 +263,15 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
                   fontSize: '15px', fontWeight: 800, cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(25,118,210,0.30)',
                   letterSpacing: '-0.2px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 }}
               >
-                <FaCheckCircle /> Done, I've Added It!
+                <FaCheckCircle aria-hidden="true" /> {t('pwa.done')}
               </button>
             )}
 
             <button
+              type="button"
               onClick={handleLater}
               style={{
                 width: '100%', padding: '12px',
@@ -245,13 +280,13 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
                 fontSize: '13px', fontWeight: 600, cursor: 'pointer',
               }}
             >
-              Maybe Later
+              {t('pwa.later')}
             </button>
           </div>
 
           {/* ── Bottom hint ── */}
-          <p style={{ margin: '12px 0 0', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}> 
-            You won't see this again once installed.
+          <p style={{ margin: '12px 0 0', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            {t('pwa.hint')}
           </p>
         </div>
       </div>

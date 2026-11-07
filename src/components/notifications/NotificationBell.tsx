@@ -86,6 +86,9 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigate }
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<AppNotification[]>([]);
   const [unread, setUnread] = useState(0);
+  // True until the first fetch after opening resolves, so the panel shows a
+  // spinner rather than a premature "no notifications".
+  const [loading, setLoading] = useState(false);
 
   const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
   const [pushEnabled, setPushEnabled] = useState<boolean | null>(null); // null = not checked yet
@@ -124,7 +127,12 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigate }
 
   const openPanel = async () => {
     setOpen(true);
-    setItems(await fetchNotifications(30));
+    setLoading(true);
+    try {
+      setItems(await fetchNotifications(30));
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -216,7 +224,11 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ onNavigate }
                 </>
               )}
 
-              {groups.length === 0 ? (
+              {loading && groups.length === 0 ? (
+                <p className="notif-empty" role="status" aria-busy="true" aria-label={t('common.loading')}>
+                  <FaSpinner className="notif-push-spin" aria-hidden="true" />
+                </p>
+              ) : groups.length === 0 ? (
                 <p className="notif-empty">{t('notifications.empty')}</p>
               ) : (
                 groups.map((g) => {

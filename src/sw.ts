@@ -88,18 +88,30 @@ self.addEventListener('message', (event) => {
 // ── Push notification (server-sent) ──────────────────────────────────
 // Payload shape sent by supabase/functions/send-push: { title, body, icon,
 // badge, data: { ...whatever the notification type needs for routing } }.
+// A push that results in no visible notification is the worst outcome: iOS
+// counts silent pushes against the site and revokes the subscription after a
+// few, with no error anywhere. So the payload parse is guarded, and if the
+// full showNotification() rejects (an option the platform dislikes, a bad
+// icon path) we retry with the bare minimum rather than show nothing.
+const FALLBACK_PUSH = { title: 'MFU Longevity Passport', body: 'You have a new notification.' };
+
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? { title: 'Health Notification', body: 'Please check your passport.' };
+  let data: any = null;
+  try { data = event.data?.json(); } catch { /* not JSON — fall through to the fallback */ }
+  if (!data || typeof data.title !== 'string') data = { ...FALLBACK_PUSH, ...(data || {}) };
+  const title: string = data.title || FALLBACK_PUSH.title;
+  const body: string = typeof data.body === 'string' ? data.body : FALLBACK_PUSH.body;
+
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
+    self.registration.showNotification(title, {
+      body,
       icon: data.icon || '/pwa-192x192.png',
       badge: data.badge || '/pwa-192x192.png',
       data: data.data || {},
       tag: data.data?.type || undefined,
       // @ts-ignore
       vibrate: [200, 100, 200]
-    })
+    }).catch(() => self.registration.showNotification(title, { body }))
   );
 });
 

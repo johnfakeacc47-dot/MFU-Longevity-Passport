@@ -57,7 +57,9 @@ export const DailyGoalsCard: React.FC<DailyGoalsCardProps> = ({
           <FaTrophy className="goals-icon" />
           <div>
             <h3 className="coach-card-title">{t('goal.todayTitle')}</h3>
-            <span className="coach-card-subtitle">{completedCount} / {totalCount} {t('home.todayLongevityScore').split(' ')[0]}</span>
+            <span className="coach-card-subtitle">
+              {t('goal.completedOf').replace('{done}', String(completedCount)).replace('{total}', String(totalCount))}
+            </span>
           </div>
         </div>
         <div className="streak-pill">

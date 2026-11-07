@@ -64,6 +64,8 @@ const SliderRow: React.FC<{
       <div className="mh-slider-track-wrap">
         <input
           type="range" min={min} max={max} value={value}
+          aria-label={label}
+          aria-valuetext={levelLabel}
           className="mh-slider-input"
           style={{ '--slider-pct': `${pct}%`, '--slider-color': color } as React.CSSProperties}
           onChange={e => onChange(Number(e.target.value))}
@@ -288,6 +290,7 @@ export const MentalHealth: React.FC<MentalHealthProps> = ({ onNavigate, onOpenFo
           {saved && <p className="mh-journal-hint">{t('mental.editingSaved')}</p>}
           <textarea
             className="mh-journal-input"
+            aria-label={t('mental.journal')}
             placeholder={t('mental.journalPlaceholder')}
             value={note}
             rows={3}

@@ -168,7 +168,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* Form */}
-        <form onSubmit={handleAuth} autoComplete="off" className="login-form-v2">
+        {/* autocomplete hints let password managers fill sign-in and offer to
+            save a new password on sign-up (they were all "off"/"new-*" before). */}
+        <form onSubmit={handleAuth} className="login-form-v2">
           <div className="login-field">
             <label htmlFor="email" className="login-label">{t('login.email')}</label>
             <input
@@ -177,7 +179,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               placeholder={t('login.emailPlaceholder')}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              autoComplete="new-email"
+              autoComplete={isSignUp ? 'email' : 'username'}
               required
               className="login-input-v2"
             />
@@ -192,7 +194,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 placeholder={t('login.passwordPlaceholder')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
+                autoComplete={isSignUp ? 'new-password' : 'current-password'}
                 required
                 className="login-input-v2"
               />
@@ -200,8 +202,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 type="button"
                 className="login-eye-btn"
                 onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+                aria-pressed={showPassword}
               >
                 {showPassword ? <FaEyeSlash /> : <FaEye />}
               </button>

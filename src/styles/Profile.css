@@ -653,6 +653,11 @@
   animation: pv2Shimmer 1.4s ease infinite;
 }
 
+[data-theme="dark"] .pv2-skeleton {
+  background: linear-gradient(90deg, #2A3447 25%, #374151 50%, #2A3447 75%);
+  background-size: 200% 100%;
+}
+
 @keyframes pv2Shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
@@ -664,7 +669,7 @@
   inset: 0;
   background: rgba(15,23,42,0.35);
   backdrop-filter: blur(3px);
-  z-index: 100;
+  z-index: 160; /* above bottom nav (100) and chat FAB (120); below notif panel (200) */
   animation: pv2FadeIn 0.2s ease;
 }
 
@@ -681,7 +686,7 @@
   width: min(320px, 88vw);
   background: var(--surface-solid);
   box-shadow: -8px 0 40px rgba(15,23,42,0.15);
-  z-index: 101;
+  z-index: 161;
   display: flex;
   flex-direction: column;
   transform: translateX(100%);
@@ -697,7 +702,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px 16px;
+  padding: calc(20px + env(safe-area-inset-top, 0px)) 20px 16px;
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -728,7 +733,7 @@
 .pv2-drawer-body {
   flex: 1;
   overflow-y: auto;
-  padding: 12px 12px 24px;
+  padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 4px;

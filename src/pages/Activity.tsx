@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { safeParse } from '../utils/safeStorage';
 import { healthApi, isApiConfigured } from '../services/healthApi';
-import '../styles/components/activity.css'; // Will create this
+import '../styles/components/activity.css';
 
 type PageType = 'home' | 'profile' | 'team' | 'eating' | 'dashboard' | 'activity' | 'sleep';
 
@@ -40,6 +40,9 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
   const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState('');
+  // Set when the local save worked but the API write didn't — shown inline
+  // instead of being swallowed into console.error.
+  const [syncError, setSyncError] = useState<string | null>(null);
   
   // Flexible input state
   const [inputHours, setInputHours] = useState<number | ''>('');
@@ -99,7 +102,8 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
 
   const logActivity = async () => {
     if (!selected || currentDuration <= 0) return;
-    
+    setSyncError(null);
+
     const newAct: ActivityLog = {
       id: Date.now(), type: selected, duration: currentDuration, caloriesBurned: currentCalories,
       timestamp: new Date().toISOString(),
@@ -116,12 +120,18 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
       }
     } catch (e) {
       console.error('Failed to log activity:', e);
+      setSyncError(t('activity.syncFailed'));
     }
     window.dispatchEvent(new Event('healthDataUpdated'));
-    setShowModal(false); 
+    setShowModal(false);
     setSelected('');
   };
 
+  // The Nest backend (backend/src/health/controllers/activities.controller.ts)
+  // exposes POST + GET only — there is no DELETE /health/activities/:id — so
+  // when the API is configured a local delete would be undone by the next
+  // loadActivities() reload. The delete button is hidden in that mode until
+  // the endpoint exists; this handler is local-storage only.
   const deleteActivity = (id: number | string) => {
     const updated = activities.filter(a => a.id !== id);
     setActivities(updated);
@@ -188,7 +198,8 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
         {/* History */}
         <div className="ac-section">
           <h2 className="ac-section-title">{isTh ? 'ประวัติการทำกิจกรรม' : 'Activity History'}</h2>
-          
+          {syncError && <p className="team-add-error" role="alert">{syncError}</p>}
+
           {activities.length === 0 ? (
             <div className="ac-empty">
               <FaRunning className="ac-empty-icon" />
@@ -214,9 +225,11 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
                         <span className="ac-hist-cals">{act.caloriesBurned} kcal</span>
                       </div>
                     </div>
-                    <button className="ac-hist-del" onClick={() => deleteActivity(act.id)}>
-                      <FaTrash />
-                    </button>
+                    {!isApiConfigured && (
+                      <button className="ac-hist-del" onClick={() => deleteActivity(act.id)} aria-label={t('common.delete')}>
+                        <FaTrash />
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -232,7 +245,7 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
           <div className="ac-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ac-modal-header">
               <h3>{isTh ? 'ระบุเวลา' : 'Enter Duration'}</h3>
-              <button className="ac-modal-close" onClick={() => setShowModal(false)}><FaTimes /></button>
+              <button className="ac-modal-close" onClick={() => setShowModal(false)} aria-label={t('common.close')}><FaTimes /></button>
             </div>
 
             {selectedCfg && (
@@ -244,13 +257,13 @@ export const Activity: React.FC<ActivityProps> = ({ onNavigate, onOpenFoodRecogn
 
             <div className="ac-modal-inputs">
               <div className="ac-input-group">
-                <label>{isTh ? 'ชั่วโมง' : 'Hours'}</label>
-                <input type="number" min="0" placeholder="0" value={inputHours} onChange={e => setInputHours(e.target.value ? Number(e.target.value) : '')} />
+                <label htmlFor="ac-hours-input">{isTh ? 'ชั่วโมง' : 'Hours'}</label>
+                <input id="ac-hours-input" type="number" min="0" placeholder="0" value={inputHours} onChange={e => setInputHours(e.target.value ? Number(e.target.value) : '')} />
               </div>
-              <div className="ac-input-separator">:</div>
+              <div className="ac-input-separator" aria-hidden="true">:</div>
               <div className="ac-input-group">
-                <label>{isTh ? 'นาที' : 'Minutes'}</label>
-                <input type="number" min="0" max="59" placeholder="0" value={inputMinutes} onChange={e => setInputMinutes(e.target.value ? Number(e.target.value) : '')} />
+                <label htmlFor="ac-minutes-input">{isTh ? 'นาที' : 'Minutes'}</label>
+                <input id="ac-minutes-input" type="number" min="0" max="59" placeholder="0" value={inputMinutes} onChange={e => setInputMinutes(e.target.value ? Number(e.target.value) : '')} />
               </div>
             </div>
 

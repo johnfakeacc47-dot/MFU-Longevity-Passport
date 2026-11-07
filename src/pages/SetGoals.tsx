@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { FaBed, FaBolt, FaHourglassHalf, FaRunning } from 'react-icons/fa';
+import React, { useEffect, useRef, useState } from 'react';
+import { FaBed, FaBolt, FaCheckCircle, FaHourglassHalf, FaRunning } from 'react-icons/fa';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { BottomNav } from '../components/BottomNav';
 import { BackButton } from '../components/BackButton';
+import { USER_GOALS_KEY, readUserGoals, type UserGoals } from '../utils/userGoals';
 
 type PageType = 'login' | 'home' | 'eating' | 'dashboard' | 'team' | 'profile' | 'edit-profile' | 'user-management' | 'privacy-settings' | 'set-goals' | 'about-tracker';
 
@@ -16,13 +17,36 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
   const { t, language } = useLanguage();
   const isTh = language === 'th';
   useSEO(`${t('setGoals.title')} · MFU Longevity Passport`, 'Set and adjust your personal health goals.');
-  const [fastingGoal, setFastingGoal] = useState(16);
-  const [sleepGoal, setSleepGoal] = useState(8);
-  const [activityGoal, setActivityGoal] = useState(30);
+  // Clamped to the slider ranges, so a stale/hand-edited value can't land a
+  // thumb outside its track. The coach reads the same store (utils/userGoals).
+  const [initial] = useState<UserGoals>(readUserGoals);
+  const [fastingGoal, setFastingGoal] = useState(initial.fastingHours);
+  const [sleepGoal, setSleepGoal] = useState(initial.sleepHours);
+  const [activityGoal, setActivityGoal] = useState(initial.activityMinutes);
+  const [saveState, setSaveState] = useState<'idle' | 'saved' | 'error'>('idle');
+  const navTimer = useRef<number | null>(null);
+
+  useEffect(() => () => { if (navTimer.current) window.clearTimeout(navTimer.current); }, []);
 
   const saveGoals = () => {
-    alert(isTh ? 'บันทึกเป้าหมายสุขภาพเรียบร้อยแล้ว!' : 'Goals saved successfully!');
-    onNavigate('profile');
+    const goals: UserGoals = {
+      fastingHours: fastingGoal,
+      sleepHours: sleepGoal,
+      activityMinutes: activityGoal,
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem(USER_GOALS_KEY, JSON.stringify(goals));
+    } catch (err) {
+      console.error('Failed to save goals:', err);
+      setSaveState('error');
+      return;
+    }
+    // Same event the loggers fire, so Home/Dashboard recompute against the new targets.
+    window.dispatchEvent(new CustomEvent('healthDataUpdated'));
+    setSaveState('saved');
+    // Let the confirmation be seen before leaving the page.
+    navTimer.current = window.setTimeout(() => onNavigate('profile'), 1200);
   };
 
   const getHealthPotential = () => {
@@ -63,10 +87,10 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         >
           <div className="flex justify-between items-start mb-4">
             <div>
-              <div className="text-sm font-black text-blue-700 uppercase tracking-wider mb-1">{isTh ? 'ศักยภาพการชะลอวัย' : 'Longevity Potential'}</div>
-              <div className="text-xs text-blue-500">{isTh ? 'ประเมินจากเป้าหมายประจำวันของคุณ' : 'Based on your current daily targets'}</div>
+              <div className="text-sm font-black uppercase tracking-wider mb-1" style={{ color: 'var(--text-accent)' }}>{isTh ? 'ศักยภาพการชะลอวัย' : 'Longevity Potential'}</div>
+              <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>{isTh ? 'ประเมินจากเป้าหมายประจำวันของคุณ' : 'Based on your current daily targets'}</div>
             </div>
-            <div className="px-3 py-1 rounded-full text-xs font-black text-blue-700" style={{ background: 'rgba(33, 150, 243, 0.14)' }}>
+            <div className="px-3 py-1 rounded-full text-xs font-black" style={{ background: 'rgba(33, 150, 243, 0.14)', color: 'var(--text-accent)' }}>
               {potentialTone}
             </div>
           </div>
@@ -205,13 +229,31 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         </div>
 
         <button
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-800 text-white font-black text-sm shadow-xl shadow-blue-200 active:scale-[0.98] transition-all"
-          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}
+          type="button"
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-700 to-blue-800 text-white font-black text-sm active:scale-[0.98] transition-all"
+          style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', boxShadow: '0 8px 24px rgba(25,118,210,0.30)' }}
           onClick={saveGoals}
+          disabled={saveState === 'saved'}
         >
-          <FaBolt aria-hidden="true" />
+          {saveState === 'saved' ? <FaCheckCircle aria-hidden="true" /> : <FaBolt aria-hidden="true" />}
           {isTh ? 'บันทึกเป้าหมายของฉัน' : 'Save My Strategy'}
         </button>
+
+        {saveState !== 'idle' && (
+          <p
+            role="status"
+            className="text-sm font-bold text-center"
+            style={{
+              marginTop: 12,
+              padding: '10px 14px',
+              borderRadius: 12,
+              color: saveState === 'saved' ? 'var(--color-success, #10B981)' : 'var(--color-danger, #EF4444)',
+              background: saveState === 'saved' ? 'rgba(16,185,129,0.12)' : 'var(--color-danger-soft, rgba(239,68,68,0.12))',
+            }}
+          >
+            {saveState === 'saved' ? t('setGoals.saved') : t('setGoals.saveFailed')}
+          </p>
+        )}
       </div>
 
       <BottomNav
@@ -219,7 +261,6 @@ export const SetGoals: React.FC<SetGoalsProps> = ({ onNavigate, onOpenFoodRecogn
         onNavigate={onNavigate}
         onOpenFoodRecognition={onOpenFoodRecognition}
         t={t}
-        className="bottom-nav glass-card"
       />
     </div>
   );

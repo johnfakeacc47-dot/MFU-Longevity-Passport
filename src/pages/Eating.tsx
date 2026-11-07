@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import type { MealLog, Macros } from '../utils/longevityScore';
 import { getTodayWater, saveTodayWater } from '../utils/healthCoach';
 import { mealDisplayName } from '../utils/foodNames';
+import { scheduleFastingAlarm, cancelFastingAlarm } from '../services/notifications';
+import { startFastingTimer, stopFastingTimer } from '../services/supabaseClient';
 import {
   FaUtensils, FaChartPie,
   FaClock, FaChevronRight, FaCamera, FaDroplet,
@@ -54,11 +56,27 @@ const DEFAULT_TARGETS = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const todayStart = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
 
-const fmtTime = (ts: string) =>
-  new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const fmtTime = (ts: string, isTh: boolean) =>
+  new Date(ts).toLocaleTimeString(isTh ? 'th-TH' : 'en-US', { hour: '2-digit', minute: '2-digit' });
 
-const fmtDate = (ts: string) =>
-  new Date(ts).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+const fmtDate = (ts: string, isTh: boolean) =>
+  new Date(ts).toLocaleDateString(isTh ? 'th-TH' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+
+// Fasting protocols → hours fasted. Kept as data (not parsed from the label) so
+// 'OMAD' can't turn into NaN (it used to via Number('OMAD'.split(':')[0])).
+const SCHEDULES: { id: string; fastHours: number }[] = [
+  { id: '12:12', fastHours: 12 },
+  { id: '14:10', fastHours: 14 },
+  { id: '16:8',  fastHours: 16 },
+  { id: '18:6',  fastHours: 18 },
+  { id: '20:4',  fastHours: 20 },
+  { id: 'OMAD',  fastHours: 23 },
+];
+const MIN_FAST_HOURS = 1;
+const MAX_FAST_HOURS = 23;
+const clampFastHours = (n: number) =>
+  Number.isFinite(n) ? Math.min(MAX_FAST_HOURS, Math.max(MIN_FAST_HOURS, Math.round(n))) : MIN_FAST_HOURS;
+const isValidFastHours = (n: number) => Number.isFinite(n) && n >= MIN_FAST_HOURS && n <= MAX_FAST_HOURS;
 
 const fmtHMS = (sec: number) => {
   const h = Math.floor(sec / 3600);
@@ -115,12 +133,18 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
     setFastHistory(hist.slice(-7).reverse());
     if (active) {
       const st = localStorage.getItem('fastingStartTime');
-      const hrs = Number(localStorage.getItem('fastingTargetHours') || '16');
+      // A stored "NaN" (from the old OMAD bug) made `elapsed < NaN` false and
+      // auto-expired every fast on load — treat anything non-finite as 16 h.
+      const storedHrs = Number(localStorage.getItem('fastingTargetHours') || '16');
+      const hrs = isValidFastHours(storedHrs) ? storedHrs : 16;
       if (st) {
         const start = new Date(st);
         const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
         if (elapsed < hrs * 3600) {
           setStartTime(start); setFastHours(hrs); setElapsedSec(elapsed); setIsRunning(true);
+          // Re-arm the local alarm — the service worker may have restarted
+          // (losing its in-memory timer) since the fast began.
+          void scheduleFastingAlarm(start.getTime() + hrs * 3600_000, hrs).catch(() => { /* notifications unavailable */ });
           return;
         }
         // Auto-complete expired fast
@@ -230,13 +254,15 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   }, [totalCals, macros, targets, isTh]);
 
   // ── Meal CRUD ────────────────────────────────────────────────────────────────
-  const deleteMeal = (globalIdx: number) => {
+  /** Returns false (and leaves UI state untouched) when the storage write failed. */
+  const deleteMeal = (globalIdx: number): boolean => {
     const all = [...meals];
     all.splice(globalIdx, 1);
-    safeSetItem('meals', all);
+    if (!safeSetItem('meals', all)) return false;
     setMeals(all);
     window.dispatchEvent(new Event('healthDataUpdated'));
     setSelectedMeal(null);
+    return true;
   };
 
   const saveMealEdit = (updated: MealLog, globalIdx: number) => {
@@ -261,14 +287,26 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   };
 
   // ── IF controls ───────────────────────────────────────────────────────────────
+  const selectedFastHours = selectedSched === 'custom'
+    ? customHrs
+    : (SCHEDULES.find(sc => sc.id === selectedSched)?.fastHours ?? NaN);
+  const canStartFasting = isValidFastHours(selectedFastHours);
+
   const startFasting = () => {
+    const hrs = selectedFastHours;
+    if (!isValidFastHours(hrs)) return;
     const now = new Date();
-    const hrs = selectedSched === 'custom' ? customHrs : Number(selectedSched.split(':')[0]);
     setFastHours(hrs); setStartTime(now); setElapsedSec(0); setIsRunning(true);
     localStorage.setItem('fastingActive', 'true');
     localStorage.setItem('fastingStartTime', now.toISOString());
     localStorage.setItem('fastingTargetHours', String(hrs));
     window.dispatchEvent(new Event('healthDataUpdated'));
+
+    // Local alarm — fires on this device the moment the fast completes.
+    void scheduleFastingAlarm(now.getTime() + hrs * 3600_000, hrs).catch((err) => console.warn('scheduleFastingAlarm failed:', err));
+    // Server copy — lets the scheduled reminder job catch the completion even
+    // if this browser was closed before the local alarm could fire.
+    startFastingTimer(hrs).catch((err) => console.error('startFastingTimer failed:', err));
   };
 
   const stopFasting = () => {
@@ -287,6 +325,9 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
     setIsRunning(false); setStartTime(null); setElapsedSec(0);
     ['fastingActive', 'fastingStartTime', 'fastingTargetHours'].forEach(k => localStorage.removeItem(k));
     window.dispatchEvent(new Event('healthDataUpdated'));
+
+    void cancelFastingAlarm().catch((err) => console.warn('cancelFastingAlarm failed:', err));
+    stopFastingTimer().catch((err) => console.error('stopFastingTimer failed:', err));
   };
 
   const handleBack = () => {
@@ -313,9 +354,9 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
     const fPct = macroTotal > 0 ? (macros.fat / macroTotal) * 100 : 0;
 
     const macroItems = [
-      { key: 'protein', label: isTh ? 'Protein' : 'Protein', val: macros.protein, target: targets.protein, unit: 'g', color: '#3B82F6' },
-      { key: 'carbs', label: isTh ? 'Carbs' : 'Carbs', val: macros.carbs, target: targets.carbs, unit: 'g', color: '#F59E0B' },
-      { key: 'fat', label: isTh ? 'Fat' : 'Fat', val: macros.fat, target: targets.fat, unit: 'g', color: '#EF4444' },
+      { key: 'protein', label: isTh ? 'โปรตีน' : 'Protein', val: macros.protein, target: targets.protein, unit: 'g', color: '#3B82F6' },
+      { key: 'carbs', label: isTh ? 'คาร์บ' : 'Carbs', val: macros.carbs, target: targets.carbs, unit: 'g', color: '#F59E0B' },
+      { key: 'fat', label: isTh ? 'ไขมัน' : 'Fat', val: macros.fat, target: targets.fat, unit: 'g', color: '#EF4444' },
     ];
 
     const microItems = [
@@ -363,9 +404,9 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
           <div className="ev-macro-stacked-bar">
             {macroTotal > 0 ? (
               <>
-                <div style={{ width: `${pPct}%`, background: '#3B82F6' }} title="Protein" />
-                <div style={{ width: `${cPct}%`, background: '#F59E0B' }} title="Carbs" />
-                <div style={{ width: `${fPct}%`, background: '#EF4444' }} title="Fat" />
+                <div style={{ width: `${pPct}%`, background: '#3B82F6' }} title={isTh ? 'โปรตีน' : 'Protein'} />
+                <div style={{ width: `${cPct}%`, background: '#F59E0B' }} title={isTh ? 'คาร์บ' : 'Carbs'} />
+                <div style={{ width: `${fPct}%`, background: '#EF4444' }} title={isTh ? 'ไขมัน' : 'Fat'} />
               </>
             ) : (
               <div style={{ width: '100%', background: 'var(--bg-primary)' }} />
@@ -460,7 +501,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                 <div className="ev-hist-body">
                   <div className="ev-hist-header">
                     <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h4>
-                    <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
+                    <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp, isTh) : fmtDate(meal.timestamp, isTh)}</span>
                   </div>
                   <div className="ev-hist-cals">{meal.calories} kcal</div>
                   <div className="ev-hist-macros-text">
@@ -505,7 +546,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
       </div>
 
       <div className="ev-water-controls">
-        <button className="ev-water-btn minus" onClick={() => updateWater(water.glasses - 1)} disabled={water.glasses <= 0}>−</button>
+        <button className="ev-water-btn minus" onClick={() => updateWater(water.glasses - 1)} disabled={water.glasses <= 0} aria-label={t('eating.a11yRemoveGlass')}>−</button>
         <button className="ev-water-btn plus" onClick={() => updateWater(water.glasses + 1)}>
           + {isTh ? '1 แก้ว (250ml)' : '1 glass (250ml)'}
         </button>
@@ -516,16 +557,15 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
   // ══════════════════════════════════════════════
   // SUB-VIEW: IF Schedule
   // ══════════════════════════════════════════════
-  const SCHEDULES = ['12:12', '14:10', '16:8', '18:6', '20:4', 'OMAD'];
   const renderSchedule = () => (
     <div className="ev-subview">
       <div className="ev-sched-chips">
-        {SCHEDULES.map(s => (
-          <button key={s}
-            className={`ev-chip ${selectedSched === s ? 'active' : ''}`}
-            onClick={() => { if (!isRunning) setSelectedSched(s); }}
+        {SCHEDULES.map(({ id }) => (
+          <button key={id}
+            className={`ev-chip ${selectedSched === id ? 'active' : ''}`}
+            onClick={() => { if (!isRunning) setSelectedSched(id); }}
             disabled={isRunning}
-          >{s}</button>
+          >{id}</button>
         ))}
         <button
           className={`ev-chip ${selectedSched === 'custom' ? 'active' : ''}`}
@@ -537,8 +577,8 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
       {selectedSched === 'custom' && !isRunning && (
         <div className="ev-custom-input">
           <label>{isTh ? 'ชั่วโมงอดอาหาร:' : 'Fasting hours:'}</label>
-          <input type="number" min={1} max={23} value={customHrs}
-            onChange={e => setCustomHrs(Number(e.target.value))} />
+          <input type="number" min={MIN_FAST_HOURS} max={MAX_FAST_HOURS} step={1} value={customHrs}
+            onChange={e => setCustomHrs(clampFastHours(Number(e.target.value)))} />
         </div>
       )}
 
@@ -551,7 +591,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
 
       <div className="ev-sched-btns">
         {!isRunning
-          ? <button className="ev-start-btn" onClick={startFasting}><FaPlay style={{ fontSize: '11px' }} /> {isTh ? 'เริ่มอดอาหาร' : 'Start Fasting'}</button>
+          ? <button className="ev-start-btn" onClick={startFasting} disabled={!canStartFasting}><FaPlay style={{ fontSize: '11px' }} /> {isTh ? 'เริ่มอดอาหาร' : 'Start Fasting'}</button>
           : <button className="ev-stop-btn" onClick={stopFasting}><FaStop style={{ fontSize: '11px' }} /> {isTh ? 'หยุดและบันทึก' : 'Stop & Save'}</button>
         }
       </div>
@@ -564,7 +604,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
             return (
               <div key={i} className={`ev-fast-hist-row ${completed ? 'completed' : 'partial'}`}>
                 <div>
-                  <span className="ev-fh-date">{fmtDate(s.endTime)}</span>
+                  <span className="ev-fh-date">{fmtDate(s.endTime, isTh)}</span>
                   <span className={`ev-fh-badge ${completed ? 'done' : 'miss'}`}>
                     {completed ? (isTh ? 'สำเร็จ' : 'Done') : (isTh ? 'บางส่วน' : 'Partial')}
                   </span>
@@ -744,7 +784,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
                   <div className="ev-hist-body">
                     <div className="ev-hist-header">
                       <h4>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h4>
-                      <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp) : fmtDate(meal.timestamp)}</span>
+                      <span className="ev-hist-time">{historyFilter === 'today' ? fmtTime(meal.timestamp, isTh) : fmtDate(meal.timestamp, isTh)}</span>
                     </div>
                     <div className="ev-hist-cals">{meal.calories} kcal</div>
                     <div className="ev-hist-macros-text">
@@ -776,7 +816,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
               <div className="ev-progress-fill" style={{ width: `${waterPct}%`, background: 'var(--color-cyan)' }} />
             </div>
             <div className="ev-sec-card-actions" onClick={e => e.stopPropagation()}>
-              <button className="ev-sec-btn minus" onClick={() => updateWater(water.glasses - 1)} disabled={water.glasses <= 0}>−</button>
+              <button className="ev-sec-btn minus" onClick={() => updateWater(water.glasses - 1)} disabled={water.glasses <= 0} aria-label={t('eating.a11yRemoveGlass')}>−</button>
               <button className="ev-sec-btn plus" onClick={() => updateWater(water.glasses + 1)}>+ {isTh ? 'เพิ่ม 1 แก้ว' : '+1 Glass'}</button>
             </div>
           </div>
@@ -797,7 +837,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
             </div>
             <div className="ev-sec-card-actions" onClick={e => e.stopPropagation()}>
               {!isRunning ? (
-                <button className="ev-sec-btn fast-start" onClick={startFasting}><FaPlay style={{ fontSize: '10px' }} /> {isTh ? 'เริ่มจับเวลา IF' : 'Start Fasting'}</button>
+                <button className="ev-sec-btn fast-start" onClick={startFasting} disabled={!canStartFasting}><FaPlay style={{ fontSize: '10px' }} /> {isTh ? 'เริ่มจับเวลา IF' : 'Start Fasting'}</button>
               ) : (
                 <button className="ev-sec-btn fast-stop" onClick={stopFasting}><FaStop style={{ fontSize: '10px' }} /> {isTh ? 'หยุดและบันทึก' : 'Stop & Save'}</button>
               )}
@@ -901,6 +941,25 @@ const FastRing: React.FC<any> = ({ pct, elapsed, target, running, isTh, protocol
 // MealDetailModal (Reused)
 const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDelete, onEdit }) => {
   const { t } = useLanguage();
+  // Two-step delete: first tap arms, second tap (within 3 s) deletes.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteFailed, setDeleteFailed] = useState(false);
+  const armTimer = useRef<number | null>(null);
+  useEffect(() => () => { if (armTimer.current) window.clearTimeout(armTimer.current); }, []);
+
+  const handleDeleteTap = () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      setDeleteFailed(false);
+      armTimer.current = window.setTimeout(() => setConfirmDelete(false), 3000);
+      return;
+    }
+    if (armTimer.current) window.clearTimeout(armTimer.current);
+    setConfirmDelete(false);
+    const ok: boolean = onDelete(globalIdx);
+    if (ok === false) setDeleteFailed(true);
+  };
+
   const rows = [
     { label: isTh ? 'แคลอรี่' : 'Calories', val: `${meal.calories} kcal` },
     { label: isTh ? 'โปรตีน' : 'Protein', val: `${meal.macros?.protein ?? 0} g` },
@@ -914,9 +973,9 @@ const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDele
     <div className="ev-modal-backdrop" onClick={onClose}>
       <div className="ev-modal" onClick={e => e.stopPropagation()}>
         <div className="ev-modal-header">
-          <button className="ev-modal-close" onClick={onClose}><FaXmark /></button>
+          <button className="ev-modal-close" onClick={onClose} aria-label={t('common.close')}><FaXmark /></button>
           <h2>{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</h2>
-          <span className="ev-meal-time-badge">{fmtTime(meal.timestamp)}</span>
+          <span className="ev-meal-time-badge">{fmtTime(meal.timestamp, isTh)}</span>
         </div>
         {meal.imageUrl && <img src={meal.imageUrl} alt={meal.foodName} className="ev-modal-img" />}
         <div className="ev-modal-rows">
@@ -926,9 +985,16 @@ const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDele
             </div>
           ))}
         </div>
+        {deleteFailed && (
+          <p role="alert" style={{ color: 'var(--color-danger-text)', fontSize: '0.85rem', margin: '0 0 8px', textAlign: 'center' }}>
+            {t('eating.deleteFailed')}
+          </p>
+        )}
         <div className="ev-modal-actions">
           <button className="ev-modal-btn edit" onClick={onEdit}><FaPencil /> {isTh ? 'แก้ไข' : 'Edit'}</button>
-          <button className="ev-modal-btn del" onClick={() => onDelete(globalIdx)}><FaTrash /> {isTh ? 'ลบ' : 'Delete'}</button>
+          <button className="ev-modal-btn del" onClick={handleDeleteTap} aria-live="polite">
+            <FaTrash /> {confirmDelete ? t('eating.tapAgainDelete') : (isTh ? 'ลบ' : 'Delete')}
+          </button>
         </div>
       </div>
     </div>
@@ -937,8 +1003,12 @@ const MealDetailModal: React.FC<any> = ({ meal, globalIdx, isTh, onClose, onDele
 
 // MealEditModal (Reused)
 const MealEditModal: React.FC<any> = ({ meal, isTh, recalcCalories, onClose, onSave }) => {
+  const { t } = useLanguage();
+  // What the user currently sees as the name (foodKey / AI names take priority
+  // over foodName in mealDisplayName) — so the field starts with the real name.
+  const currentDisplayName = mealDisplayName(meal, t, meal.foodName || '', isTh);
   const [form, setForm] = useState({
-    foodName: meal.foodName || '', calories: meal.calories,
+    foodName: currentDisplayName, calories: meal.calories,
     protein: meal.macros?.protein ?? 0, carbs: meal.macros?.carbs ?? 0, fat: meal.macros?.fat ?? 0,
     sugar: meal.macros?.sugar ?? 0, fiber: meal.macros?.fiber ?? 0, sodium: meal.macros?.sodium ?? 0,
   });
@@ -950,8 +1020,15 @@ const MealEditModal: React.FC<any> = ({ meal, isTh, recalcCalories, onClose, onS
   };
 
   const handleSave = () => {
+    const nextName = form.foodName.trim();
+    const renamed = nextName !== '' && nextName !== currentDisplayName;
+    // A custom name must win: drop the language-keyed fields that
+    // mealDisplayName() would otherwise prefer over `foodName`.
+    const base: MealLog = renamed
+      ? (({ foodKey: _k, foodNameEn: _en, foodNameTh: _th, ...rest }) => rest)(meal as MealLog)
+      : meal;
     onSave({
-      ...meal, foodName: form.foodName, calories: form.calories,
+      ...base, foodName: renamed ? nextName : (meal.foodName ?? currentDisplayName), calories: form.calories,
       macros: { protein: form.protein, carbs: form.carbs, fat: form.fat, sugar: form.sugar, fiber: form.fiber, sodium: form.sodium },
     });
   };
@@ -960,7 +1037,7 @@ const MealEditModal: React.FC<any> = ({ meal, isTh, recalcCalories, onClose, onS
     <div className="ev-modal-backdrop" onClick={onClose}>
       <div className="ev-modal ev-modal--edit" onClick={e => e.stopPropagation()}>
         <div className="ev-modal-header">
-          <button className="ev-modal-close" onClick={onClose}><FaXmark /></button>
+          <button className="ev-modal-close" onClick={onClose} aria-label={t('common.close')}><FaXmark /></button>
           <h2>{isTh ? 'แก้ไขข้อมูล' : 'Edit'}</h2>
         </div>
         <div className="ev-edit-form">

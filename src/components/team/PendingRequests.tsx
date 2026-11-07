@@ -17,14 +17,23 @@ interface Props {
 export const PendingRequests: React.FC<Props> = ({ requests, onResolved }) => {
   const { t } = useLanguage();
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (requests.length === 0) return null;
 
   const respond = async (id: string, accept: boolean) => {
     setBusyId(id);
-    await respondToTeamRequest(id, accept);
-    setBusyId(null);
-    onResolved();
+    setError(null);
+    try {
+      const ok = await respondToTeamRequest(id, accept);
+      if (!ok) { setError(t('team.errGeneric')); return; }
+      onResolved();
+    } catch (err) {
+      console.error('respondToTeamRequest threw:', err);
+      setError(t('team.errGeneric'));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -32,6 +41,7 @@ export const PendingRequests: React.FC<Props> = ({ requests, onResolved }) => {
       <div className="team-lb-header">
         <h3 className="team-lb-title">{t('team.pendingRequests')}</h3>
       </div>
+      {error && <p className="team-add-error" role="alert">{error}</p>}
       <div className="team-lb-list">
         {requests.map((req) => (
           <div key={req.requestId} className="team-lb-card">
