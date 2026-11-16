@@ -331,7 +331,9 @@ export interface LongevityIndexResult {
   realAge: number;
   ageDelta: number; // e.g. -5 means 5 years younger
   trend: 'up' | 'down' | 'stable';
-  trendPercent: number;
+  /** Absolute point change vs yesterday (0–100 scale). Points, not percent:
+   *  a percent change explodes when yesterday was near 0 (0 → 16 read as 1600%). */
+  trendPoints: number;
 }
 
 export const getLongevityIndex = (currentScore?: LongevityBreakdown): LongevityIndexResult => {
@@ -368,14 +370,12 @@ export const getLongevityIndex = (currentScore?: LongevityBreakdown): LongevityI
 
   const yesterdayTotal = parseFloat(localStorage.getItem('yesterdayScore') || `${total}`);
   let trend: 'up' | 'down' | 'stable' = 'stable';
-  let trendPercent = 0;
+  const trendPoints = Number.isFinite(yesterdayTotal) ? Math.round(Math.abs(total - yesterdayTotal)) : 0;
 
   if (total > yesterdayTotal + 1) {
     trend = 'up';
-    trendPercent = Math.round(((total - yesterdayTotal) / Math.max(1, yesterdayTotal)) * 100);
   } else if (total < yesterdayTotal - 1) {
     trend = 'down';
-    trendPercent = Math.round(((yesterdayTotal - total) / Math.max(1, yesterdayTotal)) * 100);
   }
 
   return {
@@ -386,7 +386,7 @@ export const getLongevityIndex = (currentScore?: LongevityBreakdown): LongevityI
     realAge,
     ageDelta: healthAge - realAge,
     trend,
-    trendPercent,
+    trendPoints,
   };
 };
 

@@ -8,7 +8,7 @@ interface LongevityIndexCardProps {
 }
 
 export const LongevityIndexCard: React.FC<LongevityIndexCardProps> = ({ indexData, t }) => {
-  const { score, levelKey, healthAge, realAge, ageDelta, trend, trendPercent } = indexData;
+  const { score, levelKey, healthAge, realAge, ageDelta, trend, trendPoints } = indexData;
 
   const getLevelBadgeStyle = () => {
     if (score >= 85) return { bg: '#8B5CF6', color: '#FFFFFF', border: '1px solid #7C3AED' };
@@ -53,7 +53,8 @@ export const LongevityIndexCard: React.FC<LongevityIndexCardProps> = ({ indexDat
             {trend === 'up' && <FaArrowUp className="trend-icon trend-up" />}
             {trend === 'down' && <FaArrowDown className="trend-icon trend-down" />}
             {trend === 'stable' && <FaMinus className="trend-icon trend-stable" />}
-            <span className="metric-val">{trend === 'stable' ? '-' : `${trendPercent}%`}</span>
+            <span className="metric-val">{trend === 'stable' ? '-' : `${trend === 'up' ? '+' : '−'}${trendPoints}`}</span>
+            {trend !== 'stable' && <span className="metric-unit">{t('common.pts')}</span>}
           </div>
           <span className="metric-delta">
             {trend === 'up' ? t('index.trendUp') : trend === 'down' ? t('index.trendDown') : t('index.trendStable')}
