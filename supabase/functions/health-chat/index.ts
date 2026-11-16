@@ -70,7 +70,7 @@ const QUOTA_MAX = Math.max(1, Number(Deno.env.get('AI_QUOTA_CHAT')) || 60)
 function cleanText(v: unknown, max = 60): string {
   if (v == null) return ''
   return String(v)
-    .replace(/[\u0000-\u001f\u007f-\u009f  ]/g, ' ')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, max)
