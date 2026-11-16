@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.101.1'
 // Set the ALLOWED_ORIGINS secret (comma-separated) to override / extend this.
 const DEFAULT_ORIGINS = [
   'https://mfu-longevity-passport.vercel.app',
+  'https://longevity.mfu.ac.th', // MFU-hosted deployment (GitLab CI, deploy/README.md) — same Supabase backend
   'http://localhost:5173',
 ]
 
