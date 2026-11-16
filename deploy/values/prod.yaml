@@ -1,0 +1,16 @@
+replicaCount: 2
+
+image:
+  repository: hub-registry.mfu.ac.th/longevity/web
+  tag: production-latest
+  pullPolicy: IfNotPresent
+
+imagePullSecret: harbor-registry
+
+ingress:
+  className: nginx
+  host: longevity.mfu.ac.th
+  tls:
+    enabled: false
+    secretName: ""
+
