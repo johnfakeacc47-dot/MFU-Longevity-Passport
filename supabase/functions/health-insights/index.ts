@@ -17,6 +17,7 @@ import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.124.0'
 
 const DEFAULT_ORIGINS = [
   'https://mfu-longevity-passport.vercel.app',
+  'https://longevity.mfu.ac.th', // MFU-hosted deployment (GitLab CI, deploy/README.md) — same Supabase backend
   'http://localhost:5173',
 ]
 function getAllowedOrigins(): string[] {

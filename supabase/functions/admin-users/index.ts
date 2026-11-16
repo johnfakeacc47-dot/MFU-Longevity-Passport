@@ -39,6 +39,7 @@ type AdminClient = ReturnType<typeof createClient>
 // e.g. to add preview/staging domains: `supabase secrets set ALLOWED_ORIGINS=...`
 const DEFAULT_ORIGINS = [
   'https://mfu-longevity-passport.vercel.app',
+  'https://longevity.mfu.ac.th', // MFU-hosted deployment (GitLab CI, deploy/README.md) — same Supabase backend
   'http://localhost:5173',
 ]
 
