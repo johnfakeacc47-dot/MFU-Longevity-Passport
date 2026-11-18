@@ -61,6 +61,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         const { data, error: supaError } = await supabase!.auth.signUp({
           email: username.trim(),
           password: password,
+          // Without this the confirmation link always opened the Site URL (the
+          // Vercel app), even for people who signed up on longevity.mfu.ac.th.
+          options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (supaError) { setError(friendlyAuthError(supaError.message, t)); return; }
         if (data?.user) {
@@ -113,7 +116,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setIsLoading(true);
     try {
       await supabase!.auth.resetPasswordForEmail(username.trim(), {
-        redirectTo: window.location.origin,
+        // Trailing slash so it matches the `https://<host>/**` Redirect URL
+        // entries in Supabase Auth; an unmatched redirect silently falls back
+        // to the Site URL (the Vercel app) — wrong for the MFU-hosted site.
+        redirectTo: `${window.location.origin}/`,
       });
       // Always show the same message — don't leak whether the email exists.
       setMessage(t('login.resetSent'));
