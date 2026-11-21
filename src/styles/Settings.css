@@ -1,0 +1,394 @@
+.settings-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-primary);
+  /* .settings-content already reserves the bottom-nav clearance (110px+);
+     a second 100px here left a blank band under the version line. */
+  padding-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-sans);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-glass);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.settings-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.settings-content {
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 20px calc(112px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-section.card {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft);
+  border-radius: 0;
+  padding: 20px 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .settings-section.card {
+  background: transparent;
+  border-color: var(--border-glass, rgba(255, 255, 255, 0.12));
+}
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  font-size: 1.35rem;
+  background: var(--surface-soft, rgba(33, 150, 243, 0.08));
+  border-radius: var(--radius-icon);
+  flex-shrink: 0;
+}
+
+.section-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+}
+
+.section-header p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0;
+}
+
+.option-btn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  border-right: 0;
+  border-radius: var(--radius-small-card);
+  min-height: 82px;
+  padding: var(--space-3) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.option-btn:first-child,
+.option-btn:last-child {
+  border-right: 1px solid var(--border-soft);
+  border-radius: var(--radius-small-card);
+}
+
+[data-theme="dark"] .option-btn {
+  background: var(--surface-soft, #2D3748);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.option-btn:hover {
+  border-color: var(--accent, #38BDF8);
+  transform: translateY(-2px);
+  background: var(--surface-soft, rgba(56, 189, 248, 0.08));
+}
+
+.option-btn.active {
+  border-color: var(--accent, #38BDF8);
+  background: var(--accent-soft, rgba(56, 189, 248, 0.12));
+  box-shadow: none;
+}
+
+.option-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.option-icon {
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+}
+
+.option-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.check-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--accent, #38BDF8);
+  color: #FFFFFF;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-chip);
+  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.toggle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.toggle-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4); /* keep long descriptions off the switch */
+  min-height: 68px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-soft, rgba(255, 255, 255, 0.08));
+}
+
+.toggle-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.toggle-info strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.toggle-info span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-glow, #CBD5E1);
+  transition: .3s;
+}
+
+[data-theme="dark"] .slider {
+  background-color: var(--surface-hover, #374151);
+}
+
+/* OFF knob must stay visible on the dark card */
+[data-theme="dark"] .slider:before {
+  background-color: #E5E7EB;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--surface-card, #FFFFFF);
+  transition: .3s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .slider {
+  background-color: var(--accent, #38BDF8);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 26px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.settings-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.settings-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-soft, #E2E8F0);
+  border-radius: 0;
+  padding: 14px 0;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .settings-link-btn {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.settings-link-btn:hover {
+  background: transparent;
+  border-bottom-color: var(--accent, #38BDF8);
+  transform: none;
+}
+
+.settings-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.settings-logout-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.logout-btn {
+  width: 100%;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+  padding: 16px;
+  border-radius: var(--radius-btn, 16px);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.18);
+  transform: translateY(-2px);
+}
+
+.app-version-info {
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #94A3B8);
+  text-align: center;
+}
+
+/* Push "Enable" is the section's primary action, but the global dark rule
+   repaints every .btn as a flat --surface-solid slab, so it read as disabled.
+   Keep the accent fill; ink text for contrast on the light sky accent. */
+[data-theme="dark"] .btn.settings-push-btn {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  color: #0F172A !important;
+}
+[data-theme="dark"] .btn.settings-push-btn:disabled { opacity: 0.6; }
+
+@media (max-width: 767.98px) {
+  .settings-content {
+    padding: 16px 16px calc(112px + env(safe-area-inset-bottom, 0px));
+  }
+  .options-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .theme-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .option-btn,
+  .option-btn:first-child,
+  .option-btn:last-child {
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+  }
+  .option-btn {
+    min-width: 0;
+  }
+  .option-label {
+    font-size: 0.82rem;
+  }
+}

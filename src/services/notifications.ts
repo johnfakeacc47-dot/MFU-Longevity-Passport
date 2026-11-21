@@ -1,0 +1,285 @@
+// Client side of the notification system — see
+// supabase/migrations/0008_notifications.sql for the server side
+// (notifications / push_subscriptions / notification_preferences tables,
+// the notify()/check_team_challenge()/run_scheduled_reminders() functions,
+// and the triggers that wire them together).
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  data: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationPrefs {
+  mealReminder: boolean;
+  waterReminder: boolean;
+  sleepReminder: boolean;
+  activityReminder: boolean;
+  fastingReminder: boolean;
+  teamNotifs: boolean;
+  challengeNotifs: boolean;
+  badgeNotifs: boolean;
+}
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  mealReminder: true, waterReminder: true, sleepReminder: true,
+  activityReminder: true, fastingReminder: true, teamNotifs: true, challengeNotifs: true,
+  badgeNotifs: true,
+};
+
+function mapNotification(row: any): AppNotification {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    body: row.body,
+    data: row.data ?? {},
+    read: !!row.read,
+    createdAt: row.created_at,
+  };
+}
+
+export async function fetchNotifications(limit = 30): Promise<AppNotification[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) { console.error('fetchNotifications failed:', error); return []; }
+  return (data ?? []).map(mapNotification);
+}
+
+export async function fetchUnreadCount(): Promise<number> {
+  if (!supabase) return 0;
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('id', { count: 'exact', head: true })
+    .eq('read', false);
+  if (error) { console.error('fetchUnreadCount failed:', error); return 0; }
+  return count ?? 0;
+}
+
+export async function markNotificationRead(id: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
+  if (error) console.error('markNotificationRead failed:', error);
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.from('notifications').update({ read: true }).eq('read', false);
+  if (error) console.error('markAllNotificationsRead failed:', error);
+}
+
+// Badges (src/utils/healthCoach.ts getAchievements()) are computed entirely
+// client-side, so the unlock *detection* has to happen there too — this just
+// records the resulting notification server-side so it lands in the bell and
+// triggers push like every other type. notify_badge_unlocked is narrow by
+// design (self-only, fixed badge ids) — see 0014_badge_unlock_notifications.sql.
+export async function notifyBadgeUnlocked(badgeId: string): Promise<void> {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('notify_badge_unlocked', { p_badge_id: badgeId });
+  if (error) console.error('notifyBadgeUnlocked failed:', error);
+}
+
+// ── Preferences ──────────────────────────────────────────────────────────
+
+function prefsFromRow(row: any): NotificationPrefs {
+  if (!row) return DEFAULT_PREFS;
+  return {
+    mealReminder: row.meal_reminder ?? true,
+    waterReminder: row.water_reminder ?? true,
+    sleepReminder: row.sleep_reminder ?? true,
+    activityReminder: row.activity_reminder ?? true,
+    fastingReminder: row.fasting_reminder ?? true,
+    teamNotifs: row.team_notifs ?? true,
+    challengeNotifs: row.challenge_notifs ?? true,
+    badgeNotifs: row.badge_notifs ?? true,
+  };
+}
+
+const PREF_COLUMN: Record<keyof NotificationPrefs, string> = {
+  mealReminder: 'meal_reminder',
+  waterReminder: 'water_reminder',
+  sleepReminder: 'sleep_reminder',
+  activityReminder: 'activity_reminder',
+  fastingReminder: 'fasting_reminder',
+  teamNotifs: 'team_notifs',
+  challengeNotifs: 'challenge_notifs',
+  badgeNotifs: 'badge_notifs',
+};
+
+export async function getNotificationPreferences(): Promise<NotificationPrefs> {
+  if (!supabase) return DEFAULT_PREFS;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return DEFAULT_PREFS;
+  const { data, error } = await supabase
+    .from('notification_preferences')
+    .select('*')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (error) { console.error('getNotificationPreferences failed:', error); return DEFAULT_PREFS; }
+  return prefsFromRow(data);
+}
+
+export async function updateNotificationPreference(key: keyof NotificationPrefs, value: boolean): Promise<void> {
+  if (!supabase) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const patch: Record<string, unknown> = { user_id: user.id, updated_at: new Date().toISOString() };
+  patch[PREF_COLUMN[key]] = value;
+  const { error } = await supabase.from('notification_preferences').upsert(patch, { onConflict: 'user_id' });
+  // Throw rather than log-and-swallow: Settings flips the switch optimistically
+  // and relies on a rejection to revert it and tell the user.
+  if (error) throw error;
+}
+
+// ── Browser notification permission ─────────────────────────────────────
+
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (!('Notification' in window)) return 'denied';
+  if (Notification.permission !== 'default') return Notification.permission;
+  try { return await Notification.requestPermission(); } catch { return 'denied'; }
+}
+
+// ── Web Push subscription ───────────────────────────────────────────────
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+
+// Records (or refreshes) a device's push subscription server-side. Keyed on
+// the endpoint, so re-sending the same subscription is idempotent and just
+// bumps last_seen_at.
+async function saveSubscription(sub: PushSubscription, userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  const subJson = sub.toJSON();
+  const { error } = await supabase.from('push_subscriptions').upsert({
+    user_id: userId,
+    endpoint: sub.endpoint,
+    p256dh: subJson.keys?.p256dh ?? '',
+    auth: subJson.keys?.auth ?? '',
+    last_seen_at: new Date().toISOString(),
+  }, { onConflict: 'endpoint' });
+  if (error) { console.error('saving push subscription failed:', error); return false; }
+  return true;
+}
+
+/**
+ * True once this device has an active push subscription that the server
+ * knows about. A browser-side subscription on its own isn't enough: the
+ * server only ever delivers to rows in push_subscriptions, and the two can
+ * drift apart (pushManager.subscribe() succeeded but the upsert failed, the
+ * row was deleted after a 404/410 from the push service, the user signed in
+ * to a different account on the same device...). So whenever the browser
+ * already holds a subscription, re-send it — that heals any of those cases
+ * on the next app open and keeps last_seen_at fresh — and only report
+ * "enabled" if the server accepted it, so a failure shows the Enable button
+ * again instead of a toggle that says on while nothing arrives.
+ */
+export async function isPushSubscribed(): Promise<boolean> {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    if (!sub) return false;
+    if (!supabase) return true;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return true;
+    return await saveSubscription(sub, user.id);
+  } catch {
+    return false;
+  }
+}
+
+export type PushFailReason =
+  | 'unsupported'       // no Push API in this browser (e.g. iOS Safari opened as a plain tab, not installed to the home screen)
+  | 'not_configured'    // VAPID key missing or Supabase not connected
+  | 'permission_denied' // the OS/browser notification prompt was denied (or blocked previously)
+  | 'not_signed_in'
+  | 'timeout'           // navigator.serviceWorker.ready never resolved — see note below
+  | 'error';
+
+export type PushSubscribeResult = { ok: true } | { ok: false; reason: PushFailReason };
+
+export async function subscribeToPush(): Promise<PushSubscribeResult> {
+  if (!isSupabaseConfigured() || !supabase) return { ok: false, reason: 'not_configured' };
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return { ok: false, reason: 'unsupported' };
+
+  const vapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
+  if (!vapidKey) { console.warn('VITE_VAPID_PUBLIC_KEY is not set — push notifications are disabled.'); return { ok: false, reason: 'not_configured' }; }
+
+  const permission = await requestNotificationPermission();
+  if (permission !== 'granted') return { ok: false, reason: 'permission_denied' };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, reason: 'not_signed_in' };
+
+  try {
+    // navigator.serviceWorker.ready has NO built-in timeout — if the service
+    // worker never reaches "activated" (the classic cause: the page was
+    // loaded over plain http from a LAN IP during phone testing rather than
+    // https/localhost, which service workers refuse to register under at
+    // all) this used to hang the "Enable" button on "Loading…" forever, with
+    // no way out. Bounded here so a real failure surfaces instead.
+    const registration = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('sw_timeout')), 8000)),
+    ]);
+    let sub = await registration.pushManager.getSubscription();
+    if (!sub) {
+      sub = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
+      });
+    }
+    if (!(await saveSubscription(sub, user.id))) return { ok: false, reason: 'error' };
+    return { ok: true };
+  } catch (err) {
+    console.error('subscribeToPush failed:', err);
+    const reason: PushFailReason = err instanceof Error && err.message === 'sw_timeout' ? 'timeout' : 'error';
+    return { ok: false, reason };
+  }
+}
+
+export async function unsubscribeFromPush(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const sub = await registration.pushManager.getSubscription();
+    if (sub) {
+      if (supabase) await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+      await sub.unsubscribe();
+    }
+  } catch (err) {
+    console.error('unsubscribeFromPush failed:', err);
+  }
+}
+
+// ── Fasting alarm — local, via the service worker (see src/sw.ts) ────────
+// Independent of Web Push: fires immediately from the SW's own 30s-interval
+// check, no server round trip needed while the browser process is alive.
+
+export async function scheduleFastingAlarm(endTimestamp: number, goalHours: number): Promise<void> {
+  await requestNotificationPermission();
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.ready;
+  registration.active?.postMessage({ type: 'SCHEDULE_FASTING_ALARM', endTimestamp, goalHours });
+}
+
+export async function cancelFastingAlarm(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.ready;
+  registration.active?.postMessage({ type: 'CANCEL_FASTING_ALARM' });
+}

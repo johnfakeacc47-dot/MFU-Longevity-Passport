@@ -1,0 +1,335 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   CONTRAST + NAVIGATION LAYER
+   Loaded LAST (see main.tsx). index.css grew many stacked override blocks, one of
+   which ("Light-mode seamless card surfaces") painted every light card the same
+   colour as the page with no border, and flattened the home hero so its white
+   text sat on a near-white surface. This file re-establishes separation with
+   tokens instead of fighting each block, and rebuilds the bottom navigation.
+   Brand palette (sage green) is unchanged — only the steps between layers.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. TOKENS ───────────────────────────────────────────────────────────── */
+:root {
+  /* Hairlines that are actually visible on both --bg and white cards. */
+  --border-soft: #D3DBCF;
+  --border-glass: #D3DBCF;
+  --border-glow: #C4CFBF;
+  --border-strong: #AEBBAA;          /* inputs, toggles, unselected controls */
+
+  /* Secondary/tertiary text: >= 4.5:1 on white and on --bg (AA for small text). */
+  --text-secondary: #526158;
+  --text-tertiary: #66756B;
+
+  --surface-soft: #EBF0E7;
+  --surface-hover: #DFE8DA;
+  --accent-soft: #DCEAD8;
+
+  --shadow-card: 0 1px 2px rgba(37, 49, 41, .06), 0 6px 18px rgba(37, 49, 41, .07);
+  --nav-bg: rgba(255, 255, 255, .86);
+  --nav-shadow: 0 10px 30px rgba(37, 49, 41, .14), 0 1px 3px rgba(37, 49, 41, .08);
+  --on-accent: #FFFFFF;
+}
+
+:root[data-theme="dark"] {
+  /* Three distinct steps: page < card < raised/inset, each separated by a border. */
+  --bg: #121712;
+  --bg-subtle: #182018;
+  --surface: #1D251D;
+  --surface-solid: #1D251D;
+  --surface-card: #1D251D;
+  --surface-elevated: #1D251D;
+  --surface-soft: #283228;
+  --surface-hover: #344134;
+  --accent-soft: rgba(158, 197, 156, .20);
+
+  --border-soft: #3F4F3F;
+  --border-glass: #3F4F3F;
+  --border-glow: #4D604D;
+  --border-strong: #6A806A;
+
+  --text-secondary: #C9D4C7;
+  --text-tertiary: #A5B3A3;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .35), 0 8px 22px rgba(0, 0, 0, .28);
+  --nav-bg: rgba(29, 37, 29, .88);
+  --nav-shadow: 0 10px 30px rgba(0, 0, 0, .55), 0 1px 3px rgba(0, 0, 0, .4);
+  --on-accent: #0E160E;
+}
+
+/* ── 2. CARDS — undo the "seamless" light-mode flattening ─────────────────── */
+html:root:not([data-theme="dark"]) :is(
+  .hd-card, .coach-card, .daily-goals-card, .longevity-index-card, .ai-coach-card,
+  .timeline-card, .ana-card, .ana-overview-card, .ana-chart-section, .ana-summary-card,
+  .ana-goals-card, .ana-improve-card, .ana-ai-card, .ana-achieve-card, .pv2-card,
+  .pv2-achievements-section, .pv2-goal-card, .settings-section.card, .team-score-hero,
+  .team-challenge-card, .team-leaderboard-section, .eating-card, .ev-card,
+  .ev-premium-card, .profile-card, .settings-card, .dashboard-card, .mh-card,
+  .activity-card, .sleep-card, .fasting-card, .eating-dashboard-card, .team-invite-card
+):not(.ref-score-hero):not(.ana-hero-card) {
+  background: var(--surface-card) !important;
+  border: 1px solid var(--border-soft) !important;
+  box-shadow: var(--shadow-card) !important;
+}
+
+html:root[data-theme="dark"] :is(
+  .hd-card, .coach-card, .dashboard-card, .mh-card, .activity-card, .sleep-card,
+  .fasting-card, .settings-card, .profile-card, .pv2-card, .ana-card,
+  .team-challenge-card, .team-leaderboard-section, .eating-dashboard-card
+):not(.ref-score-hero):not(.ana-hero-card) {
+  box-shadow: var(--shadow-card) !important;
+}
+
+/* Home score hero: dark-green panel with white text, in BOTH themes. */
+html:root .hd-card.ref-score-hero {
+  background: linear-gradient(135deg, #5A7F67 0%, #3A5C46 80%) !important;
+  border: 1px solid rgba(255, 255, 255, .10) !important;
+  box-shadow: 0 12px 28px rgba(37, 49, 41, .22) !important;
+  color: #fff !important;
+}
+html:root[data-theme="dark"] .hd-card.ref-score-hero {
+  background: linear-gradient(135deg, #3E5A47 0%, #284034 80%) !important;
+  border-color: #4F6B58 !important;
+}
+html:root .ref-score-copy h2,
+html:root .ref-score-copy p { color: #fff !important; }
+
+/* Analytics hero keeps its light card in light mode, but gets a border. */
+html:root:not([data-theme="dark"]) .ana-hero-card { border: 1px solid var(--border-soft) !important; }
+
+/* Pillar / secondary tiles sit on a card, so they must differ from the card. */
+html:root .hd-pillar-card,
+html:root .activity-btn,
+html:root .ev-secondary-card,
+html:root .ana-overview-item,
+html:root .ana-sum-box,
+html:root .mh-mood-btn,
+html:root .sleep-option {
+  border: 1px solid var(--border-soft) !important;
+}
+html:root[data-theme="dark"] .hd-pillar-card,
+html:root[data-theme="dark"] .activity-btn,
+html:root[data-theme="dark"] .ev-secondary-card,
+html:root[data-theme="dark"] .ana-overview-item,
+html:root[data-theme="dark"] .ana-sum-box,
+html:root[data-theme="dark"] .mh-mood-btn,
+html:root[data-theme="dark"] .sleep-option {
+  background: var(--surface-soft) !important;
+}
+
+/* ── 3. FORM CONTROLS ────────────────────────────────────────────────────── */
+html:root :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea) {
+  border-color: var(--border-strong);
+}
+html:root:not([data-theme="dark"]) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea) {
+  background-color: #fff;
+}
+html:root[data-theme="dark"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]), select, textarea) {
+  background-color: var(--bg-subtle);
+  color: var(--text-primary);
+}
+html:root :is(input, select, textarea)::placeholder { color: var(--text-tertiary); opacity: 1; }
+html:root :is(input, select, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+html:root :is(input, select, textarea, button):disabled { opacity: .55; cursor: not-allowed; }
+
+/* ── 4. TABS / SEGMENTED CONTROLS ────────────────────────────────────────── */
+html:root .ana-filter-bar,
+html:root .ev-filter-tabs,
+html:root .mh-tabs {
+  background: var(--surface-soft) !important;
+  border: 1px solid var(--border-soft);
+}
+html:root .ana-filter-btn,
+html:root .ev-filter-tab,
+html:root .mh-tab { color: var(--text-secondary) !important; }
+html:root .ana-filter-btn.active,
+html:root .ev-filter-tab.active,
+html:root .mh-tab.active {
+  background: var(--surface-card) !important;
+  color: var(--accent-dark) !important;
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+}
+
+/* Header chrome (back button, round icon buttons) */
+html:root .app-back-btn, html:root .back-btn, html:root .icon-btn,
+html:root .menu-btn, html:root .pv2-hamburger {
+  border: 1px solid var(--border-strong) !important;
+}
+
+/* ── 5. BOTTOM NAVIGATION ────────────────────────────────────────────────── */
+html:root .bottom-nav-v2 {
+  position: fixed !important;
+  left: 0 !important; right: 0 !important; bottom: 0 !important;
+  width: 100% !important; max-width: none !important; transform: none !important;
+  display: flex !important; justify-content: center !important;
+  padding: 18px 14px max(env(safe-area-inset-bottom, 0px), 10px) !important;
+  background: none !important;
+  box-shadow: none !important;
+  pointer-events: none;
+  z-index: 100 !important;
+}
+/* Soft fade so scrolling content dissolves into the bar instead of being cut. */
+html:root .bottom-nav-v2::before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, var(--bg) 18%, transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+
+html:root .bottom-nav-v2 .bottom-nav-pill {
+  pointer-events: auto;
+  width: min(100%, 440px) !important;
+  min-height: 64px !important;
+  padding: 6px 8px !important;
+  gap: 2px !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 28px !important;
+  background: var(--nav-bg) !important;
+  box-shadow: var(--nav-shadow) !important;
+  -webkit-backdrop-filter: saturate(1.4) blur(18px) !important;
+  backdrop-filter: saturate(1.4) blur(18px) !important;
+}
+
+html:root .bottom-nav-v2 .nav-item-v2 {
+  flex: 1 1 0 !important;
+  min-width: 0;
+  min-height: 52px !important;
+  padding: 4px 2px !important;
+  display: flex !important; flex-direction: column !important;
+  align-items: center !important; justify-content: center !important;
+  gap: 3px !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: transparent !important;
+  color: var(--text-secondary) !important;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .2s ease, transform .15s ease !important;
+}
+html:root .bottom-nav-v2 .nav-item-v2:active { transform: scale(.94); }
+
+/* Icon holder doubles as the active "pill" indicator. */
+html:root .bottom-nav-v2 .nav-icon-v2 {
+  position: relative;
+  width: 52px !important; height: 30px !important;
+  margin: 0 !important;
+  display: grid !important; place-items: center !important;
+  border-radius: 15px !important;
+}
+html:root .bottom-nav-v2 .nav-active-bg {
+  display: block !important;
+  position: absolute !important; inset: 0 !important;
+  border-radius: 15px !important;
+  background: var(--accent-soft) !important;
+  border: 0 !important; box-shadow: none !important;
+  animation: navPillIn .22s ease-out both !important;
+}
+@keyframes navPillIn { from { opacity: 0; transform: scaleX(.6); } to { opacity: 1; transform: none; } }
+
+html:root .bottom-nav-v2 .nav-icon-svg {
+  position: relative;
+  width: 20px !important; height: 20px !important; font-size: 20px !important;
+  color: var(--text-secondary) !important;
+  transform: none !important;
+  transition: color .2s ease;
+}
+html:root .bottom-nav-v2 .nav-label-v2 {
+  margin: 0 !important;
+  font-size: 11px !important; line-height: 1.1 !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+html:root .bottom-nav-v2 .nav-item-v2:hover:not(.nav-item-v2--active) {
+  background: transparent !important;
+}
+html:root .bottom-nav-v2 .nav-item-v2:hover:not(.nav-item-v2--active) .nav-icon-v2 {
+  background: var(--surface-soft);
+}
+html:root .bottom-nav-v2 .nav-item-v2--active .nav-icon-svg,
+html:root .bottom-nav-v2 .nav-item-v2--active .nav-label-v2 {
+  color: var(--accent-dark) !important;
+}
+html:root .bottom-nav-v2 .nav-item-v2--active .nav-label-v2 { font-weight: 700 !important; }
+html:root .bottom-nav-v2 .nav-item-v2:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+
+/* Centre "add" action: a soft raised round button, no active pill. */
+html:root .bottom-nav-v2 .nav-item-v2:nth-child(3) .nav-icon-v2 {
+  width: 50px !important; height: 50px !important;
+  margin-top: -22px !important;
+  border-radius: 50% !important;
+  background: var(--accent) !important;
+  border: 4px solid var(--bg) !important;
+  box-shadow: 0 6px 16px rgba(37, 49, 41, .28) !important;
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+html:root .bottom-nav-v2 .nav-item-v2:nth-child(3):hover .nav-icon-v2 { transform: translateY(-1px); }
+html:root .bottom-nav-v2 .nav-item-v2:nth-child(3) .nav-icon-svg {
+  color: var(--on-accent) !important;
+  width: 22px !important; height: 22px !important;
+}
+html:root .bottom-nav-v2 .nav-item-v2:nth-child(3) .nav-label-v2 { opacity: 0; height: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  html:root .bottom-nav-v2 * { transition: none !important; animation: none !important; }
+}
+@media (max-width: 360px) {
+  html:root .bottom-nav-v2 { padding-left: 8px !important; padding-right: 8px !important; }
+  html:root .bottom-nav-v2 .nav-icon-v2 { width: 44px !important; }
+  html:root .bottom-nav-v2 .nav-label-v2 { font-size: 10px !important; }
+}
+
+/* ── 6. PAGE-LEVEL LEFTOVERS FOUND IN THE CONTRAST AUDIT ─────────────────── */
+
+/* Primary buttons that had white text but lost their fill in light mode. */
+html:root .sleep-add-btn,
+html:root .sleep-log-btn-v2,
+html:root .empty-state-action,
+html:root .team-invite-btn,
+html:root .team-invite-add {
+  background: var(--accent) !important;
+  color: var(--on-accent) !important;
+  border: 1px solid transparent !important;
+}
+html:root .sleep-add-btn svg,
+html:root .sleep-log-btn-v2 svg,
+html:root .team-invite-btn svg,
+html:root .team-invite-add svg { color: inherit !important; }
+
+/* Avatar initials were white on a transparent circle. */
+html:root .pv2-avatar { background: var(--accent-soft) !important; border: 1px solid var(--border-strong); }
+html:root .pv2-avatar-letter { color: var(--accent-dark) !important; }
+html:root .about-us-avatar {
+  background: var(--accent) !important;
+  color: var(--on-accent) !important;
+}
+
+/* Water "−" button referenced tokens that don't exist (white on white). */
+html:root .ev-water-btn.minus,
+html:root .ev-sec-btn.minus {
+  background: var(--surface-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-strong) !important;
+}
+
+/* Status colours (amber / green / orange text chosen at runtime) are fine on
+   dark surfaces but 2–2.6:1 on white. Darken the glyph colour in light mode only;
+   brightness() keeps each status' hue so green/amber/orange stay distinguishable. */
+html:root:not([data-theme="dark"]) :is(
+  .mh-header-score-num, .mh-score-status, .mh-score-number, .mh-slider-value,
+  .ana-delta-badge, .ana-overview-score, .ana-status-tag, .score-ring-legend-val
+) {
+  filter: brightness(.68) saturate(1.15);
+}
+
+/* Settings language badges: blue-50 text on a translucent blue was ~2:1 in dark. */
+html:root[data-theme="dark"] .option-badge { color: #DCEBFF !important; background: rgba(59, 130, 246, .32) !important; }
+html:root:not([data-theme="dark"]) .option-badge { color: #1E40AF !important; }

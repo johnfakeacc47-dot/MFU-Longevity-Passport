@@ -1,0 +1,70 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY — the only place fonts, weights and the type scale are decided.
+   Latin letters + digits → Inter. Thai (incl. vowels / tone marks) → IBM Plex Sans Thai.
+   Inter has no Thai glyphs, so the browser falls through to Plex per character, which gives
+   exactly the split the design asks for with a single font-family stack.
+   Loaded last (see main.tsx) so it wins over legacy per-page rules.
+   ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --font-sans: 'Inter Variable', 'Inter', 'IBM Plex Sans Thai', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --fw-body: 400;
+  --fw-ui: 500;          /* buttons, navigation, labels */
+  --fw-strong: 600;
+  --fw-heading: 700;
+
+  /* fluid scale: 320px → 1440px */
+  --fs-body: clamp(0.9375rem, 0.9rem + 0.18vw, 1rem);
+  --fs-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --fs-h3: clamp(1rem, 0.96rem + 0.25vw, 1.125rem);
+  --fs-h2: clamp(1.0625rem, 1rem + 0.35vw, 1.3125rem);
+  --fs-h1: clamp(1.375rem, 1.2rem + 0.85vw, 1.875rem);
+  --fs-title: clamp(1rem, 0.95rem + 0.3vw, 1.1875rem);
+
+  /* Thai needs more vertical room than Latin for stacked vowels and tone marks */
+  --lh-body: 1.6;
+  --lh-tight: 1.4;
+}
+
+html:root, html:root body {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-body);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;                 /* never fake a weight the family doesn't ship */
+  font-kerning: normal;
+}
+html:root body { font-size: var(--fs-body); }
+
+/* one family everywhere, including form controls (browsers don't inherit it by default) */
+html:root :is(button, input, select, textarea, optgroup) { font-family: inherit; }
+html:root :is(svg text) { font-family: inherit; }
+html:root :is(code, kbd, pre, samp) { font-family: var(--font-mono); }
+
+/* headings */
+html:root :is(h1, h2, h3, h4, .v2-h1, .v2-h2) { font-family: var(--font-sans); font-weight: var(--fw-heading); line-height: var(--lh-tight); letter-spacing: -0.005em; }
+html:root :is(h1, .v2-h1) { font-size: var(--fs-h1); }
+html:root :is(h2, .v2-h2) { font-size: var(--fs-h2); }
+html:root :is(h3, h4) { font-size: var(--fs-h3); font-weight: var(--fw-strong); }
+html:root :is(.v2-header-title, .v2-chat-head .t b) { font-size: var(--fs-title); font-weight: var(--fw-heading); line-height: var(--lh-tight); }
+html:root :is(.profile-top-header, .activity-header, .edit-profile-header, .user-header) :is(h1, .header-title) { font-size: var(--fs-title) !important; font-weight: var(--fw-heading); }
+html:root :is(strong, b) { font-weight: var(--fw-strong); }
+
+/* UI text: buttons, chips, navigation, labels */
+html:root :is(button, .v2-btn, .v2-chip, .v2-link, .v2-label) { font-weight: var(--fw-ui); }
+html:root :is(.v2-btn--primary, .v2-chip.is-on, .v2-link) { font-weight: var(--fw-strong); }
+/* nav labels keep ONE weight in every state, so selecting an item can never change its width */
+html:root .v2-nav-item { font-weight: var(--fw-strong); }
+html:root .v2-nav-item { font-size: clamp(0.6875rem, 0.66rem + 0.12vw, 0.75rem); line-height: 1.35; letter-spacing: 0; }
+/* tone marks sit above the line: give nav labels headroom instead of clipping them */
+html:root .v2-nav-item span { line-height: 1.5; padding-block: 1px; }
+html:root :is(.v2-muted, small, .v2-eyebrow) { font-size: var(--fs-small); }
+
+/* numerals: Inter digits, aligned in columns where numbers are compared */
+html:root :is(.v2-score, .v2-pillar-row, .v2-stat, table, .v2-bars, .v2-ring, .v2-pv-ring) { font-variant-numeric: tabular-nums; }
+
+/* Thai text must never be cropped by tight line boxes in single-line truncation */
+html:root :is(.v2-header-title, .v2-nav-item span, .v2-chip, .v2-btn) { padding-block: 0; }
+html:root :is(h1, h2, h3, p, span, label, li) { text-wrap: pretty; }

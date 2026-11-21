@@ -1,0 +1,169 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+stages:
+  - validate
+  - test
+  - build
+  - scan
+  - package
+  - deploy
+  - verify
+  - rollback
+
+variables:
+  HARBOR_HOST: "hub-registry.mfu.ac.th"
+  IMAGE_REPOSITORY: "$HARBOR_HOST/longevity/web"
+  IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  HELM_RELEASE_PROD: "longevity"
+  KUBE_NAMESPACE_PROD: "mfu-apps-prod"
+  INGRESS_HOST_PROD: "longevity.mfu.ac.th"
+  HARBOR_IMAGE_PULL_SECRET_PROD: "harbor-registry"
+  DOCKER_HOST: "tcp://docker:2375"
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_BUILDKIT: "1"
+
+.production_rules:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+
+.kube_config_prod:
+  before_script:
+    - apk add --no-cache kubectl curl bash
+    - mkdir -p ~/.kube
+    - test -n "$KUBE_CONFIG_PROD" || (echo "KUBE_CONFIG_PROD is required." >&2 && exit 1)
+    - if [ -f "$KUBE_CONFIG_PROD" ]; then cp "$KUBE_CONFIG_PROD" ~/.kube/config; else printf '%s' "$KUBE_CONFIG_PROD" > ~/.kube/config; fi
+    - chmod 600 ~/.kube/config
+
+validate-production:
+  stage: validate
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  script:
+    - if [ "$CI_COMMIT_BRANCH" = "production" ]; then test -n "$VITE_SUPABASE_URL" || (echo "VITE_SUPABASE_URL is required." >&2 && exit 1); fi
+    - if [ "$CI_COMMIT_BRANCH" = "production" ]; then test -n "$VITE_SUPABASE_ANON_KEY" || (echo "VITE_SUPABASE_ANON_KEY is required." >&2 && exit 1); fi
+    - helm lint deploy/helm/longevity -f deploy/values/prod.yaml
+    - helm template "$HELM_RELEASE_PROD" deploy/helm/longevity -n "$KUBE_NAMESPACE_PROD" -f deploy/values/prod.yaml --set-string image.repository="$IMAGE_REPOSITORY" --set-string image.tag="$IMAGE_TAG" --set-string ingress.host="$INGRESS_HOST_PROD" --set-string imagePullSecret="$HARBOR_IMAGE_PULL_SECRET_PROD" > /tmp/longevity-prod.yaml
+
+frontend-test:
+  stage: test
+  image: node:22-alpine
+  variables:
+    VITE_SUPABASE_URL: "https://ci.invalid"
+    VITE_SUPABASE_ANON_KEY: "ci-public-placeholder"
+  script:
+    - npm ci --no-audit --no-fund
+    - npm run lint
+    - npm run build
+
+build-image:
+  stage: build
+  extends: .production_rules
+  image: docker:27.5.1-cli
+  services:
+    - name: docker:27.5.1-dind
+      alias: docker
+      command: ["--tls=false"]
+  before_script:
+    - test -n "$HARBOR_USERNAME" || (echo "HARBOR_USERNAME is required." >&2 && exit 1)
+    - test -n "$HARBOR_PASSWORD" || (echo "HARBOR_PASSWORD is required." >&2 && exit 1)
+    - echo "$HARBOR_PASSWORD" | docker login "$HARBOR_HOST" -u "$HARBOR_USERNAME" --password-stdin
+  script:
+    - >-
+      docker build --pull
+      --build-arg VITE_SUPABASE_URL="$VITE_SUPABASE_URL"
+      --build-arg VITE_SUPABASE_ANON_KEY="$VITE_SUPABASE_ANON_KEY"
+      --build-arg VITE_VAPID_PUBLIC_KEY="${VITE_VAPID_PUBLIC_KEY:-}"
+      --build-arg VITE_API_URL="${VITE_API_URL:-}"
+      -t "$IMAGE_REPOSITORY:$IMAGE_TAG" .
+    - docker push "$IMAGE_REPOSITORY:$IMAGE_TAG"
+    - docker tag "$IMAGE_REPOSITORY:$IMAGE_TAG" "$IMAGE_REPOSITORY:production-latest"
+    - docker push "$IMAGE_REPOSITORY:production-latest"
+
+scan-image:
+  stage: scan
+  extends: .production_rules
+  image:
+    name: aquasec/trivy:0.54.1
+    entrypoint: [""]
+  variables:
+    TRIVY_USERNAME: "$HARBOR_USERNAME"
+    TRIVY_PASSWORD: "$HARBOR_PASSWORD"
+    TRIVY_NO_PROGRESS: "true"
+  needs: [build-image]
+  script:
+    - trivy image --exit-code 1 --severity CRITICAL,HIGH "$IMAGE_REPOSITORY:$IMAGE_TAG"
+
+render-production:
+  stage: package
+  extends: .production_rules
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  needs: [build-image]
+  script:
+    - mkdir -p rendered
+    - helm template "$HELM_RELEASE_PROD" deploy/helm/longevity -n "$KUBE_NAMESPACE_PROD" -f deploy/values/prod.yaml --set-string image.repository="$IMAGE_REPOSITORY" --set-string image.tag="$IMAGE_TAG" --set-string ingress.host="$INGRESS_HOST_PROD" --set-string imagePullSecret="$HARBOR_IMAGE_PULL_SECRET_PROD" > rendered/longevity-prod.yaml
+  artifacts:
+    paths: [rendered/longevity-prod.yaml]
+    expire_in: 30 days
+
+deploy-production:
+  stage: deploy
+  extends:
+    - .production_rules
+    - .kube_config_prod
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  needs: [scan-image, render-production]
+  environment:
+    name: production
+    url: https://longevity.mfu.ac.th
+  resource_group: longevity-production
+  script:
+    - kubectl auth can-i create deployments -n "$KUBE_NAMESPACE_PROD" | grep -qx yes
+    - >-
+      helm upgrade --install "$HELM_RELEASE_PROD" deploy/helm/longevity
+      --namespace "$KUBE_NAMESPACE_PROD"
+      --create-namespace
+      --atomic --wait --timeout 10m
+      -f deploy/values/prod.yaml
+      --set-string image.repository="$IMAGE_REPOSITORY"
+      --set-string image.tag="$IMAGE_TAG"
+      --set-string ingress.host="$INGRESS_HOST_PROD"
+      --set-string imagePullSecret="$HARBOR_IMAGE_PULL_SECRET_PROD"
+
+verify-production:
+  stage: verify
+  extends:
+    - .production_rules
+    - .kube_config_prod
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  needs: [deploy-production]
+  script:
+    - apk add --no-cache curl
+    - kubectl rollout status deployment/longevity -n "$KUBE_NAMESPACE_PROD" --timeout=5m
+    - test "$(kubectl get deployment longevity -n "$KUBE_NAMESPACE_PROD" -o jsonpath='{.spec.template.spec.containers[0].image}')" = "$IMAGE_REPOSITORY:$IMAGE_TAG"
+    - curl --fail --silent --show-error --retry 12 --retry-delay 5 --max-time 20 "https://$INGRESS_HOST_PROD/" >/dev/null
+
+rollback-production:
+  stage: rollback
+  extends: .kube_config_prod
+  image:
+    name: alpine/helm:3.15.4
+    entrypoint: [""]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "production"'
+      when: manual
+  environment:
+    name: production
+  resource_group: longevity-production
+  script:
+    - helm rollback "$HELM_RELEASE_PROD" 0 -n "$KUBE_NAMESPACE_PROD" --wait --timeout 10m
+

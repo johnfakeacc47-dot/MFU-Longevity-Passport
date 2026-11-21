@@ -1,0 +1,158 @@
+/// <reference lib="webworker" />
+declare let self: ServiceWorkerGlobalScope;
+
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
+
+cleanupOutdatedCaches();
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Without these, an updated SW sits in "waiting" until every open tab/PWA
+// instance of the OLD version closes on its own — on a phone that already
+// has this installed to the home screen, that can mean the new worker (and
+// anything that depends on it, like Push permission's navigator.serviceWorker
+// .ready) never activates during the session that's open right now.
+self.skipWaiting();
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
+// ── TF.js model: cache-first, populated on first use ─────────────────
+// The model shards (~17 MB) are deliberately NOT in the precache manifest so
+// the SW installs fast. They're fetched on demand the first time the food
+// camera runs in on-device mode, then served from cache offline.
+const MODEL_CACHE = 'tfjs-model-v1';
+
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (!/\/model\//.test(url.pathname)) return;
+
+  event.respondWith(
+    caches.open(MODEL_CACHE).then(async (cache) => {
+      const cached = await cache.match(event.request);
+      if (cached) return cached;
+      const res = await fetch(event.request);
+      if (res.ok) cache.put(event.request, res.clone());
+      return res;
+    }),
+  );
+});
+
+// ── Fasting alarm state ──────────────────────────────────────────────
+let fastingAlarmInterval: ReturnType<typeof setInterval> | null = null;
+let fastingEndTimestamp: number | null = null;
+
+function clearFastingAlarm() {
+  if (fastingAlarmInterval !== null) {
+    clearInterval(fastingAlarmInterval);
+    fastingAlarmInterval = null;
+  }
+  fastingEndTimestamp = null;
+}
+
+function startFastingAlarm(endTimestamp: number, goalHours: number) {
+  // Clear any existing alarm first
+  clearFastingAlarm();
+  fastingEndTimestamp = endTimestamp;
+
+  // Check every 30 seconds whether it's time to fire the alarm
+  fastingAlarmInterval = setInterval(() => {
+    if (fastingEndTimestamp && Date.now() >= fastingEndTimestamp) {
+      clearFastingAlarm();
+
+      self.registration.showNotification('Fasting Goal Reached!', {
+        body: `Congratulations! You've completed your ${goalHours} hour fast. Time to log your first meal!`,
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+        tag: 'fasting-goal',
+        // @ts-ignore – actions & requireInteraction are valid on supported browsers
+        actions: [{ action: 'enter-meal', title: 'Enter Meal' }],
+        requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 400],
+      });
+    }
+  }, 30_000);
+}
+
+// ── Message listener (from client page) ──────────────────────────────
+self.addEventListener('message', (event) => {
+  const { type, endTimestamp, goalHours } = event.data ?? {};
+
+  if (type === 'SCHEDULE_FASTING_ALARM') {
+    startFastingAlarm(endTimestamp, goalHours);
+  } else if (type === 'CANCEL_FASTING_ALARM') {
+    clearFastingAlarm();
+  }
+});
+
+// ── Push notification (server-sent) ──────────────────────────────────
+// Payload shape sent by supabase/functions/send-push: { title, body, icon,
+// badge, data: { ...whatever the notification type needs for routing } }.
+// A push that results in no visible notification is the worst outcome: iOS
+// counts silent pushes against the site and revokes the subscription after a
+// few, with no error anywhere. So the payload parse is guarded, and if the
+// full showNotification() rejects (an option the platform dislikes, a bad
+// icon path) we retry with the bare minimum rather than show nothing.
+const FALLBACK_PUSH = { title: 'MFU Longevity Passport', body: 'You have a new notification.' };
+
+self.addEventListener('push', (event) => {
+  let data: any = null;
+  try { data = event.data?.json(); } catch { /* not JSON — fall through to the fallback */ }
+  if (!data || typeof data.title !== 'string') data = { ...FALLBACK_PUSH, ...(data || {}) };
+  const title: string = data.title || FALLBACK_PUSH.title;
+  const body: string = typeof data.body === 'string' ? data.body : FALLBACK_PUSH.body;
+
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon: data.icon || '/pwa-192x192.png',
+      badge: data.badge || '/pwa-192x192.png',
+      data: data.data || {},
+      tag: data.data?.type || undefined,
+      // @ts-ignore
+      vibrate: [200, 100, 200]
+    }).catch(() => self.registration.showNotification(title, { body }))
+  );
+});
+
+// Which in-app page a notification type should open to on click.
+const NOTIF_TYPE_PAGE: Record<string, string> = {
+  teammate_added: 'team',
+  challenge_complete: 'team',
+  badge_unlocked: 'profile',
+  reminder_activity: 'activity',
+  reminder_sleep: 'sleep',
+  reminder_water: 'eating',
+};
+
+// ── Notification click ───────────────────────────────────────────────
+self.addEventListener('notificationclick', (event) => {
+  const action = event.action; // '' when body clicked, 'enter-meal' when action btn clicked
+  const notifData = (event.notification as any).data || {};
+  event.notification.close();
+
+  // Decide which URL to open
+  let targetUrl = '/';
+  if (action === 'enter-meal' || notifData.type === 'reminder_fasting' || notifData.type === 'reminder_meal') {
+    targetUrl = '/?openFoodRecognition=true';
+  } else if (NOTIF_TYPE_PAGE[notifData.type]) {
+    targetUrl = `/?notifPage=${NOTIF_TYPE_PAGE[notifData.type]}`;
+  }
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Focus an existing window and navigate it
+      for (const client of clientList) {
+        if ('focus' in client) {
+          client.focus();
+          client.postMessage({ type: 'SW_NAVIGATE', url: targetUrl });
+          return;
+        }
+      }
+      // Otherwise open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
+  );
+});

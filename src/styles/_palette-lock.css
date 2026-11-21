@@ -1,0 +1,964 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PALETTE LOCK — Design System Core
+   Single source of truth for all CSS variables, tokens, and system-wide styles.
+   Imported by every page CSS file.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. LIGHT MODE TOKENS ──────────────────────────────────────────────────── */
+:root {
+  /* Shared spacing and radius scale for Profile and Settings */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-main-card: 16px;
+  --radius-small-card: 12px;
+  --radius-control: 10px;
+  --radius-icon: 10px;
+  --radius-chip: 999px;
+  /* Background */
+  --bg:              #F6F7F2;
+  --bg-subtle:       #EDF2E9;
+  --surface:         #FFFFFF;
+  --surface-solid:   #FFFFFF;
+  --surface-soft:    #F1F5EE;
+  --surface-hover:   #E7EFE3;
+  --surface-card:    #FFFFFF;
+  --card-bg:         #FFFFFF;
+
+  /* Accent */
+  --accent:          #4D7659;
+  --accent-dark:     #365942;
+  --accent-soft:     #E1EDDE;
+  --secondary:       #7D9D86;
+  --secondary-dark:  #557760;
+  --secondary-soft:  #E8F1E6;
+  --health-green:    #6E9B73;
+  --health-green-soft: #E7F2E5;
+
+  /* Borders */
+  --border-glass:    #E6ECE2;
+  --border-glow:     #DCE6D8;
+  --border-soft:     #E8EDE5;
+  --border-hover:    #4D7659;
+
+  /* Shadows */
+  --shadow-card:    0 6px 22px rgba(47, 71, 53, 0.08);
+  --shadow-card-hover: 0 10px 28px rgba(47, 71, 53, 0.13);
+  --shadow-btn:     0 4px 12px rgba(54, 89, 66, 0.15);
+  --shadow-btn-hover: 0 7px 18px rgba(54, 89, 66, 0.2);
+  --shadow-nav:     0 -6px 28px rgba(47, 71, 53, 0.08);
+
+  /* Typography */
+  --text-primary:   #253129;
+  --text-secondary: #69756B;
+  --text-tertiary:  #8A968D;
+  --text-accent:    #365942;
+
+  /* Border Radius */
+  --radius-card:    24px;
+  --radius-btn:     16px;
+  --radius-input:   14px;
+
+  /* Transition */
+  --transition:     all 0.25s cubic-bezier(0.4,0,0.2,1);
+
+  /* ── Coach / Card system bridge tokens (Light Mode defaults) ── */
+  --bg-card:         #FFFFFF;
+  --bg-primary:      #F6F7F2;
+  --bg-main:         #F6F7F2;
+  --bg-hover:        #EDF2E9;
+  --text-main:       #253129;
+  --text-muted:      #69756B;
+  --border-color:    #E6ECE2;
+
+  /* ── Semantic Color Tokens ── */
+  --color-success:      #6E9B73;
+  --color-success-soft: #E7F2E5;
+  --color-success-text: #426D4A;
+  --color-warning:      #C58A35;
+  --color-warning-soft: #FBF3E5;
+  --color-warning-text: #956324;
+  --color-danger:       #C96B6B;
+  --color-danger-soft:  #FBECEC;
+  --color-danger-text:  #9D4A4A;
+  --color-info:         #5B9BD5;
+  --color-info-soft:    #E8F2FA;
+  --color-info-text:    #3D7FB8;
+  --color-cyan:         #4D7659;
+  --color-cyan-soft:    #E1EDDE;
+  --color-cyan-text:    #365942;
+
+  /* ── Input/Form tokens ── */
+  --input-bg:        #F8FAF6;
+  --input-bg-focus:  #FFFFFF;
+  --input-border:    #E2E8F0;
+
+  /* ── Header tokens ── */
+  --header-bg:       rgba(246,247,242,0.88);
+  --header-border:   #E6ECE2;
+
+  /* ── Card tokens ── */
+  --surface-card:    var(--surface-solid, #FFFFFF);
+  --card-bg:         var(--bg-card, #FFFFFF);
+
+  /* ── Legacy brand token (several rules + AboutTracker rely on it) ── */
+  --color-primary:   #4D7659;
+}
+
+/* ── 2. DARK MODE TOKENS ───────────────────────────────────────────────────── */
+:root[data-theme="dark"],
+html[data-theme="dark"] {
+  /* Background */
+  --bg:              #171B17;
+  --bg-subtle:       #1D251E;
+  --surface:         #202720;
+  --surface-solid:   #202720;
+  --surface-soft:    #293229;
+  --surface-hover:   #323D32;
+
+  /* Accent */
+  --accent:          #9EC59C;
+  --accent-dark:     #C5DEC0;
+  --accent-soft:     rgba(158,197,156,0.16);
+  --secondary:       #78AEDA;
+  --secondary-dark:  #A2C8E6;
+  --secondary-soft:  rgba(120,174,218,0.16);
+  --health-green:    #75C59B;
+  --health-green-soft: rgba(117,197,155,0.16);
+
+  /* Borders */
+  --border-glass:    #344034;
+  --border-glow:     rgba(158,197,156,0.22);
+  --border-soft:     #344034;
+  --border-hover:    #9EC59C;
+
+  /* Shadows */
+  --shadow-card: none;
+  --shadow-card-hover: none;
+  --shadow-btn: none;
+  --shadow-btn-hover: none;
+  --shadow-nav: none;
+
+  /* Typography */
+  --text-primary:   #F1F5ED;
+  --text-secondary: #C2CCC0;
+  --text-tertiary:  #97A496;
+  --text-accent:    #C5DEC0;
+
+  /* Border Radius (same) */
+  --radius-card:    24px;
+  --radius-btn:     16px;
+  --radius-input:   14px;
+
+  /* ── Coach / Card system bridge tokens (Dark Mode) ── */
+  --bg-card:         #202720;
+  --bg-primary:      #171B17;
+  --bg-main:         #171B17;
+  --bg-hover:        #293229;
+  --text-main:       #F1F5ED;
+  --text-muted:      #C2CCC0;
+  --border-color:    #344034;
+
+  /* ── Input/Form / Header / Card tokens (Dark) ── */
+  --input-bg:        #1F2C31;
+  --input-bg-focus:  #233136;
+  --input-border:    #34484E;
+  --header-bg:       #172126;
+  --header-border:   #34484E;
+  --surface-card:    var(--surface-solid, #233136);
+  --card-bg:         var(--bg-card, #1F2937);
+
+  /* ── Semantic Color Tokens (Dark) ── */
+  --color-success:      #75C59B;
+  --color-success-soft: rgba(117,197,155,0.16);
+  --color-success-text: #A5D8BE;
+  --color-warning:      #D8B36A;
+  --color-warning-soft: rgba(216,179,106,0.16);
+  --color-warning-text: #E3C991;
+  --color-danger:       #E39797;
+  --color-danger-soft:  rgba(227,151,151,0.16);
+  --color-danger-text:  #F0BABA;
+  --color-info:         #78AEDA;
+  --color-info-soft:    rgba(120,174,218,0.16);
+  --color-info-text:    #A2C8E6;
+  --color-cyan:         #58BDB4;
+  --color-cyan-soft:    rgba(88,189,180,0.16);
+  --color-cyan-text:    #87CCC5;
+
+  /* ── Input/Form tokens (Dark) ── */
+  --input-bg:        #1F2C31;
+  --input-bg-focus:  #233136;
+  --input-border:    #34484E;
+
+  /* ── Header tokens (Dark) ── */
+  --header-bg:       #172126;
+  --header-border:   #34484E;
+
+  /* ── Legacy brand token (Dark) ── */
+  --color-primary:   #9EC59C;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   3. GLOBAL RESETS & BASE STYLES
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* In @layer base, not unlayered: Tailwind v4 emits its utilities in
+   @layer utilities, and unlayered CSS beats every layer regardless of
+   specificity — as a bare rule this reset silently zeroed every p-*, m-*,
+   gap-* etc. utility in the app (Set Goals, Privacy, Settings, About…).
+   Tailwind's own preflight does the same reset in this layer, so plain
+   (non-Tailwind) markup is unaffected. */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+:root[data-theme="dark"],
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+  background: var(--bg);
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   4. BOTTOM NAVIGATION
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 8px 16px max(env(safe-area-inset-bottom, 0px), 8px) !important;
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+.bottom-nav-pill {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-around !important;
+  width: 100% !important;
+  gap: 8px !important;
+  background: var(--surface-solid) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  padding: 6px 8px !important;
+  pointer-events: all !important;
+}
+
+.nav-item-v2 {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 3px !important;
+  padding: 8px 4px !important;
+  border-radius: 999px !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  background: transparent !important;
+  transition: all 0.25s cubic-bezier(0.4,0,0.2,1) !important;
+  color: var(--text-secondary) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+}
+
+.nav-item-v2--active,
+.nav-item-v2.active {
+  background: transparent !important;
+  color: var(--accent) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.nav-item-v2:hover:not(.nav-item-v2--active):not(.active) {
+  background: var(--surface-soft) !important;
+  color: var(--text-primary) !important;
+}
+
+.nav-icon-v2 {
+  position: relative !important;
+  width: 38px !important;
+  height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+}
+
+@keyframes popCircle {
+  0% { transform: scale(0.5); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.nav-active-bg {
+  position: absolute !important;
+  inset: 2px 6px !important;
+  border-radius: 999px !important;
+  background: var(--accent) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.nav-icon-svg {
+  position: relative !important;
+  z-index: 1 !important;
+  font-size: 18px !important;
+  color: var(--text-secondary) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s ease !important;
+}
+
+.nav-item-v2--active .nav-icon-svg,
+.nav-item-v2.active .nav-icon-svg {
+  color: var(--text-on-accent, #ffffff) !important;
+  transform: none !important;
+}
+
+.nav-label-v2 {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: var(--text-secondary) !important;
+  transition: color 0.2s ease !important;
+}
+
+.nav-item-v2--active .nav-label-v2,
+.nav-item-v2.active .nav-label-v2 {
+  color: var(--text-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Dark mode nav */
+[data-theme="dark"] .bottom-nav-pill {
+  background: var(--surface-solid) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: var(--border-soft) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active,
+[data-theme="dark"] .nav-item-v2.active {
+  background: transparent !important;
+  color: var(--accent) !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .nav-active-bg {
+  background: var(--accent) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active .nav-icon-svg,
+[data-theme="dark"] .nav-item-v2.active .nav-icon-svg {
+  color: var(--text-on-accent) !important;
+}
+
+[data-theme="dark"] .nav-item-v2--active .nav-label-v2,
+[data-theme="dark"] .nav-item-v2.active .nav-label-v2 {
+  color: var(--text-primary) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   5. APP BACK BUTTON (universal)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.app-back-btn,
+.back-btn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: var(--surface-solid) !important;
+  color: var(--text-primary) !important;
+  font-size: 20px !important;
+  border: 1px solid var(--border-glow) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: var(--shadow-btn) !important;
+  transition: var(--transition) !important;
+  flex-shrink: 0 !important;
+}
+
+.app-back-btn:hover,
+.back-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-btn-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+[data-theme="dark"] .app-back-btn,
+[data-theme="dark"] .back-btn {
+  background: rgba(30,41,59,0.95) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+  color: var(--text-primary) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   6. ICON BUTTON (header icons)
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.icon-btn,
+.menu-btn {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: var(--surface-solid) !important;
+  color: var(--text-primary) !important;
+  font-size: 20px !important;
+  border: 1px solid var(--border-glow) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: var(--shadow-btn) !important;
+  transition: var(--transition) !important;
+  flex-shrink: 0 !important;
+}
+
+.icon-btn:hover,
+.menu-btn:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-btn-hover) !important;
+  border-color: var(--border-hover) !important;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.16) !important;
+}
+
+[data-theme="dark"] .icon-btn,
+[data-theme="dark"] .menu-btn {
+  background: rgba(30,41,59,0.95) !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   7. GLOBAL BUTTON SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.btn,
+.login-btn,
+.hero-btn,
+.log-btn,
+.camera-btn,
+.modal-btn--primary {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 14px 24px !important;
+  border-radius: var(--radius-btn) !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+  transition: var(--transition) !important;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.28) !important;
+}
+
+.btn:hover,
+.login-btn:hover,
+.hero-btn:hover,
+.log-btn:hover,
+.camera-btn:hover,
+.modal-btn--primary:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 28px rgba(56,189,248,0.38) !important;
+}
+
+/* Secondary / Danger button */
+.fasting-stop-btn,
+.cancel-btn,
+.modal-btn--cancel,
+.btn-secondary {
+  background: var(--surface-solid) !important;
+  border: 1px solid rgba(239,68,68,0.25) !important;
+  color: var(--color-danger) !important;
+  box-shadow: 0 2px 10px rgba(239,68,68,0.05) !important;
+}
+
+.fasting-stop-btn:hover,
+.cancel-btn:hover,
+.modal-btn--cancel:hover,
+.btn-secondary:hover {
+  background: var(--color-danger-soft) !important;
+  border-color: var(--color-danger) !important;
+  box-shadow: 0 6px 20px rgba(239,68,68,0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+[data-theme="dark"] .btn,
+[data-theme="dark"] .hero-btn,
+[data-theme="dark"] .log-btn,
+[data-theme="dark"] .camera-btn {
+  background: var(--surface-solid) !important;
+  border-color: var(--border-glass) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   8. INPUT SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* Range sliders, checkboxes and radios draw their own chrome — keep them out
+   of the text-field skin below. :where() keeps the specificity at a bare
+   `input` so page-level overrides (e.g. .ac-input-group input) still win. */
+input:where(:not([type="range"]):not([type="checkbox"]):not([type="radio"])),
+select,
+textarea,
+.modal-input,
+.login-input,
+.form-input,
+.custom-input-wrapper {
+  background: var(--input-bg) !important;
+  border: 1px solid var(--input-border) !important;
+  border-radius: var(--radius-input) !important;
+  color: var(--text-primary) !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  transition: var(--transition) !important;
+  outline: none !important;
+}
+
+input:where(:not([type="range"]):not([type="checkbox"]):not([type="radio"])):focus,
+select:focus,
+textarea:focus,
+.modal-input:focus,
+.login-input:focus,
+.form-input:focus,
+.custom-input-wrapper:focus-within {
+  border-color: var(--accent) !important;
+  background: var(--input-bg-focus) !important;
+  box-shadow: 0 0 0 4px rgba(56,189,248,0.12) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-tertiary) !important;
+  font-weight: 400 !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   9. SETTINGS PAGE SYSTEM
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.settings-header,
+.settings-content {
+  background: var(--bg) !important;
+  color: var(--text-primary) !important;
+}
+
+.settings-section-title {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  color: var(--text-secondary) !important;
+  padding: 0 4px !important;
+}
+
+.settings-list { display: flex !important; flex-direction: column !important; gap: 12px !important; }
+
+.setting-item {
+  background: var(--surface) !important;
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 16px !important;
+  padding: 14px 18px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+/* Dark mode protocol / fasting active */
+[data-theme="dark"] .fasting-protocol-btn--active,
+[data-theme="dark"] .fasting-protocol-btn.active,
+[data-theme="dark"] .protocol-btn.active,
+[data-theme="dark"] .protocol-card.active,
+[data-theme="dark"] .preset-btn.active {
+  background: rgba(56,189,248,0.18) !important;
+  border: 1.5px solid rgba(56,189,248,0.50) !important;
+  color: var(--accent-dark) !important;
+}
+
+[data-theme="dark"] .team-header-title {
+  color: var(--text-primary) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   10. COACH CARD THEME SYSTEM
+   Forces all coach/health card sub-elements to use CSS variables
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.coach-card,
+.longevity-index-card,
+.daily-goals-card,
+.ai-coach-card,
+.timeline-card,
+.challenges-card,
+.ai-report-card,
+.water-card,
+.mood-history-card,
+.calendar-card,
+.pv2-card,
+.pv2-achievements-section {
+  background: var(--bg-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Coach card typography */
+.coach-card-title      { color: var(--text-main) !important; }
+.coach-card-subtitle   { color: var(--text-muted) !important; }
+.metric-val            { color: var(--text-main) !important; }
+.metric-label          { color: var(--text-muted) !important; }
+.metric-unit           { color: var(--text-muted) !important; }
+.goal-title            { color: var(--text-main) !important; }
+.goal-target           { color: var(--text-muted) !important; }
+.timeline-item-title   { color: var(--text-main) !important; }
+.timeline-time         { color: var(--text-muted) !important; }
+.timeline-detail       { color: var(--text-muted) !important; }
+.challenge-title       { color: var(--text-main) !important; }
+.challenge-desc        { color: var(--text-muted) !important; }
+.ai-report-summary     { color: var(--text-main) !important; }
+.ai-stat-val           { color: var(--text-main) !important; }
+.ai-stat-label         { color: var(--text-muted) !important; }
+.coach-summary-text    { color: var(--text-main) !important; }
+.rec-text              { color: var(--text-main) !important; }
+.day-num               { color: var(--text-main) !important; }
+.mood-item-label       { color: var(--text-main) !important; }
+.mood-item-score       { color: var(--text-main) !important; }
+.mood-item-note        { color: var(--text-muted) !important; }
+.modal-score-status    { color: var(--text-main) !important; }
+.modal-pillar-val { color: var(--text-main) !important; }
+.modal-pillar-label { color: var(--text-muted) !important; }
+.water-target          { color: var(--text-muted) !important; }
+.calendar-legend       { color: var(--text-muted) !important; }
+
+/* Sub-surface backgrounds */
+.goal-item,
+.timeline-empty-box,
+.coach-rec-item,
+.water-glass-dot,
+.water-btn,
+.mood-history-item,
+.mood-empty-box,
+.challenge-icon-wrap,
+.mood-item-icon {
+  background: var(--bg-main) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.index-metric-box,
+.challenge-item,
+.ai-stat-box,
+.modal-pillar-item,
+.calendar-modal-box {
+  background: var(--surface-card) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+/* Goal item hover */
+.goal-item:hover { background: var(--bg-hover) !important; }
+
+/* Calendar modal */
+.calendar-modal-box { background: var(--bg-card) !important; }
+.calendar-modal-header { border-color: var(--border-color) !important; }
+.calendar-modal-header h4 { color: var(--text-main) !important; }
+.calendar-modal-close { color: var(--text-muted) !important; }
+
+/* Water tracker */
+.water-btn {
+  background: var(--bg-main) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-main) !important;
+}
+
+.water-progress-track { background: rgba(0, 0, 0, 0.08); }
+[data-theme="dark"] .water-progress-track {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Progress bars */
+[data-theme="dark"] .goals-progress-bar {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+[data-theme="dark"] .challenge-bar-bg {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* AI coach card dark gradient */
+[data-theme="dark"] .ai-coach-card {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(30, 58, 138, 0.4) 100%) !important;
+}
+
+/* Achievement cards */
+.pv2-badge-title { color: var(--text-main) !important; }
+.pv2-badge-desc { color: var(--text-muted) !important; }
+.pv2-card-title     { color: var(--text-main) !important; }
+.pv2-achieve-sub    { color: var(--text-muted) !important; }
+
+/* Longevity index card dark */
+[data-theme="dark"] .longevity-index-card {
+  background: linear-gradient(135deg, rgba(6, 78, 59, 0.08) 0%, rgba(29, 78, 216, 0.08) 100%) !important;
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+   11. PAGE-LEVEL WRAPPERS — uniform full-width
+   ════════════════════════════════════════════════════════════════════════════ */
+
+.hd-header, .hd-content,
+.dashboard-top-header, .dashboard-content,
+.pv2-header, .pv2-content,
+.activity-header, .activity-content,
+.eating-header, .eating-main,
+.sleep-header, .sleep-content,
+.fasting-header, .fasting-content,
+.team-header, .team-content,
+.user-header, .user-management-page, .um-container,
+.mh-header, .mh-content,
+.settings-header, .settings-content,
+.page-header, .page-content, .page-content-v2,
+.home-v2, .dashboard-container, .profile-page-v2,
+.activity-page, .sleep-page, .fasting-page, .team-page {
+  width: 100% !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Standard page top headers — 56px notch clearance on all sizes */
+.team-header-v2,
+.eating-header,
+.pv2-header {
+  padding-top: 56px !important;
+}
+
+/* ── Mobile (< 768px) ── */
+@media (max-width: 767.98px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 56px 16px 14px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 16px 16px 110px !important;
+    gap: 16px !important;
+  }
+}
+
+/* ── Tablet (768px – 1199.98px) ── */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header,
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 960px !important;
+  }
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    padding: 56px 32px 14px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    padding: 20px 32px 120px !important;
+    gap: 20px !important;
+  }
+}
+
+/* ── Desktop (≥ 1200px) ── */
+@media (min-width: 1200px) {
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header,
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    width: 100% !important;
+    max-width: 1360px !important;
+  }
+  .hd-header, .dashboard-top-header, .pv2-header,
+  .activity-header, .eating-header, .sleep-header,
+  .fasting-header, .team-header, .user-header,
+  .mh-header, .settings-header, .page-header {
+    padding: 56px 48px 16px !important;
+  }
+  .hd-content, .dashboard-content, .pv2-content,
+  .activity-content, .eating-main, .sleep-content,
+  .fasting-content, .team-content, .um-container,
+  .mh-content, .settings-content, .page-content, .page-content-v2 {
+    padding: 24px 48px 130px !important;
+    gap: 24px !important;
+  }
+}
+
+/* ── 8. MASTER DARK MODE CARD, DIALOG & COMPONENT BRIDGE ─────────────────────── */
+:root[data-theme="dark"] body,
+html[data-theme="dark"] body,
+body[data-theme="dark"] {
+  background: var(--bg, #0F172A) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* All Containers & Page Backgrounds in Dark Mode */
+[data-theme="dark"] .team-container,
+[data-theme="dark"] .um-container,
+[data-theme="dark"] .sleep-container,
+[data-theme="dark"] .dashboard-container,
+[data-theme="dark"] .hd-container,
+[data-theme="dark"] .profile-container,
+[data-theme="dark"] .mh-container,
+[data-theme="dark"] .eating-container,
+[data-theme="dark"] .fasting-container,
+[data-theme="dark"] .settings-container,
+[data-theme="dark"] .app-container,
+[data-theme="dark"] .page-container {
+  background: var(--bg, #0F172A) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* .page-content / .page-content-v2 are layout wrappers sitting on the body
+   gradient — forcing a flat bg on them drew a visible seam. Colour only. */
+[data-theme="dark"] .page-content,
+[data-theme="dark"] .page-content-v2 {
+  color: var(--text-primary, #F1F5F9);
+}
+
+/* All Cards & Surfaces in Dark Mode */
+[data-theme="dark"] .glass-card,
+[data-theme="dark"] .ev-premium-card,
+[data-theme="dark"] .ev-card,
+[data-theme="dark"] .team-score-card,
+[data-theme="dark"] .challenge-card,
+[data-theme="dark"] .leaderboard-section,
+[data-theme="dark"] .dashboard-card,
+[data-theme="dark"] .longevity-index-card,
+[data-theme="dark"] .ai-coach-card,
+[data-theme="dark"] .coach-card,
+[data-theme="dark"] .sleep-card,
+[data-theme="dark"] .sleep-chart-card,
+[data-theme="dark"] .sleep-stats-card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .um-card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .preset-item,
+[data-theme="dark"] .mh-card,
+[data-theme="dark"] .meal-card,
+[data-theme="dark"] .fasting-card,
+[data-theme="dark"] .food-card,
+[data-theme="dark"] .card,
+[data-theme="dark"] .item-card,
+[data-theme="dark"] .expansion-tile,
+[data-theme="dark"] .bg-white {
+  background: var(--surface-card, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+}
+
+/* All Modals, Dialogs, Bottom Sheets & Drawers in Dark Mode */
+[data-theme="dark"] .modal,
+[data-theme="dark"] .modal-content,
+[data-theme="dark"] .modal-box,
+[data-theme="dark"] .dialog,
+[data-theme="dark"] .dialog-box,
+[data-theme="dark"] .bottom-sheet,
+[data-theme="dark"] .sheet-content,
+[data-theme="dark"] .drawer,
+[data-theme="dark"] .popup-card {
+  background: var(--surface-solid, #1E293B) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+}
+
+/* Bottom Nav Bars & Status Bars in Dark Mode */
+[data-theme="dark"] .bottom-nav,
+[data-theme="dark"] .nav-bar,
+[data-theme="dark"] .status-bar {
+  background: var(--surface-solid, #1E293B) !important;
+  border-color: var(--border-glass, rgba(255,255,255,0.10)) !important;
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+/* Hardcoded text colors inside Dark Mode */
+[data-theme="dark"] .text-black,
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .team-header-title,
+[data-theme="dark"] .score-value,
+[data-theme="dark"] .challenge-title,
+[data-theme="dark"] .leaderboard-title,
+[data-theme="dark"] .member-name {
+  color: var(--text-primary, #F1F5F9) !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-muted,
+[data-theme="dark"] .score-label,
+[data-theme="dark"] .challenge-description,
+[data-theme="dark"] .day-label,
+[data-theme="dark"] .member-tag,
+[data-theme="dark"] .member-points {
+  color: var(--text-secondary, #CBD5E1) !important;
+}

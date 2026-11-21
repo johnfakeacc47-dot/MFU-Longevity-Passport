@@ -1,0 +1,488 @@
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react'
+import './App.css'
+import { Login } from './pages/Login'
+import { Home } from './pages/Home'
+import { Eating } from './pages/Eating'
+import { Dashboard } from './pages/Dashboard'
+import { AiReport } from './pages/AiReport'
+import { Coach } from './pages/Coach'
+import { Team } from './pages/Team'
+import { Profile } from './pages/Profile'
+import { EditProfile } from './pages/EditProfile'
+import { Activity } from './pages/Activity'
+import { Sleep } from './pages/Sleep'
+import UserManagement from './pages/UserManagement'
+import { PrivacySettings } from './pages/PrivacySettings'
+import { SetGoals } from './pages/SetGoals'
+import { AboutTracker } from './pages/AboutTracker'
+import { AboutGarden } from './pages/AboutGarden'
+import { AboutUs } from './pages/AboutUs'
+import { MentalHealth } from './pages/MentalHealth'
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext'
+import { Settings } from './pages/Settings'
+import { calculateLongevityScore } from './utils/longevityScore'
+import { syncDailyScoreToSupabase, supabase } from './services/supabaseClient'
+import { pullDailyLogs, schedulePushDailyLogs } from './services/dailyLogsSync'
+import { PWAInstallPrompt } from './components/PWAInstallPrompt'
+import { useDailyReset } from './hooks/useDailyReset'
+import { checkForNewlyUnlockedBadges } from './utils/healthCoach'
+import type { BadgeItem } from './utils/healthCoach'
+import { notifyBadgeUnlocked } from './services/notifications'
+import { BadgeUnlockPopup } from './components/BadgeUnlockPopup'
+import { BottomNav } from './components/BottomNav'
+import { BrandLogo } from './components/BrandLogo'
+import { resetTopBarProfile } from './components/TopBar'
+import type { NavPage } from './components/BottomNav'
+import type { PageType } from './types/pages'
+
+// FoodRecognition pulls in TensorFlow.js (~1 MB gzip). Load it only when the
+// camera is actually opened, so it stays out of every page's critical path.
+//
+// The chunk filename is content-hashed, so a client still holding an older
+// index.html / service-worker precache after a redeploy requests a file that no
+// longer exists (or a flaky network drops it). Retry a couple of times, then do a
+// single hard reload to pick up the fresh index.html before giving up.
+const CHUNK_RELOAD_KEY = 'foodRecognitionChunkReloaded'
+function loadFoodRecognition() {
+  const attempt = (n: number): Promise<{ default: typeof import('./components/FoodRecognition').FoodRecognition }> =>
+    import('./components/FoodRecognition')
+      .then((m) => {
+        try { sessionStorage.removeItem(CHUNK_RELOAD_KEY) } catch { /* storage unavailable */ }
+        return { default: m.FoodRecognition }
+      })
+      .catch((err) => {
+        if (n < 2) return new Promise((r) => setTimeout(r, 400 * (n + 1))).then(() => attempt(n + 1))
+        let alreadyReloaded = true
+        try {
+          alreadyReloaded = sessionStorage.getItem(CHUNK_RELOAD_KEY) === '1'
+          if (!alreadyReloaded) sessionStorage.setItem(CHUNK_RELOAD_KEY, '1')
+        } catch { /* storage unavailable: don't risk a reload loop */ }
+        if (!alreadyReloaded && navigator.onLine) {
+          // Reload with the same param the notification deep-link uses so the overlay reopens.
+          window.location.replace(`${window.location.pathname}?openFoodRecognition=true`)
+          return new Promise(() => {}) // page is reloading; keep showing the spinner
+        }
+        throw err
+      })
+  return lazy(() => attempt(0))
+}
+
+// Rendered inside <LanguageProvider>, so the fallback can use the real t().
+// (The boundary itself is a class component and can't call hooks.)
+function FoodRecognitionErrorFallback({ message, onClose, onRetry }: { message: string; onClose: () => void; onRetry: () => void }) {
+  const { t } = useLanguage()
+  return (
+    <div className="loading-overlay" role="alert">
+      <div style={{ textAlign: 'center', color: 'var(--text-primary)' }}>
+        <div style={{ fontWeight: 700 }}>{t('foodRecognition.loadFailed')}</div>
+        {message && <div style={{ marginTop: 8, fontSize: 14, color: 'var(--text-secondary)' }}>{message}</div>}
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button type="button" className="btn" onClick={onRetry}>
+            {t('common.retry')}
+          </button>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+class FoodRecognitionErrorBoundary extends React.Component<
+  { onClose: () => void; onRetry: () => void; children: React.ReactNode },
+  { hasError: boolean; message: string }
+> {
+  constructor(props: { onClose: () => void; onRetry: () => void; children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false, message: '' }
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, message: error.message }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <FoodRecognitionErrorFallback
+          message={this.state.message}
+          onClose={this.props.onClose}
+          onRetry={() => {
+            this.setState({ hasError: false, message: '' })
+            this.props.onRetry()
+          }}
+        />
+    }
+    return this.props.children
+  }
+}
+
+// A shared invite link looks like `/?add=swift-lotus-73`. Capture the handle into
+// localStorage (the Team page's TeamInvite picks it up), then scrub it from the
+// URL so it isn't re-processed or leaked into history/analytics.
+function consumeAddParam(): boolean {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const handle = params.get('add')
+    if (!handle) return false
+    localStorage.setItem('pendingTeamAdd', handle.trim().toLowerCase())
+    window.history.replaceState({}, '', window.location.pathname)
+    return true
+  } catch {
+    return false
+  }
+}
+
+// A notification click looks like `/?notifPage=team` (set by the service
+// worker's notificationclick handler — see src/sw.ts) or, for the fasting
+// "Enter Meal" action, `/?openFoodRecognition=true`.
+function consumeNotifParams(): { page: PageType | null; openFood: boolean } {
+  try {
+    const params = new URLSearchParams(window.location.search)
+    const page = params.get('notifPage') as PageType | null
+    const openFood = params.get('openFoodRecognition') === 'true'
+    if (page || openFood) window.history.replaceState({}, '', window.location.pathname)
+    return { page, openFood }
+  } catch {
+    return { page: null, openFood: false }
+  }
+}
+
+// Which bottom-nav tab each page belongs to. Pages not listed highlight nothing.
+const NAV_TAB: Partial<Record<PageType, NavPage>> = {
+  home: 'home',
+  eating: 'eating', 'eating-food-log': 'eating', 'eating-macros': 'eating', 'eating-water': 'eating',
+  'eating-schedule': 'eating', 'eating-history': 'eating', sleep: 'eating', 'mental-health': 'eating', activity: 'eating',
+  dashboard: 'dashboard', 'ai-report': 'dashboard', 'set-goals': 'dashboard',
+  coach: 'coach',
+  team: 'team',
+}
+
+// The one navigation bar for the whole app (rendered inside <LanguageProvider> so it can translate).
+function AppNav({ page, onNavigate }: { page: PageType; onNavigate: (p: PageType) => void }) {
+  const { t } = useLanguage()
+  return <BottomNav active={NAV_TAB[page] ?? 'profile'} onNavigate={onNavigate} t={t} />
+}
+
+function App() {
+  const [currentPage, setCurrentPage] = useState<PageType>('login')
+  // Page we navigated away from — only used to send About Us "Back" to the right place.
+  const prevPageRef = useRef<PageType>('profile')
+  const [showFoodRecognition, setShowFoodRecognition] = useState(false)
+  // React.lazy caches a rejected import forever; a fresh lazy() per retry re-requests the chunk.
+  const [FoodRecognition, setFoodRecognition] = useState(() => loadFoodRecognition())
+  const [showPwaPrompt, setShowPwaPrompt] = useState(false)
+  // FIX: Track auth loading state to prevent login flash bug
+  const [isAuthLoading, setIsAuthLoading] = useState(true)
+  // Newly-unlocked badges awaiting their celebratory popup — shown one at a
+  // time in case more than one crosses its threshold in the same update.
+  const [badgePopupQueue, setBadgePopupQueue] = useState<BadgeItem[]>([])
+
+  // Clears yesterday's meals/activities/sleep logs on day rollover so they
+  // don't keep bleeding into "today's" score. Previously written but never wired up.
+  useDailyReset()
+
+  // Editing the profile may rename the user: make the top-bar avatar re-read it next time.
+  useEffect(() => { if (currentPage === 'edit-profile') resetTopBarProfile() }, [currentPage])
+
+  useEffect(() => {
+    // FIX: Validate session with Supabase instead of just checking localStorage token
+    const initAuth = async () => {
+      try {
+        const hasPendingAdd = consumeAddParam()
+        const { page: notifPage, openFood } = consumeNotifParams()
+        if (openFood) setShowFoodRecognition(true)
+
+        // Dev quick-login session (local `vite` dev build only — never in production).
+        const isDevSession =
+          import.meta.env.DEV &&
+          (localStorage.getItem('userId') === 'dev-user' ||
+            localStorage.getItem('authToken') === 'dev-mock-token');
+
+        if (isDevSession) {
+          const savedPage = localStorage.getItem('currentPage') as PageType;
+          if (hasPendingAdd) {
+            setCurrentPage('team');
+          } else if (notifPage) {
+            setCurrentPage(notifPage);
+          } else if (savedPage && savedPage !== 'login') {
+            setCurrentPage(savedPage);
+          } else {
+            setCurrentPage('home');
+          }
+          setIsAuthLoading(false);
+          return;
+        }
+
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession()
+          if (session) {
+            // Valid live session found — restore saved page
+            const savedPage = localStorage.getItem('currentPage') as PageType
+            if (hasPendingAdd) {
+              setCurrentPage('team')
+            } else if (notifPage) {
+              setCurrentPage(notifPage)
+            } else if (savedPage && savedPage !== 'login') {
+              setCurrentPage(savedPage)
+            } else {
+              setCurrentPage('home')
+            }
+          } else {
+            // No valid session — ensure we're on login, clear stale tokens
+            localStorage.removeItem('authToken')
+            localStorage.removeItem('currentPage')
+            setCurrentPage('login')
+          }
+        } else {
+          // Supabase not configured — use legacy localStorage token
+          const token = localStorage.getItem('authToken')
+          const savedPage = localStorage.getItem('currentPage') as PageType
+          if (token) {
+            setCurrentPage(hasPendingAdd ? 'team' : notifPage ? notifPage : (savedPage && savedPage !== 'login' ? savedPage : 'home'))
+          } else {
+            setCurrentPage('login')
+          }
+        }
+      } catch (err) {
+        console.error('Auth init error:', err)
+        setCurrentPage('login')
+      } finally {
+        setIsAuthLoading(false)
+      }
+    }
+
+    initAuth()
+
+    // Listen for auth state changes (crucial for OAuth redirects)
+    let subscription: any = null
+    if (supabase) {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session) {
+          localStorage.setItem('authToken', session.access_token)
+          localStorage.setItem('userEmail', session.user.email || '')
+          localStorage.setItem('userId', session.user.id)
+          // Only redirect on new sign-in events, not on session restore
+          if (event === 'SIGNED_IN') {
+            handleLoginSuccess()
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // Only clear local state here — handleLogout() itself calls
+          // signOut(), which fires this very event, so routing it back
+          // through handleLogout would loop.
+          resetTopBarProfile()
+    clearLocalSession()
+        }
+      })
+      subscription = data.subscription
+    }
+
+    // Auto-sync the score rollup + push the raw daily logs (debounced) whenever
+    // the local logs change, so other devices on the same account catch up.
+    const handleHealthUpdate = async () => {
+      try {
+        const currentScore = calculateLongevityScore()
+        await syncDailyScoreToSupabase(currentScore)
+      } catch (error) {
+        console.error('Failed to auto-sync score to Supabase:', error)
+      }
+      schedulePushDailyLogs()
+
+      // Achievement badges are recomputed fresh from local logs on every
+      // render with nothing remembering what was already unlocked — this is
+      // the one place that actually notices the moment one crosses its
+      // threshold. Queue a celebratory popup for right now, and fire the real
+      // notification (bell + push) so it's not lost if the app isn't open.
+      const newlyUnlocked = checkForNewlyUnlockedBadges()
+      if (newlyUnlocked.length > 0) {
+        setBadgePopupQueue((q) => [...q, ...newlyUnlocked])
+        for (const badge of newlyUnlocked) {
+          void notifyBadgeUnlocked(badge.id)
+        }
+      }
+    }
+
+    window.addEventListener('healthDataUpdated', handleHealthUpdate)
+
+    // A notification click while the app is already open/focused doesn't
+    // reload the page — the service worker just postMessages the target
+    // URL to the focused client (see notificationclick in src/sw.ts).
+    const handleSwMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'SW_NAVIGATE' || typeof event.data.url !== 'string') return
+      try {
+        const url = new URL(event.data.url, window.location.origin)
+        const page = url.searchParams.get('notifPage') as PageType | null
+        if (page) setCurrentPage(page)
+        if (url.searchParams.get('openFoodRecognition') === 'true') setShowFoodRecognition(true)
+      } catch { /* ignore malformed message */ }
+    }
+    navigator.serviceWorker?.addEventListener('message', handleSwMessage)
+
+    // Pull raw logs from other devices once the session is confirmed.
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) void pullDailyLogs()
+      })
+    }
+
+    return () => {
+      window.removeEventListener('healthDataUpdated', handleHealthUpdate)
+      navigator.serviceWorker?.removeEventListener('message', handleSwMessage)
+      if (subscription) {
+        subscription.unsubscribe()
+      }
+    }
+  }, [])
+
+  function handleLoginSuccess() {
+    // Arrived via a `/?add=<handle>` invite link → land on Team so TeamInvite
+    // can pick up the pending handle and open the add dialog.
+    const landing: PageType = localStorage.getItem('pendingTeamAdd') ? 'team' : 'home'
+    localStorage.setItem('currentPage', landing)
+    setCurrentPage(landing)
+    setShowPwaPrompt(false)
+    setTimeout(() => setShowPwaPrompt(true), 50)
+    void pullDailyLogs() // catch up on logs from this account's other devices
+  }
+
+  function clearLocalSession() {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('currentPage')
+    localStorage.removeItem('userEmail')
+    localStorage.removeItem('userId')
+    localStorage.removeItem('profileData')
+    setCurrentPage('login')
+  }
+
+  async function handleLogout() {
+    // Previously this only wiped our own localStorage keys and left the
+    // Supabase session (`sb-*-auth-token`) in place, so the next launch's
+    // initAuth() restored the "logged-out" user straight back in. End the
+    // real session first; clear local state regardless of the outcome so
+    // the user is never stuck on a page they asked to leave.
+    try {
+      await supabase?.auth.signOut()
+    } catch (err) {
+      console.error('Supabase signOut failed:', err)
+    }
+    clearLocalSession()
+  }
+
+  function handleNavigate(page: PageType) {
+    // "บันทึกอาหาร" card → open AI Food Recognition overlay directly
+    if (page === 'eating-food-log') {
+      localStorage.setItem('currentPage', 'eating')
+      setCurrentPage('eating')
+      setShowFoodRecognition(true)
+      return
+    }
+    prevPageRef.current = currentPage
+    localStorage.setItem('currentPage', page)
+    setCurrentPage(page)
+  }
+
+  // Show a centered spinner while validating session
+  if (isAuthLoading) {
+    return (
+      <div className="auth-loading-screen">
+        <div className="auth-loading-logo">
+          <div className="auth-loading-ring" />
+          <BrandLogo size={28} />
+        </div>
+        <p className="auth-loading-sub">Longevity Passport</p>
+      </div>
+    )
+  }
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 'login':
+        return <Login onLoginSuccess={handleLoginSuccess} />
+      case 'home':
+        return <Home onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} onLogout={handleLogout} />
+      case 'eating':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="dashboard" />
+      case 'eating-food-log':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="food-log" />
+      case 'eating-macros':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="macros" />
+      case 'eating-water':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="water" />
+      case 'eating-schedule':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="schedule" />
+      case 'eating-history':
+        return <Eating onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} view="history" />
+      case 'dashboard':
+        return <Dashboard onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'ai-report':
+        return <AiReport onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'coach':
+        return <Coach onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'team':
+        return <Team onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'profile':
+        return <Profile onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} onLogout={handleLogout} />
+      case 'edit-profile':
+        return <EditProfile onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'activity':
+        return <Activity onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'sleep':
+        return <Sleep onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'mental-health':
+        return <MentalHealth onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'privacy-settings':
+        return <PrivacySettings onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'set-goals':
+        return <SetGoals onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'about-tracker':
+        return <AboutTracker onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'about-garden':
+        return <AboutGarden onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+      case 'about-us':
+        // Reachable from both the Profile drawer and Settings — Back returns to whichever opened it.
+        return <AboutUs onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} backTo={prevPageRef.current === 'settings' ? 'settings' : 'profile'} />
+      case 'user-management':
+        return (
+          <div style={{ minHeight: '100vh' }}>
+            <UserManagement onNavigate={handleNavigate} onOpenFoodRecognition={() => setShowFoodRecognition(true)} />
+          </div>
+        )
+      case 'settings':
+        return <Settings onNavigate={handleNavigate} currentPage={currentPage} onOpenFoodRecognition={() => setShowFoodRecognition(true)} onLogout={handleLogout} />
+      default:
+        return <Login onLoginSuccess={handleLoginSuccess} />
+    }
+  }
+
+  return (
+    <LanguageProvider>
+      <div className="app-container">
+        {renderPage()}
+        {currentPage !== 'login' && <AppNav page={currentPage} onNavigate={handleNavigate} />}
+        {showFoodRecognition && (
+          <FoodRecognitionErrorBoundary onClose={() => setShowFoodRecognition(false)} onRetry={() => setFoodRecognition(() => loadFoodRecognition())}>
+            <Suspense fallback={<div className="loading-overlay" />}>
+              <FoodRecognition
+                onClose={() => setShowFoodRecognition(false)}
+                onSuccess={() => {
+                  setShowFoodRecognition(false);
+                  handleNavigate('eating');
+                  window.dispatchEvent(new CustomEvent('eatingResetView'));
+                }}
+              />
+            </Suspense>
+          </FoodRecognitionErrorBoundary>
+        )}
+        <PWAInstallPrompt triggerOnLogin={showPwaPrompt} />
+        {badgePopupQueue.length > 0 && (
+          <BadgeUnlockPopup
+            badge={badgePopupQueue[0]}
+            onClose={() => setBadgePopupQueue((q) => q.slice(1))}
+          />
+        )}
+      </div>
+    </LanguageProvider>
+  )
+}
+
+export default App

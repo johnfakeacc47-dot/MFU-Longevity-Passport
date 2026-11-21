@@ -1,0 +1,21 @@
+-- ============================================================================
+-- Push notifications never delivered: no device could save its subscription.
+--
+-- The client registers a device with
+--   supabase.from('push_subscriptions').upsert({...}, { onConflict: 'endpoint' })
+-- (src/services/notifications.ts, subscribeToPush), which PostgREST runs as
+--   INSERT ... ON CONFLICT (endpoint) DO UPDATE SET ...
+-- Postgres requires UPDATE privilege on the table for that statement — at plan
+-- time, whether or not a conflict actually happens. 0008_notifications.sql
+-- only granted select/insert/delete, so every "Enable push" attempt failed with
+--   permission denied for table push_subscriptions
+-- the table stayed empty, and send-push had nobody to deliver to (it returned
+-- {ok:true, sent:0, reason:'no_subscriptions'} for every notification).
+--
+-- Table-level rather than column-level: the upsert's DO UPDATE assigns every
+-- column in the payload (user_id, endpoint, p256dh, auth, last_seen_at), and
+-- the push_subscriptions_own RLS policy (USING + WITH CHECK user_id =
+-- auth.uid()) already confines each user to their own rows.
+-- ============================================================================
+
+grant update on public.push_subscriptions to authenticated;
