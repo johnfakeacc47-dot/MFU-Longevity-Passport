@@ -125,12 +125,13 @@ html:root[data-theme="dark"] body { background: var(--v2-bg) !important; }
 
 .v2-header {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  min-height: var(--v2-header-h);
+  height: calc(var(--v2-header-h) + env(safe-area-inset-top, 0px));
+  min-height: calc(var(--v2-header-h) + env(safe-area-inset-top, 0px));
   padding: calc(var(--v2-header-pad) + env(safe-area-inset-top, 0px)) 0 8px;
   box-sizing: border-box;
 }
 .v2-header--center { position: relative; justify-content: space-between; }
-.v2-header-title { flex: 1; text-align: center; font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
+.v2-header-title { flex: 1; min-width: 0; height: 24px; line-height: 24px; text-align: center; font-size: 18px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .v2-header-spacer { width: 44px; flex: none; }
 .v2-h1 { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -.02em; }
 .v2-h2 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; }
@@ -451,7 +452,7 @@ button.v2-row:hover { background: color-mix(in srgb, var(--v2-inset) 55%, transp
 .v2-profile-choice {
   display: grid;
   grid-template-columns: 22px minmax(0, 1fr);
-  align-items: start;
+  align-items: center;
   gap: 12px;
   width: 100%;
   min-width: 0;
@@ -486,7 +487,7 @@ button.v2-row:hover { background: color-mix(in srgb, var(--v2-inset) 55%, transp
 .v2-profile-choice-radio {
   width: 20px;
   height: 20px;
-  margin-top: 1px;
+  margin: 0;
   display: grid;
   place-items: center;
   border: 1.5px solid var(--v2-line-strong);
@@ -502,6 +503,7 @@ button.v2-row:hover { background: color-mix(in srgb, var(--v2-inset) 55%, transp
   min-width: 0;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 3px;
   text-align: left;
 }
@@ -985,7 +987,7 @@ html:root { --v2-max-narrow: 600px; }
   html:root { --v2-gutter: 16px; --v2-gap: 14px; }
 }
 @media (max-width: 767px) and (orientation: landscape) and (max-height: 500px) {
-  html:root { --v2-header-h: 52px; }
+  html:root { --v2-header-h: 64px; }
 }
 
 /* 320px phones with a classic (non-overlay) scrollbar: body must not demand more than the viewport gives */
@@ -1001,16 +1003,36 @@ html:root body { min-width: 0; }
 /* ── TOP BAR (components/TopBar.tsx): one geometry for every main tab page ── */
 .v2-topbar {
   display: flex; align-items: center; gap: 12px; width: 100%;
-  min-height: var(--v2-header-h); box-sizing: border-box;
+  height: calc(var(--v2-header-h) + env(safe-area-inset-top, 0px)); min-height: calc(var(--v2-header-h) + env(safe-area-inset-top, 0px)); box-sizing: border-box;
   padding: calc(var(--v2-header-pad) + env(safe-area-inset-top, 0px)) 0 8px;
 }
 .v2-topbar-logo { margin-inline-end: -2px; }
-.v2-topbar-text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.v2-topbar-title { font-size: clamp(1.125rem, 4.6vw, 1.25rem); line-height: var(--lh-tight, 1.4); font-weight: var(--fw-heading, 700); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v2-topbar-text { flex: 1; min-width: 0; height: 44px; display: flex; flex-direction: column; justify-content: flex-start; }
+.v2-topbar-title { font-size: 18px; line-height: 1.35; font-weight: var(--fw-heading, 700); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .v2-topbar-sub { margin-top: 1px; font-size: clamp(.75rem, 3.5vw, .8125rem); line-height: 1.45; font-weight: var(--fw-body, 400); color: var(--v2-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .v2-topbar-profile-letter { font-family: var(--font-sans); font-size: clamp(.9375rem, 4vw, 1.0625rem); line-height: 1; }
 .v2-topbar-actions { display: flex; align-items: center; gap: 10px; flex: none; }
 .v2-toolbar { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 767px) {
+  html:root .v2-topbar {
+    height: calc(64px + env(safe-area-inset-top, 0px));
+    min-height: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  html:root .v2-header {
+    height: calc(64px + env(safe-area-inset-top, 0px));
+    min-height: calc(64px + env(safe-area-inset-top, 0px));
+  }
+  html:root h1.v2-topbar-title,
+  html:root h1.v2-header-title {
+    font-size: 18px !important;
+    font-weight: var(--fw-heading, 700) !important;
+    line-height: 24px !important;
+    height: 24px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
 @media (max-width: 767px) {
   .v2-topbar { gap: 10px; }
   .v2-topbar-actions { gap: 8px; }
