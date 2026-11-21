@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
       manifest: {
         name: 'MFU Longevity Passport',
-        short_name: 'Passport',
+        short_name: 'MFU Longevity Passport',
         description: 'MFU Longevity Passport - AI health tracking for anti-aging and longevity.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
