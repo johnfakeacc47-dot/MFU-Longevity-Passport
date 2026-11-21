@@ -266,8 +266,10 @@ export const PWAInstallPrompt: React.FC<PWAInstallPromptProps> = ({ triggerOnLog
                 onClick={handleDone}
                 style={{
                   width: '100%', padding: '15px',
-                  background: 'linear-gradient(135deg, #1976D2, #1565C0)',
-                  color: 'white', border: 'none', borderRadius: '16px',
+                  background: 'var(--v2-success-soft)',
+                  color: 'var(--v2-success-text)',
+                  border: '1px solid var(--v2-primary)',
+                  borderRadius: '16px',
                   fontSize: '15px', fontWeight: 800, cursor: 'pointer',
                   boxShadow: '0 8px 24px rgba(25,118,210,0.30)',
                   letterSpacing: '-0.2px',

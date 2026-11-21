@@ -22,6 +22,8 @@ html:root {
   --v2-danger: #B3412E;
   --v2-danger-soft: #F5E1DC;
   --v2-warn: #A8542F;
+  --v2-success-soft: var(--v2-primary-soft);
+  --v2-success-text: var(--v2-primary);
 
   --v2-act: #A8542F;   --v2-act-bg: #F1E4DE;
   --v2-food: #4A7C37;  --v2-food-bg: #E0EAD9;
@@ -86,6 +88,8 @@ html:root[data-theme="dark"] {
   --v2-danger: #F08A78;
   --v2-danger-soft: #35201C;
   --v2-warn: #EBA27D;
+  --v2-success-soft: var(--v2-primary-soft);
+  --v2-success-text: var(--v2-primary);
 
   --v2-act: #EBA27D;   --v2-act-bg: #2D2520;
   --v2-food: #9BCB8C;  --v2-food-bg: #1E2B1F;
