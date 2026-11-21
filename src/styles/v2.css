@@ -1042,7 +1042,6 @@ html:root body { min-width: 0; }
   .v2-topbar { gap: 8px; }
   .v2-topbar-actions { gap: 6px; }
   .v2-topbar-logo { display: none; }
-  .v2-topbar-sub { display: none; }
 }
 @media (max-width: 320px) {
   .v2-topbar-actions { gap: 4px; }

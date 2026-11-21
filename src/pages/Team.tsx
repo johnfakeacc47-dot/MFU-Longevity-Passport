@@ -143,7 +143,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate }) => {
 
   return (
     <div className="v2-page">
-      <TopBar title={t('team.title')} onNavigate={onNavigate}
+      <TopBar title={t('v2.teamTitle')} subtitle={t('v2.teamSubtitle')} onNavigate={onNavigate}
         actions={<IconBtn label={t('team.addTeammate')} onClick={handleInvite}><QrCode size={22} {...ICON_PROPS} /></IconBtn>} />
 
       {isLoading ? (

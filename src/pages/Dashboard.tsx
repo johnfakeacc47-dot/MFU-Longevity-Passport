@@ -87,7 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   return (
     <div className="v2-page">
-      <TopBar title={t('v2.overview')} onNavigate={onNavigate} />
+      <TopBar title={t('v2.dashboardTitle')} subtitle={t('v2.dashboardSubtitle')} onNavigate={onNavigate} />
       <div className="v2-chips v2-toolbar">
         {RANGES.map((r) => (
           <Chip key={r.id} on={timeRange === r.id} onClick={() => setTimeRange(r.id)}>{t(r.labelKey)}</Chip>

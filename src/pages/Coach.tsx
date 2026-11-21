@@ -144,7 +144,7 @@ export const Coach: React.FC<Props> = ({ onNavigate }) => {
 
   return (
     <div className="v2-page v2-chat-page">
-      <TopBar title={t('v2.coachName')} subtitle={t('v2.coachSub')} onNavigate={onNavigate}
+      <TopBar title={t('v2.coachTopTitle')} subtitle={t('v2.coachTopSubtitle')} onNavigate={onNavigate}
         actions={messages.length > 0 ? (
           <IconBtn label={t('chat.clear')} onClick={() => void handleClear()}><Trash2 size={20} {...ICON_PROPS} /></IconBtn>
         ) : undefined} />
