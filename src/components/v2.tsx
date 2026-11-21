@@ -55,9 +55,9 @@ export const PageHeader: React.FC<{
 );
 
 export const Chip: React.FC<{
-  on?: boolean; onClick?: () => void; children: React.ReactNode; type?: 'button' | 'submit'; disabled?: boolean; ariaLabel?: string;
-}> = ({ on, onClick, children, type = 'button', disabled, ariaLabel }) => (
-  <button type={type} className={`v2-chip ${on ? 'is-on' : ''}`} onClick={onClick} aria-pressed={on} disabled={disabled} aria-label={ariaLabel}>
+  on?: boolean; onClick?: () => void; children: React.ReactNode; type?: 'button' | 'submit'; disabled?: boolean; ariaLabel?: string; className?: string;
+}> = ({ on, onClick, children, type = 'button', disabled, ariaLabel, className }) => (
+  <button type={type} className={`v2-chip ${on ? 'is-on' : ''} ${className ?? ''}`} onClick={onClick} aria-pressed={on} disabled={disabled} aria-label={ariaLabel}>
     {children}
   </button>
 );

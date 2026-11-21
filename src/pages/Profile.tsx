@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
-  UserRound, Pencil, Sun, Globe, Bell, Shield, Info, Download, LogOut, Trash2,
+  UserRound, Pencil, Globe, Bell, Shield, Info, Download, LogOut, Trash2,
   BellRing, Sprout, HeartPulse, Users, FileText, Scale, Flame,
 } from 'lucide-react';
 import {
@@ -9,8 +9,6 @@ import {
   updateUserGoalAndActivity,
 } from '../services/supabaseClient';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext';
-import type { Theme } from '../contexts/ThemeContext';
 import { useSEO } from '../hooks/useSEO';
 import { safeParse } from '../utils/safeStorage';
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '../services/notifications';
@@ -299,7 +297,6 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onLogout }) => {
 
   // ── Settings state (same services the old Settings page used) ─────────────
   const { language: lang, setLanguage } = useLanguage();
-  const { theme, setTheme } = useTheme();
   const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window;
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
@@ -368,39 +365,31 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onLogout }) => {
             sub={`${profileCompletion}% · ${t('v2.completeProfileSub')}`} chevron onClick={() => onNavigate('edit-profile')} />
         )}
       </Group>
-      <div className="v2-field">
-        <span className="v2-label">{t('v2.myGoal')}</span>
-        <div className="v2-chips" role="group" aria-label={t('v2.myGoal')}>
+      <section className="v2-profile-choice-section" aria-labelledby="profile-goals-title">
+        <h2 id="profile-goals-title" className="v2-profile-choice-title">{t('v2.myGoal')}</h2>
+        <div className="v2-profile-choice-grid" role="group" aria-label={t('v2.myGoal')}>
           {GOAL_OPTIONS.map((g) => (
-            <Chip key={g.value} on={(profileData.goal || 'maintain') === g.value} disabled={isSavingGoal} onClick={() => handleGoalChange(g.value)}>
+            <Chip key={g.value} className="v2-profile-choice" on={(profileData.goal || 'maintain') === g.value} disabled={isSavingGoal} onClick={() => handleGoalChange(g.value)}>
               {t(g.labelKey)}
             </Chip>
           ))}
         </div>
-      </div>
-      <div className="v2-field">
-        <span className="v2-label">{t('v2.activityLevel')}</span>
-        <div className="v2-chips" role="group" aria-label={t('v2.activityLevel')}>
+      </section>
+      <section className="v2-profile-choice-section" aria-labelledby="profile-activity-title">
+        <h2 id="profile-activity-title" className="v2-profile-choice-title">{t('v2.activityLevel')}</h2>
+        <div className="v2-profile-choice-grid" role="group" aria-label={t('v2.activityLevel')}>
           {ACTIVITY_OPTIONS.map((a) => (
-            <Chip key={a.value} on={(profileData.activityLevel || 'moderate') === a.value} disabled={isSavingGoal} onClick={() => handleActivityChange(a.value)}>
+            <Chip key={a.value} className="v2-profile-choice" on={(profileData.activityLevel || 'moderate') === a.value} disabled={isSavingGoal} onClick={() => handleActivityChange(a.value)}>
               {t(a.labelKey)}
             </Chip>
           ))}
         </div>
-      </div>
+      </section>
       {saveError && <p className="v2-alert v2-alert--error" role="alert">{saveError}</p>}
 
       {/* ── General ── */}
       <span className="v2-group-label">{t('v2.general')}</span>
       <Group>
-        <Row pillar="water" icon={<Sun size={22} {...ICON_PROPS} />} title={t('settings.appearance')}
-          end={
-            <Segmented className="v2-seg--theme" value={theme} onChange={(v) => setTheme(v as Theme)} options={[
-              { value: 'light', label: t('v2.theme.light') },
-              { value: 'dark', label: t('v2.theme.dark') },
-              { value: 'system', label: t('v2.theme.system') },
-            ]} />
-          } />
         <Row pillar="water" icon={<Globe size={22} {...ICON_PROPS} />} title={t('settings.language')}
           end={
             <Segmented className="v2-seg--theme" value={lang} onChange={(v) => setLanguage(v as 'th' | 'en')} options={[
