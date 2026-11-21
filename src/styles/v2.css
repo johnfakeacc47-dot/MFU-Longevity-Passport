@@ -587,6 +587,13 @@ button.v2-row:hover { background: color-mix(in srgb, var(--v2-inset) 55%, transp
 }
 .v2-scan-busy span:not(.v2-spinner) { color: var(--v2-text-2); font-size: 14px; }
 .v2-scan { min-height: min(46dvh, 440px); }
+.v2-scan-placeholder-icon {
+  width: 44px;
+  height: 44px;
+  color: var(--v2-primary);
+  stroke-width: 1.8;
+  flex: none;
+}
 .v2-capture-bar { padding-bottom: 4px; }
 .v2-side-btn:disabled, .v2-shutter:disabled { opacity: .5; cursor: not-allowed; }
 

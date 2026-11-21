@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import * as tf from '@tensorflow/tfjs';
-import { X, Cpu, Cloud, Image as ImageIcon, SwitchCamera, RefreshCw, ChevronLeft, Info, Check, Plus, Minus, Leaf, Sparkle, BadgeAlert } from 'lucide-react';
+import { X, Cpu, Cloud, Image as ImageIcon, SwitchCamera, RefreshCw, ChevronLeft, Info, Check, Plus, Minus, Utensils, Sparkle, BadgeAlert } from 'lucide-react';
 
 import { THAI_FOOD_CLASSES } from '../config/foodClasses';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -916,7 +916,7 @@ export const FoodRecognition: React.FC<FoodRecognitionProps> = ({ onClose, onSuc
               <span className="v2-corner v2-corner--bl" /><span className="v2-corner v2-corner--br" />
               {!isCameraActive && !imagePreview && uploadStatus === 'idle' && (
                 <>
-                  <Leaf size={44} {...ICON_PROPS} />
+                  <Utensils className="v2-scan-placeholder-icon" size={44} {...ICON_PROPS} />
                   <p>{t('v2.placeInFrame')}</p>
                 </>
               )}
