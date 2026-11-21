@@ -152,8 +152,7 @@ export const Team: React.FC<TeamProps> = ({ onNavigate }) => {
         <>
           <Group>
             <Row pillar="water" icon={<UsersRound size={22} {...ICON_PROPS} />} title={t('team.myTeam')}
-              sub={`${t('v2.members')} ${memberCount} ${t('v2.people')}${myHandle ? ` · @${myHandle}` : ''}`}
-              chevron onClick={() => setActiveTab('myTeam')} />
+              sub={`${t('v2.members')} ${memberCount} ${t('v2.people')}${myHandle ? ` · @${myHandle}` : ''}`} />
           </Group>
 
           {/* ── Pending requests (QA-008) ── */}
