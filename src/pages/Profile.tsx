@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   UserRound, Pencil, Globe, Bell, Shield, Info, Download, LogOut, Trash2,
-  BellRing, Sprout, HeartPulse, Users, FileText, Scale, Flame,
+  BellRing, Sprout, HeartPulse, Users, FileText, Scale, Flame, Check,
 } from 'lucide-react';
 import {
   isSupabaseConfigured,
@@ -61,19 +61,19 @@ const getTargetCalories = (tdee: number, goal: string): number => {
 };
 
 const GOAL_OPTIONS = [
-  { value: 'maintain',     labelKey: 'profile.goalMaintain',    label: 'Maintain Health' },
-  { value: 'lose_weight',  labelKey: 'profile.goalLoseWeight',  label: 'Lose Weight' },
-  { value: 'gain_weight',  labelKey: 'profile.goalGainWeight',  label: 'Gain Weight' },
-  { value: 'build_muscle', labelKey: 'profile.goalBuildMuscle', label: 'Build Muscle' },
-  { value: 'longevity',    labelKey: 'profile.goalLongevity',   label: 'Longevity' },
+  { value: 'maintain',     labelKey: 'profile.goalMaintain',    descKey: 'profile.goalMaintainDesc',    label: 'Maintain Health' },
+  { value: 'lose_weight',  labelKey: 'profile.goalLoseWeight',  descKey: 'profile.goalLoseWeightDesc',  label: 'Lose Weight' },
+  { value: 'gain_weight',  labelKey: 'profile.goalGainWeight',  descKey: 'profile.goalGainWeightDesc',  label: 'Gain Weight' },
+  { value: 'build_muscle', labelKey: 'profile.goalBuildMuscle', descKey: 'profile.goalBuildMuscleDesc', label: 'Build Muscle' },
+  { value: 'longevity',    labelKey: 'profile.goalLongevity',   descKey: 'profile.goalLongevityDesc',   label: 'Longevity' },
 ] as const;
 
 const ACTIVITY_OPTIONS = [
-  { value: 'sedentary',   labelKey: 'profile.actSedentary',  label: 'Sedentary' },
-  { value: 'light',       labelKey: 'profile.actLight',      label: 'Light' },
-  { value: 'moderate',    labelKey: 'profile.actModerate',   label: 'Moderate' },
-  { value: 'active',      labelKey: 'profile.actActive',     label: 'Active' },
-  { value: 'very_active', labelKey: 'profile.actVeryActive', label: 'Very Active' },
+  { value: 'sedentary',   labelKey: 'profile.actSedentary',  descKey: 'profile.actSedentaryDesc',  label: 'Sedentary' },
+  { value: 'light',       labelKey: 'profile.actLight',      descKey: 'profile.actLightDesc',      label: 'Light' },
+  { value: 'moderate',    labelKey: 'profile.actModerate',   descKey: 'profile.actModerateDesc',   label: 'Moderate' },
+  { value: 'active',      labelKey: 'profile.actActive',     descKey: 'profile.actActiveDesc',     label: 'Active' },
+  { value: 'very_active', labelKey: 'profile.actVeryActive', descKey: 'profile.actVeryActiveDesc', label: 'Very Active' },
 ] as const;
 
 const buildAIRecommendation = (bmi: number, goal: string, tdee: number, targetCal: number, lang: string = 'th'): string[] => {
@@ -366,21 +366,41 @@ export const Profile: React.FC<ProfileProps> = ({ onNavigate, onLogout }) => {
         )}
       </Group>
       <section className="v2-profile-choice-section" aria-labelledby="profile-goals-title">
-        <h2 id="profile-goals-title" className="v2-profile-choice-title">{t('v2.myGoal')}</h2>
-        <div className="v2-profile-choice-grid" role="group" aria-label={t('v2.myGoal')}>
+        <div className="v2-profile-choice-heading">
+          <h2 id="profile-goals-title" className="v2-profile-choice-title">{t('v2.myGoal')}</h2>
+          <p className="v2-profile-choice-sub">{t('v2.goalSectionSub')}</p>
+        </div>
+        <div className="v2-profile-choice-grid v2-profile-choice-grid--goals" role="radiogroup" aria-label={t('v2.myGoal')}>
           {GOAL_OPTIONS.map((g) => (
-            <Chip key={g.value} className="v2-profile-choice" on={(profileData.goal || 'maintain') === g.value} disabled={isSavingGoal} onClick={() => handleGoalChange(g.value)}>
-              {t(g.labelKey)}
+            <Chip key={g.value} role="radio" className="v2-profile-choice" on={(profileData.goal || 'maintain') === g.value} disabled={isSavingGoal}
+              ariaLabel={`${t(g.labelKey)}. ${t(g.descKey)}`} onClick={() => handleGoalChange(g.value)}>
+              <span className="v2-profile-choice-radio" aria-hidden="true">
+                {(profileData.goal || 'maintain') === g.value && <Check size={14} strokeWidth={2.5} />}
+              </span>
+              <span className="v2-profile-choice-copy">
+                <b>{t(g.labelKey)}</b>
+                <small>{t(g.descKey)}</small>
+              </span>
             </Chip>
           ))}
         </div>
       </section>
       <section className="v2-profile-choice-section" aria-labelledby="profile-activity-title">
-        <h2 id="profile-activity-title" className="v2-profile-choice-title">{t('v2.activityLevel')}</h2>
-        <div className="v2-profile-choice-grid" role="group" aria-label={t('v2.activityLevel')}>
+        <div className="v2-profile-choice-heading">
+          <h2 id="profile-activity-title" className="v2-profile-choice-title">{t('v2.activityLevel')}</h2>
+          <p className="v2-profile-choice-sub">{t('v2.activitySectionSub')}</p>
+        </div>
+        <div className="v2-profile-choice-grid v2-profile-choice-grid--activity" role="radiogroup" aria-label={t('v2.activityLevel')}>
           {ACTIVITY_OPTIONS.map((a) => (
-            <Chip key={a.value} className="v2-profile-choice" on={(profileData.activityLevel || 'moderate') === a.value} disabled={isSavingGoal} onClick={() => handleActivityChange(a.value)}>
-              {t(a.labelKey)}
+            <Chip key={a.value} role="radio" className="v2-profile-choice" on={(profileData.activityLevel || 'moderate') === a.value} disabled={isSavingGoal}
+              ariaLabel={`${t(a.labelKey)}. ${t(a.descKey)}`} onClick={() => handleActivityChange(a.value)}>
+              <span className="v2-profile-choice-radio" aria-hidden="true">
+                {(profileData.activityLevel || 'moderate') === a.value && <Check size={14} strokeWidth={2.5} />}
+              </span>
+              <span className="v2-profile-choice-copy">
+                <b>{t(a.labelKey)}</b>
+                <small>{t(a.descKey)}</small>
+              </span>
             </Chip>
           ))}
         </div>
