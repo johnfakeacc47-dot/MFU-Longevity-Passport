@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TopBar } from '../components/TopBar';
-import { Activity, Leaf, Smile, Moon, TrendingUp, TrendingDown, Sparkle, Target, RefreshCw } from 'lucide-react';
+import { Activity, Utensils, Smile, Moon, TrendingUp, TrendingDown, Sparkle, Target, RefreshCw } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
@@ -26,7 +26,7 @@ const RANGES: { id: TimeRangeFilter; labelKey: string }[] = [
 type PillarKey = 'nutrition' | 'exercise' | 'mental' | 'sleep';
 const PILLAR_ROWS: { key: PillarKey; pillar: Pillar; titleKey: string; icon: React.ReactNode }[] = [
   { key: 'exercise', pillar: 'act',   titleKey: 'v2.pillar.activity', icon: <Activity size={22} {...ICON_PROPS} /> },
-  { key: 'nutrition', pillar: 'food', titleKey: 'v2.pillar.food',     icon: <Leaf size={22} {...ICON_PROPS} /> },
+  { key: 'nutrition', pillar: 'food', titleKey: 'v2.pillar.food',     icon: <Utensils size={22} {...ICON_PROPS} /> },
   { key: 'mental',   pillar: 'mind',  titleKey: 'v2.pillar.mind',     icon: <Smile size={22} {...ICON_PROPS} /> },
   { key: 'sleep',    pillar: 'sleep', titleKey: 'v2.pillar.sleep',    icon: <Moon size={22} {...ICON_PROPS} /> },
 ];

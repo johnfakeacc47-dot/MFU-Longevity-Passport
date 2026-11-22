@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Activity, Leaf, Smile, Moon, Droplet, Timer, Camera, Plus, Minus, Play, Square, Check, Target, Info } from 'lucide-react';
+import { Activity, Utensils, Smile, Moon, Droplet, Timer, Camera, Plus, Minus, Play, Square, Check, Target, Info } from 'lucide-react';
 import { useSEO } from '../hooks/useSEO';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 import type { MealLog, Macros } from '../utils/longevityScore';
@@ -342,7 +342,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
     <button key={globalIdx} type="button" className="v2-row" onClick={() => setSelectedMeal({ meal, globalIdx })}>
       {meal.imageUrl
         ? <img src={meal.imageUrl} alt="" className="v2-thumb" />
-        : <IconChip pillar="food" size="lg"><Leaf size={22} {...ICON_PROPS} /></IconChip>}
+        : <IconChip pillar="food" size="lg"><Utensils size={22} {...ICON_PROPS} /></IconChip>}
       <span className="v2-row-main">
         <span className="v2-row-top">
           <span className="v2-row-title">{mealDisplayName(meal, t, isTh ? 'มื้ออาหาร' : 'Meal', isTh)}</span>
@@ -426,7 +426,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
         {filterChips}
         {list.length === 0 ? (
           <div className="v2-empty">
-            <IconChip pillar="food" size="lg"><Leaf size={24} {...ICON_PROPS} /></IconChip>
+            <IconChip pillar="food" size="lg"><Utensils size={24} {...ICON_PROPS} /></IconChip>
             <p className="v2-muted">{isTh ? 'ยังไม่มีรายการอาหารในช่วงเวลานี้' : 'No meals recorded in this period.'}</p>
             <button type="button" className="v2-btn v2-btn--primary v2-btn--sm" onClick={() => onOpenFoodRecognition && onOpenFoodRecognition()}>
               <Camera size={18} {...ICON_PROPS} /> {isTh ? 'สแกนอาหาร' : 'Scan food'}
@@ -553,7 +553,7 @@ export const Eating: React.FC<EatingProps> = ({ onNavigate, onOpenFoodRecognitio
 
         <h2 className="v2-h2">{isTh ? 'หมวดบันทึก' : 'Log categories'}</h2>
         <Group>
-          <Row pillar="food" icon={<Leaf size={22} {...ICON_PROPS} />} title={isTh ? 'มื้ออาหาร' : 'Meals'} chevron
+          <Row pillar="food" icon={<Utensils size={22} {...ICON_PROPS} />} title={isTh ? 'มื้ออาหาร' : 'Meals'} chevron
             sub={summary.meals > 0 ? `${mealNames} · ~${summary.calories.toLocaleString()} kcal` : none}
             onClick={() => onNavigate('eating-history')} />
           <Row pillar="act" icon={<Activity size={22} {...ICON_PROPS} />} title={isTh ? 'กิจกรรม' : 'Activity'} chevron

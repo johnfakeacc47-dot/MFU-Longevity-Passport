@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Activity, Leaf, Smile, Moon, Droplet, Camera, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Utensils, Smile, Moon, Droplet, Camera, TrendingUp, TrendingDown } from 'lucide-react';
 
 import { useLanguage } from '../contexts/LanguageContext';
 import { useSEO } from '../hooks/useSEO';
@@ -106,7 +106,7 @@ export const Home: React.FC<HomeProps> = ({ onNavigate, onOpenFoodRecognition })
       sub: summary.activeMinutes > 0 ? `${summary.activeMinutes} ${t('v2.unit.min')} · ~${summary.caloriesOut} kcal` : empty,
     },
     {
-      key: 'food' as const, title: t('v2.pillar.food'), icon: <Leaf size={22} {...ICON_PROPS} />, value: pct.nutrition, go: 'eating-history' as PageType,
+      key: 'food' as const, title: t('v2.pillar.food'), icon: <Utensils size={22} {...ICON_PROPS} />, value: pct.nutrition, go: 'eating-history' as PageType,
       sub: summary.meals > 0 ? `${summary.meals} ${t('v2.unit.meal')} · ~${summary.calories.toLocaleString()} kcal` : empty,
     },
     {
