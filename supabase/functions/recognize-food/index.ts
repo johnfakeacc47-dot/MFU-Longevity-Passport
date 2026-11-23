@@ -239,6 +239,7 @@ serve(async (req: Request) => {
     const hintDish =
       body?.hint && typeof body.hint.dish === 'string' && typeof body.hint.confidence === 'number'
         ? String(body.hint.dish)
+            // eslint-disable-next-line no-control-regex -- stripping control characters from user text is the point
             .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029<>]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
