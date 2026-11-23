@@ -74,7 +74,10 @@ function ThemedProviders() {
       <ErrorBoundary>
         <App />
       </ErrorBoundary>
-      <Analytics />
+      {/* Vercel Web Analytics only exists on Vercel; elsewhere (the MFU Docker
+          image) its /_vercel/insights script 404s into the SPA fallback and
+          throws in the console. */}
+      {window.location.hostname.endsWith('.vercel.app') && <Analytics />}
     </MantineProvider>
   )
 }

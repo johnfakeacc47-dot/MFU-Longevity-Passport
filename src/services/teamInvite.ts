@@ -6,9 +6,13 @@
 // that broke the old email-based invite.
 import { supabase } from './supabaseClient';
 
-// Public origin the QR deep link points at. Kept here (not an env var) because
-// it must be a stable, shareable URL regardless of where the app is served.
-const INVITE_ORIGIN = 'https://mfu-longevity-passport.vercel.app';
+// Origin the QR deep link points at: VITE_PUBLIC_SITE_URL when a build wants a
+// fixed public address, otherwise the site the app is being served from. It
+// used to be hard-coded to the Vercel URL, so invites made on
+// longevity.mfu.ac.th (or any other deployment) sent people to Vercel.
+const INVITE_ORIGIN = (
+  (import.meta.env.VITE_PUBLIC_SITE_URL as string | undefined) || window.location.origin
+).replace(/\/+$/, '');
 
 export type InviteReason =
   | 'unauthenticated'

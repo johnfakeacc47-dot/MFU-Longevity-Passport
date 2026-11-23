@@ -1,0 +1,32 @@
+# Runs the MFU Longevity Passport web app as a single container.
+#
+# The container is only the front end (the built React PWA served by nginx).
+# The database, sign-in, Edge Functions and push notifications all live in the
+# Supabase project the image is built against — see HANDOVER.md.
+#
+#   1. Put the three public values in a `.env` file next to this one
+#      (copy .env.example; only the VITE_* lines below are used here):
+#        VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+#        VITE_SUPABASE_ANON_KEY=<the project's anon / publishable key>
+#        VITE_VAPID_PUBLIC_KEY=<web-push public key>
+#   2. docker compose up -d --build
+#   3. Open http://<server>:8080 — put HTTPS in front (reverse proxy / ingress);
+#      service workers, push notifications and camera access require HTTPS.
+#
+# These values are compiled into the JavaScript at build time (Vite inlines
+# VITE_* variables), so changing them means rebuilding the image, not just
+# restarting the container. None of them are secrets: they are the same
+# values every visitor's browser downloads.
+
+services:
+  web:
+    image: mfu-longevity-passport:latest
+    build:
+      context: .
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?set VITE_SUPABASE_URL in .env}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:?set VITE_SUPABASE_ANON_KEY in .env}
+        VITE_VAPID_PUBLIC_KEY: ${VITE_VAPID_PUBLIC_KEY:-}
+    ports:
+      - "8080:80"
+    restart: unless-stopped
